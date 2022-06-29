@@ -1,31 +1,31 @@
 {
-  "compilerOptions": {
-    "allowSyntheticDefaultImports": true,
-    "declaration": true,
-    "forceConsistentCasingInFileNames": true,
-    "lib": [
+	"compilerOptions": {
+		"allowSyntheticDefaultImports": true,
+		"declaration": true,
+		"forceConsistentCasingInFileNames": true,
+		"lib": [
 			"DOM",
 			"DOM.Iterable",
 			"ES2020"
 		],
-    "newLine": "lf",
-    "noEmitOnError": true,
-    "noFallthroughCasesInSwitch": true,
-    "noImplicitOverride": true,
+		"newLine": "lf",
+		"noEmitOnError": true,
+		"noFallthroughCasesInSwitch": true,
+		"noImplicitOverride": true,
 		"noImplicitReturns": true,
-    "noPropertyAccessFromIndexSignature": true,
-    "noUncheckedIndexedAccess": true,
+		"noPropertyAccessFromIndexSignature": true,
+		"noUncheckedIndexedAccess": true,
 		"noUnusedLocals": true,
 		"noUnusedParameters": true,
-    "preserveConstEnums": true,
-    "pretty": true,
-    "resolveJsonModule": false,
-    "skipLibCheck": true,
-    "strict": true,
-    "stripInternal": true,
-    "target": "ES2020",
+		"preserveConstEnums": true,
+		"pretty": true,
+		"resolveJsonModule": false,
+		"skipLibCheck": true,
+		"strict": true,
+		"stripInternal": true,
+		"target": "ES2020",
 		"useDefineForClassFields": true
-  },
-  "include": ["src/**/*"],
-  "exclude": ["node_modules"]
+	},
+	"include": ["src/**/*"],
+	"exclude": ["node_modules"]
 }
