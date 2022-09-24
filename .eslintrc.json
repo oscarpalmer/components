@@ -1,0 +1,47 @@
+{
+	"root": true,
+	"extends": [
+		"xo",
+		"xo-typescript"
+	],
+	"parser": "@typescript-eslint/parser",
+	"parserOptions": {
+		"project": [
+			"./tsconfig.json"
+		]
+	},
+	"plugins": [
+		"@typescript-eslint"
+	],
+	"rules": {
+		"@typescript-eslint/member-ordering": [
+			"error",
+			{
+				"default": [
+					"signature",
+
+					"private-decorated-field", "protected-decorated-field", "public-decorated-field", "decorated-field",
+
+					"private-static-field", "protected-static-field", "public-static-field", "static-field",
+
+					["private-abstract-field", "private-instance-field", "private-field"],
+					["protected-abstract-field", "protected-instance-field", "protected-field"],
+					["public-abstract-field", "public-instance-field", "public-field"],
+					["abstract-field", "instance-field", "field"],
+
+					"private-constructor", "protected-constructor", "public-constructor", "constructor",
+
+					"static-method", "public-static-method", "protected-static-method", "private-static-method",
+
+					["public-abstract-method", "public-decorated-method", "public-instance-method", "public-method"],
+					["protected-abstract-method", "protected-decorated-method", "protected-instance-method", "protected-method"],
+					["private-abstract-method", "private-decorated-method", "private-instance-method", "private-method"],
+					["abstract-method", "decorated-method", "instance-method", "method"]
+				]
+			}
+		],
+		"@typescript-eslint/no-extraneous-class": "off",
+		"eqeqeq": "off",
+		"no-eq-null": "off"
+	}
+}
