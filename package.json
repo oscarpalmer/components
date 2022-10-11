@@ -47,12 +47,12 @@
 	},
 	"scripts": {
 		"build": "npm run build:cjs; npm run build:esm; npm run build:iife",
-		"build:cjs": "zsh -c 'esbuild ./src/**/*.ts --bundle --minify --sourcemap --format=cjs --outdir=dist/cjs --target=es2017'",
-		"build:esm": "zsh -c 'esbuild ./src/**/*.ts --bundle --minify --sourcemap --format=esm --outdir=dist/esm --target=esnext'",
-		"build:iife": "zsh -c 'esbuild ./src/**/*.ts --bundle --minify --sourcemap --format=iife --outdir=dist/iife --target=es2017'",
+		"build:cjs": "zsh -c 'esbuild ./src/**/*.ts --bundle --minify --format=cjs --outdir=dist/cjs --target=es2017'",
+		"build:esm": "zsh -c 'esbuild ./src/**/*.ts --bundle --minify --format=esm --outdir=dist/esm --target=esnext'",
+		"build:iife": "zsh -c 'esbuild ./src/**/*.ts --bundle --minify --format=iife --outdir=dist/iife --target=es2017'",
 		"watch": "esbuild ./src/index.ts --bundle --watch --format=esm --outfile=dist/esm/index.js --target=esnext"
 	},
 	"type": "module",
 	"unpkg": "dist/iife/index.js",
-	"version": "0.2.0"
+	"version": "0.3.0"
 }

@@ -1,1 +1,2 @@
 import './details';
+import './popover';

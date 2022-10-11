@@ -1,3 +1,4 @@
+dist/**/_*
 node_modules/
 test/
 www/

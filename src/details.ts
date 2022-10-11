@@ -1,75 +1,14 @@
-const keyEventOptions = {capture: false, passive: true};
+import {delay, eventOptions, findParent} from './_helpers';
 
-class DetailsHandler {
-	static escape(event: KeyboardEvent): void {
-		if (event.key !== 'Escape') {
-			return;
-		}
-
-		let parent = document.activeElement?.parentElement;
-
-		while (parent != null) {
-			if (parent === document.body) {
-				parent = null;
-
-				break;
-			}
-
-			if (parent instanceof DeliciousDetails && (Store.details.containers.get(parent)?.open ?? true)) {
-				break;
-			}
-
-			parent = parent.parentElement;
-		}
-
-		if (parent != null) {
-			DetailsHandler.toggle(parent, false);
-		}
-	}
-
-	static toggle(component: DeliciousDetails, open?: boolean): void {
-		const {buttons, containers} = Store.details;
-
-		const container = containers.get(component);
-
-		if (container == null) {
-			return;
-		}
-
-		container.open = open ?? !container.open;
-
-		if (!container.open) {
-			buttons.get(component)?.focus();
-		}
-	}
-}
-
-class ListHandler {
+class Manager {
 	static getChildren(component: DeliciousDetailsList): HTMLDetailsElement[] {
 		return Array.from(component.querySelectorAll(':scope > delicious-details > details, :scope > details'));
 	}
 
-	static open(component: DeliciousDetailsList, value: string | undefined): void {
-		if (value == null) {
-			return;
-		}
-
-		if (value.length > 0 && !/^[\s\d,]+$/.test(value)) {
-			throw new Error('The \'selected\'-attribute of a \'delicious-details-list\'-element must be a comma-separated string of numbers, e.g. \'\', \'0\' or \'0,1,2\'');
-		}
-
-		const parts = value.length > 0
-			? value
-				.split(',')
-				.filter(index => index.trim().length > 0)
-				.map(index => Number.parseInt(index, 10))
-			: [];
-
-		this.update(component, parts);
-	}
-
-	static traverse(component: DeliciousDetailsList, event: KeyboardEvent): void {
-		if (event.isComposing || (event.key !== 'ArrowDown' && event.key !== 'ArrowUp')) {
+	static onKeydown(event: KeyboardEvent): void {
+		if (event.isComposing
+				|| (event.key !== 'ArrowDown' && event.key !== 'ArrowUp')
+				|| !(this instanceof DeliciousDetailsList)) {
 			return;
 		}
 
@@ -79,7 +18,7 @@ class ListHandler {
 			return;
 		}
 
-		const children = Store.list.children.get(component) ?? [];
+		const children = Store.list.children.get(this) ?? [];
 		const parent = target.parentElement;
 		const index = children.indexOf(parent as HTMLDetailsElement);
 
@@ -99,6 +38,61 @@ class ListHandler {
 		const summary = details?.querySelector(':scope > summary');
 
 		(summary as HTMLButtonElement)?.focus();
+	}
+
+	static onKeyup(event: KeyboardEvent): void {
+		if (event.key !== 'Escape') {
+			return;
+		}
+
+		const {containers} = Store.details;
+
+		const parent = findParent(document.activeElement as HTMLElement, element =>
+			containers.has(element as DeliciousDetails)
+			&& (containers.get(element as DeliciousDetails)?.open ?? true));
+
+		if (parent instanceof DeliciousDetails) {
+			Manager.onToggle.call(parent, false);
+		}
+	}
+
+	static onToggle(open?: boolean): void {
+		if (!(this instanceof DeliciousDetails)) {
+			return;
+		}
+
+		const {buttons, containers} = Store.details;
+
+		const container = containers.get(this);
+
+		if (container == null) {
+			return;
+		}
+
+		container.open = open ?? !container.open;
+
+		if (!container.open) {
+			buttons.get(this)?.focus();
+		}
+	}
+
+	static open(component: DeliciousDetailsList, value: string | undefined): void {
+		if (value == null) {
+			return;
+		}
+
+		if (value.length > 0 && !/^[\s\d,]+$/.test(value)) {
+			throw new Error('The \'selected\'-attribute of a \'delicious-details-list\'-element must be a comma-separated string of numbers, e.g. \'\', \'0\' or \'0,1,2\'');
+		}
+
+		const parts = value.length > 0
+			? value
+				.split(',')
+				.filter(index => index.trim().length > 0)
+				.map(index => Number.parseInt(index, 10))
+			: [];
+
+		Manager.update(component, parts);
 	}
 
 	static update(component: DeliciousDetailsList, selection: number[] | undefined): void {
@@ -167,7 +161,7 @@ class Observer {
 		const removed = Array.from(record?.removedNodes ?? []);
 
 		if (added.concat(removed).some(element => element.parentElement === component)) {
-			children.set(component, ListHandler.getChildren(component));
+			children.set(component, Manager.getChildren(component));
 
 			return;
 		}
@@ -194,7 +188,7 @@ class Observer {
 			selection = element.open ? [index] : [];
 		}
 
-		ListHandler.update(component, selection);
+		Manager.update(component, selection);
 	}
 }
 
@@ -211,13 +205,9 @@ class Store {
 	};
 }
 
-function delay(callback: () => void): number {
-	return requestAnimationFrame?.(callback) ?? setTimeout?.(callback, 16);
-}
-
 class DeliciousDetails extends HTMLElement {
 	close(): void {
-		DetailsHandler.toggle(this, false);
+		Manager.onToggle.call(this, false);
 	}
 
 	connectedCallback(): void {
@@ -234,11 +224,11 @@ class DeliciousDetails extends HTMLElement {
 	}
 
 	open(): void {
-		DetailsHandler.toggle(this, true);
+		Manager.onToggle.call(this, true);
 	}
 
 	toggle(): void {
-		DetailsHandler.toggle(this);
+		Manager.onToggle.call(this);
 	}
 }
 
@@ -264,7 +254,7 @@ class DeliciousDetailsList extends HTMLElement {
 	}
 
 	set open(indices: number[]) {
-		ListHandler.update(this, indices);
+		Manager.update(this, indices);
 	}
 
 	attributeChangedCallback(name: string, oldValue: string, newValue: string): void {
@@ -274,10 +264,10 @@ class DeliciousDetailsList extends HTMLElement {
 
 		switch (name) {
 			case 'multiple':
-				ListHandler.open(this, this.getAttribute('open') ?? undefined);
+				Manager.open(this, this.getAttribute('open') ?? undefined);
 				break;
 			case 'open':
-				ListHandler.open(this, newValue);
+				Manager.open(this, newValue);
 				break;
 			default:
 				break;
@@ -287,7 +277,7 @@ class DeliciousDetailsList extends HTMLElement {
 	connectedCallback(): void {
 		const {children, observer, open} = Store.list;
 
-		children.set(this, ListHandler.getChildren(this));
+		children.set(this, Manager.getChildren(this));
 		open.set(this, []);
 
 		observer.set(this, new MutationObserver(records => {
@@ -296,11 +286,9 @@ class DeliciousDetailsList extends HTMLElement {
 
 		observer.get(this)?.observe(this, Observer.options);
 
-		this.addEventListener('keydown', event => {
-			ListHandler.traverse(this, event);
-		}, keyEventOptions);
+		this.addEventListener('keydown', Manager.onKeydown.bind(this), eventOptions.passive);
 
-		ListHandler.open(this, this.getAttribute('open') ?? undefined);
+		Manager.open(this, this.getAttribute('open') ?? undefined);
 	}
 
 	disconnectedCallback(): void {
@@ -313,7 +301,7 @@ class DeliciousDetailsList extends HTMLElement {
 	}
 }
 
-addEventListener?.('keyup', DetailsHandler.escape, keyEventOptions);
+addEventListener?.('keyup', Manager.onKeyup, eventOptions.passive);
 
 customElements?.define('delicious-details', DeliciousDetails);
 customElements?.define('delicious-details-list', DeliciousDetailsList);
