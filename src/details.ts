@@ -1,4 +1,4 @@
-import {delay, eventOptions, findParent} from './_helpers';
+import {delay, eventOptions, findParent} from './helpers';
 
 class Manager {
 	static getChildren(component: DeliciousDetailsList): HTMLDetailsElement[] {

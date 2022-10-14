@@ -1,4 +1,5 @@
-dist/**/_*
+dist/**/helpers
+dist/**/*.map
 node_modules/
 test/
 www/

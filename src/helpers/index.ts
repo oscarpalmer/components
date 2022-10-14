@@ -3,6 +3,10 @@ export const eventOptions = {
 	passive: {capture: false, passive: true},
 };
 
+export const focusableSelector = ['[href]', '[tabindex]', 'button', 'input', 'select', 'textarea']
+	.map(selector => `${selector}:not([disabled]):not([hidden]):not([tabindex="-1"])`)
+	.join(',');
+
 export function delay(callback: (time: DOMHighResTimeStamp) => void): number {
 	return requestAnimationFrame?.(callback) ?? setTimeout?.(() => {
 		callback(Date.now());
@@ -26,10 +30,6 @@ export function findParent(element: HTMLElement, matches: (element: HTMLElement)
 
 	return parent ?? undefined;
 }
-
-const focusableSelector = ['[href]', '[tabindex]', 'button', 'input', 'select', 'textarea']
-	.map(selector => `${selector}:not([disabled]):not([hidden]):not([tabindex="-1"])`)
-	.join(',');
 
 export function getFocusableElements(context: Element): HTMLElement[] {
 	const focusable: HTMLElement[] = [];

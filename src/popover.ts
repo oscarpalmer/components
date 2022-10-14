@@ -1,44 +1,83 @@
-import {delay, eventOptions, getFocusableElements, getUuid} from './_helpers';
+import {delay, eventOptions, getFocusableElements, getUuid} from './helpers';
+import {Coordinate, Floated, Rects} from './helpers/floated';
 
 type Callbacks = {
 	click?: (event: Event) => void;
 	keydown?: (event: Event) => void;
 };
 
-type Coordinate = {
-	x: number;
-	y: number;
-};
-
 type Elements = {
-	button?: HTMLElement;
-	content?: HTMLElement;
+	anchor?: HTMLElement;
+	floater?: HTMLElement;
 };
 
 type Values = {
-	buttons: WeakMap<PolitePopover, HTMLElement>;
+	anchors: WeakMap<PolitePopover, HTMLElement>;
 	click: WeakMap<PolitePopover, (event: Event) => void>;
-	content: WeakMap<PolitePopover, HTMLElement>;
+	floaters: WeakMap<PolitePopover, HTMLElement>;
 	keydown: WeakMap<PolitePopover, (event: Event) => void>;
 };
 
 const positions = ['any'].concat(...['above', 'below'].map(position => [position, `${position}-left`, `${position}-right`]));
 
 class Manager {
+	static getCoordinate(position: string, elements: Rects): Coordinate {
+		return {
+			left: Manager.getLeft(position, elements),
+			top: Manager.getTop(position, elements),
+		};
+	}
+
+	static getLeft(position: string, elements: Rects): number {
+		const {left, right} = elements.anchor;
+		const {width} = elements.floater;
+
+		const xMax = left + width;
+		const xMin = right - width;
+
+		return (position.includes('left') || position.includes('right'))
+			? (position.includes('left')
+				? left
+				: (right - width))
+			: (xMax > window.innerWidth
+				? (xMin < 0
+					? left
+					: (right - width))
+				: left);
+	}
+
+	static getTop(position: string, elements: Rects): number {
+		const {bottom, top} = elements.anchor;
+		const {height} = elements.floater;
+
+		const yMax = bottom + height;
+		const yMin = top - height;
+
+		return (position.includes('above') || position.includes('below'))
+			? (position.includes('above')
+				? (top - height)
+				: bottom)
+			: (yMax > window.innerHeight
+				? (yMin < 0
+					? bottom
+					: yMin)
+				: bottom);
+	}
+
 	static onClick(event: Event): void {
 		if (!(this instanceof PolitePopover)) {
 			return;
 		}
 
-		const {button, content} = Store.getElements(this);
+		const {anchor, floater} = Store.getElements(this);
 
-		if (button == null || content == null || button.getAttribute('aria-expanded') !== 'true') {
+		if (anchor == null || floater == null || anchor.getAttribute('aria-expanded') !== 'true') {
 			return;
 		}
 
-		if (event.target !== button
-				&& event.target !== content
-				&& !(content?.contains(event.target as Element) ?? false)) {
+		if (event.target !== anchor
+				&& event.target !== floater
+				&& !(floater?.contains(event.target as Element) ?? false)) {
 			Manager.toggle.call(this, false);
 		}
 	}
@@ -48,9 +87,9 @@ class Manager {
 			return;
 		}
 
-		const {button, content} = Store.getElements(this);
+		const {anchor, floater} = Store.getElements(this);
 
-		if (button == null || content == null || button.getAttribute('aria-expanded') !== 'true') {
+		if (anchor == null || floater == null || anchor.getAttribute('aria-expanded') !== 'true') {
 			return;
 		}
 
@@ -64,11 +103,11 @@ class Manager {
 
 		event.preventDefault();
 
-		const elements = getFocusableElements(content);
+		const elements = getFocusableElements(floater);
 
-		if (document.activeElement === content) {
+		if (document.activeElement === floater) {
 			delay(() => {
-				(elements[event.shiftKey ? elements.length - 1 : 0] ?? content).focus();
+				(elements[event.shiftKey ? elements.length - 1 : 0] ?? floater).focus();
 			});
 
 			return;
@@ -76,7 +115,7 @@ class Manager {
 
 		const index = elements.indexOf(document.activeElement as HTMLElement);
 
-		let element = content;
+		let element = floater;
 
 		if (index > -1) {
 			let position = index + (event.shiftKey ? -1 : 1);
@@ -87,7 +126,7 @@ class Manager {
 				position = 0;
 			}
 
-			element = elements[position] ?? content;
+			element = elements[position] ?? floater;
 		}
 
 		delay(() => {
@@ -95,26 +134,20 @@ class Manager {
 		});
 	}
 
-	static setCoordinates(content: HTMLElement, coordinates: Coordinate): void {
-		content.style.inset = '0 auto auto 0';
-		content.style.position = 'fixed';
-		content.style.transform = `translate3d(${coordinates.x}px, ${coordinates.y}px, 0)`;
-	}
-
 	static toggle(expand?: boolean | Event): void {
 		if (!(this instanceof PolitePopover)) {
 			return;
 		}
 
-		const {button, content} = Store.getElements(this);
+		const {anchor, floater} = Store.getElements(this);
 
-		if (button == null || content == null) {
+		if (anchor == null || floater == null) {
 			return;
 		}
 
 		const expanded = typeof expand === 'boolean'
 			? !expand
-			: button.getAttribute('aria-expanded') === 'true';
+			: anchor.getAttribute('aria-expanded') === 'true';
 
 		const {click, keydown} = Store.getCallbacks(this);
 		const method = expanded ? 'removeEventListener' : 'addEventListener';
@@ -128,92 +161,28 @@ class Manager {
 		}
 
 		if (expanded) {
-			content.parentElement?.removeChild(content);
+			floater.parentElement?.removeChild(floater);
 		} else {
-			document.body.appendChild(content);
+			document.body.appendChild(floater);
 		}
 
-		button.setAttribute('aria-expanded', String(!expanded));
+		anchor.setAttribute('aria-expanded', String(!expanded));
 
-		(expanded ? button : (getFocusableElements(content)[0] ?? content)).focus();
+		(expanded ? anchor : (getFocusableElements(floater)[0] ?? floater)).focus();
 
-		Manager.update(this);
-	}
-
-	private static getCoordinates(position: string, button: HTMLElement, content: HTMLElement): Coordinate {
-		const {bottom, left, right, top} = button.getBoundingClientRect();
-		const {height, width} = content.getBoundingClientRect();
-
-		let x = 0;
-		let y = 0;
-
-		if (position.includes('above')) {
-			y = top - height;
-		} else if (position.includes('below')) {
-			y = bottom;
-		} else {
-			const max = bottom + height;
-			const min = top - height;
-
-			y = max > window.innerHeight
-				? (min < 0 ? bottom : min)
-				: bottom;
-		}
-
-		if (position.includes('left')) {
-			x = left;
-		} else if (position.includes('right')) {
-			x = right - width;
-		} else {
-			const max = left + width;
-			const min = right - width;
-
-			x = max > window.innerWidth
-				? (min < 0 ? left : min)
-				: left;
-		}
-
-		return {x, y};
-	}
-
-	private static getPosition(component: PolitePopover): string {
-		const position = component.getAttribute('position');
-		const normalized = position?.trim().toLowerCase();
-
-		return normalized != null && positions.includes(normalized)
-			? normalized
-			: 'below';
-	}
-
-	private static update(component: PolitePopover): void {
-		const {button, content} = Store.getElements(component);
-
-		if (button == null || content == null) {
-			return;
-		}
-
-		function step() {
-			if (button?.getAttribute('aria-expanded') !== 'true' || content == null) {
-				return;
-			}
-
-			const position = Manager.getPosition(component);
-			const coordinates = Manager.getCoordinates(position, button, content);
-
-			Manager.setCoordinates(content, coordinates);
-
-			delay(step);
-		}
-
-		delay(step);
+		Floated.update(
+			{anchor, floater, parent: this},
+			{all: positions, default: 'below'},
+			Manager.getCoordinate,
+			() => anchor.getAttribute('aria-expanded') !== 'true');
 	}
 }
 
 class Store {
 	private static readonly values: Values = {
-		buttons: new WeakMap<PolitePopover, HTMLElement>(),
+		anchors: new WeakMap<PolitePopover, HTMLElement>(),
 		click: new WeakMap<PolitePopover, (event: Event) => void>(),
-		content: new WeakMap<PolitePopover, HTMLElement>(),
+		floaters: new WeakMap<PolitePopover, HTMLElement>(),
 		keydown: new WeakMap<PolitePopover, (event: Event) => void>(),
 	};
 
@@ -226,15 +195,15 @@ class Store {
 
 	static getElements(component: PolitePopover): Elements {
 		return {
-			button: this.values.buttons.get(component),
-			content: this.values.content.get(component),
+			anchor: this.values.anchors.get(component),
+			floater: this.values.floaters.get(component),
 		};
 	}
 
 	static remove(component: PolitePopover): void {
-		this.values.buttons.delete(component);
+		this.values.anchors.delete(component);
 		this.values.click.delete(component);
-		this.values.content.delete(component);
+		this.values.floaters.delete(component);
 		this.values.keydown.delete(component);
 	}
 
@@ -244,8 +213,8 @@ class Store {
 	}
 
 	static setElements(component: PolitePopover, button: HTMLElement, content: HTMLElement): void {
-		this.values.buttons?.set(component, button);
-		this.values.content?.set(component, content);
+		this.values.anchors?.set(component, button);
+		this.values.floaters?.set(component, content);
 	}
 }
 
@@ -255,37 +224,37 @@ class PolitePopover extends HTMLElement {
 	}
 
 	connectedCallback() {
-		const button = this.querySelector(':scope > [polite-popover-button]') as HTMLElement | undefined;
-		const content = this.querySelector(':scope > [polite-popover-content]') as HTMLElement | undefined;
+		const anchor = this.querySelector(':scope > [polite-popover-button]') as HTMLElement | undefined;
+		const floater = this.querySelector(':scope > [polite-popover-content]') as HTMLElement | undefined;
 
-		if (button == null) {
+		if (anchor == null) {
 			throw new Error('a');
 		}
 
-		if (!(button instanceof HTMLButtonElement) && button.getAttribute('role') !== 'button') {
+		if (!(anchor instanceof HTMLButtonElement) && anchor.getAttribute('role') !== 'button') {
 			throw new Error('b');
 		}
 
-		if (content == null) {
+		if (floater == null) {
 			throw new Error('c');
 		}
 
-		content.parentElement?.removeChild(content);
+		floater.parentElement?.removeChild(floater);
 
-		if (!content.id) {
-			content.setAttribute('id', getUuid());
+		if (!floater.id) {
+			floater.setAttribute('id', getUuid());
 		}
 
-		Manager.setCoordinates(content, {x: -100000, y: -100000});
+		Floated.setCoordinate(floater, {left: -1000000, top: -1000000});
 
-		button.setAttribute('aria-controls', content.id);
-		button.setAttribute('aria-expanded', 'false');
-		content.setAttribute('tabindex', '-1');
+		anchor.setAttribute('aria-controls', floater.id);
+		anchor.setAttribute('aria-expanded', 'false');
+		floater.setAttribute('tabindex', '-1');
 
-		Store.setElements(this, button, content);
+		Store.setElements(this, anchor, floater);
 		Store.setCallbacks(this);
 
-		button.addEventListener('click', Manager.toggle.bind(this), eventOptions.passive);
+		anchor.addEventListener('click', Manager.toggle.bind(this), eventOptions.passive);
 	}
 
 	disconnectedCallback(): void {
