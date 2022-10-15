@@ -1,5 +1,5 @@
 import {delay, eventOptions, getFocusableElements, getUuid} from './helpers';
-import {Coordinate, Floated, Rects} from './helpers/floated';
+import {Floated, Position, Rects} from './helpers/floated';
 
 type Callbacks = {
 	click?: (event: Event) => void;
@@ -18,50 +18,48 @@ type Values = {
 	keydown: WeakMap<PolitePopover, (event: Event) => void>;
 };
 
-const positions = ['any'].concat(...['above', 'below'].map(position => [position, `${position}-left`, `${position}-right`]));
+const types = ['any'].concat(...['above', 'below'].map(position => [position, `${position}-left`, `${position}-right`]));
 
 class Manager {
-	static getCoordinate(position: string, elements: Rects): Coordinate {
-		return {
-			left: Manager.getLeft(position, elements),
-			top: Manager.getTop(position, elements),
-		};
+	static getPosition(type: string, elements: Rects): Position {
+		const left = Manager.getValue(type, ['left', 'right'], elements, true);
+		const top = Manager.getValue(type, ['below', 'above'], elements, false);
+
+		if (type !== 'any') {
+			return {
+				coordinate: {left, top},
+				type: ['above', 'below'].includes(type)
+					? `??? ${type}-${elements.anchor.left === left ? 'left' : 'right'}`
+					: type,
+			};
+		}
+
+		return {coordinate: {left, top}, type: '???'};
 	}
 
-	static getLeft(position: string, elements: Rects): number {
-		const {left, right} = elements.anchor;
-		const {width} = elements.floater;
+	static getValue(type: string, types: string[], elements: Rects, left: boolean): number {
+		const {anchor, floater} = elements;
 
-		const xMax = left + width;
-		const xMin = right - width;
+		const floaterSize = left ? floater.width : floater.height;
 
-		return (position.includes('left') || position.includes('right'))
-			? (position.includes('left')
-				? left
-				: (right - width))
-			: (xMax > window.innerWidth
-				? (xMin < 0
-					? left
-					: (right - width))
-				: left);
-	}
+		const defaultValue = left ? anchor.left : anchor.bottom;
+		const minValue = (left ? anchor.right : anchor.top) - floaterSize;
 
-	static getTop(position: string, elements: Rects): number {
-		const {bottom, top} = elements.anchor;
-		const {height} = elements.floater;
+		if (types.some(t => type.includes(t))) {
+			return type.includes(types[0] ?? '_')
+				? defaultValue
+				: minValue;
+		}
 
-		const yMax = bottom + height;
-		const yMin = top - height;
+		const maxValue = defaultValue + floaterSize;
 
-		return (position.includes('above') || position.includes('below'))
-			? (position.includes('above')
-				? (top - height)
-				: bottom)
-			: (yMax > window.innerHeight
-				? (yMin < 0
-					? bottom
-					: yMin)
-				: bottom);
+		if (maxValue <= (left ? window.innerWidth : window.innerHeight)) {
+			return defaultValue;
+		}
+
+		return minValue < 0
+			? defaultValue
+			: minValue;
 	}
 
 	static onClick(event: Event): void {
@@ -172,8 +170,8 @@ class Manager {
 
 		Floated.update(
 			{anchor, floater, parent: this},
-			{all: positions, default: 'below'},
-			Manager.getCoordinate,
+			{all: types, default: 'below'},
+			Manager.getPosition,
 			() => anchor.getAttribute('aria-expanded') !== 'true');
 	}
 }
@@ -219,6 +217,10 @@ class Store {
 }
 
 class PolitePopover extends HTMLElement {
+	get content(): HTMLElement | undefined {
+		return Store.getElements(this).floater;
+	}
+
 	close() {
 		Manager.toggle.call(this, false);
 	}
@@ -241,11 +243,11 @@ class PolitePopover extends HTMLElement {
 
 		floater.parentElement?.removeChild(floater);
 
+		floater.hidden = true;
+
 		if (!floater.id) {
 			floater.setAttribute('id', getUuid());
 		}
-
-		Floated.setCoordinate(floater, {left: -1000000, top: -1000000});
 
 		anchor.setAttribute('aria-controls', floater.id);
 		anchor.setAttribute('aria-expanded', 'false');

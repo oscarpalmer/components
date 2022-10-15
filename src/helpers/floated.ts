@@ -11,7 +11,12 @@ type Elements = {
 	parent?: HTMLElement;
 };
 
-export type Positions = {
+export type Position = {
+	coordinate: Coordinate;
+	type: string;
+};
+
+export type Types = {
 	all: string[];
 	default: string;
 };
@@ -23,8 +28,48 @@ export type Rects = {
 };
 
 export class Floated {
-	static setCoordinate(floater: HTMLElement, coordinates: Coordinate): void {
-		const {left, top} = coordinates;
+	static update(
+		elements: Elements,
+		types: Types,
+		getPosition: (type: string, elements: Rects) => Position,
+		stopUpdate: () => boolean,
+	): void {
+		const {anchor, floater, parent} = elements;
+
+		function step() {
+			if (stopUpdate()) {
+				return;
+			}
+
+			const type = Floated.getType(parent ?? anchor, types);
+
+			const position = getPosition(type, {
+				anchor: anchor.getBoundingClientRect(),
+				floater: floater.getBoundingClientRect(),
+				parent: parent?.getBoundingClientRect(),
+			});
+
+			Floated.setPosition(floater, position);
+
+			delay(step);
+		}
+
+		delay(step);
+	}
+
+	private static getType(element: HTMLElement, types: Types): string {
+		const position = element.getAttribute('position');
+		const normalized = position?.trim().toLowerCase();
+
+		return normalized != null && types.all.includes(normalized)
+			? normalized
+			: types.default;
+	}
+
+	private static setPosition(floater: HTMLElement, position: Position): void {
+		const {left, top} = position.coordinate;
+
+		floater.setAttribute('position', position.type);
 
 		floater.style.inset = '0 auto auto 0';
 		floater.style.position = 'fixed';
@@ -35,45 +80,5 @@ export class Floated {
 				floater.hidden = false;
 			});
 		}
-	}
-
-	static update(
-		elements: Elements,
-		positions: Positions,
-		getCoordinate: (position: string, elements: Rects) => Coordinate,
-		stopUpdate: () => boolean,
-	): void {
-		const {anchor, floater, parent} = elements;
-
-		function step() {
-			if (stopUpdate()) {
-				return;
-			}
-
-			const position = Floated.getPosition(parent ?? anchor, positions);
-
-			floater.setAttribute('position', position);
-
-			const coordinates = getCoordinate(position, {
-				anchor: anchor.getBoundingClientRect(),
-				floater: floater.getBoundingClientRect(),
-				parent: parent?.getBoundingClientRect(),
-			});
-
-			Floated.setCoordinate(floater, coordinates);
-
-			delay(step);
-		}
-
-		delay(step);
-	}
-
-	private static getPosition(element: HTMLElement, positions: Positions): string {
-		const position = element.getAttribute('position');
-		const normalized = position?.trim().toLowerCase();
-
-		return normalized != null && positions.all.includes(normalized)
-			? normalized
-			: positions.default;
 	}
 }

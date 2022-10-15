@@ -1,62 +1,63 @@
 import {delay, eventOptions, focusableSelector} from './helpers';
-import {Coordinate, Floated, Rects} from './helpers/floated';
+import {Floated, Position, Rects} from './helpers/floated';
 
 type Callbacks = {
 	click: (event: Event) => void;
 	hide: (event: Event) => void;
-	key: (event: KeyboardEvent) => void;
+	key: (event: Event) => void;
 	show: (event: Event) => void;
 };
 
 const attribute = 'toasty-tooltip';
-const positions = ['above', 'below', 'horizontal', 'left', 'right', 'vertical'];
+const store = new WeakMap<HTMLElement, Tooltip>();
+const types = ['above', 'below', 'horizontal', 'left', 'right', 'vertical'];
 
 class Manager {
-	static getCoordinate(position: string, elements: Rects): Coordinate {
+	static getPosition(type: string, elements: Rects): Position {
+		const left = Manager.getValue(type, ['horizontal', 'left', 'right'], elements, true);
+		const top = Manager.getValue(type, ['vertical', 'above', 'below'], elements, false);
+
+		if (!['horizontal', 'vertical'].includes(type)) {
+			return {coordinate: {left, top}, type};
+		}
+
 		return {
-			left: Manager.getLeft(position, elements),
-			top: Manager.gettop(position, elements),
+			coordinate: {left, top},
+			type: type === 'horizontal'
+				? (left === elements.anchor.right ? 'right' : 'left')
+				: (top === elements.anchor.bottom ? 'below' : 'above'),
 		};
 	}
 
-	static getLeft(position: string, elements: Rects): number {
-		const {left, right} = elements.anchor;
-		const {width} = elements.floater;
+	static getValue(type: string, types: string[], elements: Rects, left: boolean): number {
+		const {anchor, floater} = elements;
 
-		const xMax = right + width;
-		const xMin = left - width;
+		const anchorMax = left ? anchor.right : anchor.bottom;
+		const anchorMin = left ? anchor.left : anchor.top;
 
-		return position === 'horizontal'
-			? (xMax > window.innerWidth
-				? (xMin < 0
-					? right
-					: xMin)
-				: right)
-			: (position === 'left' || position === 'right')
-				? (position === 'left'
-					? (left - width)
-					: right)
-				: ((left + (elements.anchor.width / 2)) - (width / 2));
-	}
+		const floaterSize = left ? floater.width : floater.height;
 
-	static gettop(position: string, elements: Rects): number {
-		const {bottom, top} = elements.anchor;
-		const {height} = elements.floater;
+		const index = types.indexOf(type);
 
-		const yMax = bottom + height;
-		const yMin = top - height;
+		if (index === -1) {
+			return ((anchorMin + ((left ? anchor.width : anchor.height) / 2)) - (floaterSize / 2));
+		}
 
-		return position === 'vertical'
-			? (yMax > window.innerHeight
-				? (yMin < 0
-					? bottom
-					: yMin)
-				: bottom)
-			: (position === 'above' || position === 'below')
-				? (position === 'above'
-					? (top - height)
-					: bottom)
-				: ((top + (elements.anchor.height / 2)) - (height / 2));
+		const minValue = anchorMin - floaterSize;
+
+		if (index > 0) {
+			return index === 1 ? minValue : anchorMax;
+		}
+
+		const maxValue = anchorMax + floaterSize;
+
+		if (maxValue <= (left ? window.innerWidth : window.innerHeight)) {
+			return anchorMax;
+		}
+
+		return minValue < 0
+			? anchorMax
+			: minValue;
 	}
 
 	static observer(entries: MutationRecord[]): void {
@@ -69,22 +70,11 @@ class Manager {
 
 			if (element.getAttribute(attribute) == null) {
 				Tooltip.destroy(element);
-
-				return;
-			}
-
-			const id = element.getAttribute('aria-describedby') ?? element.getAttribute('aria-labelledby');
-			const content = id == null ? null : document.getElementById(id);
-
-			if (content != null) {
-				Tooltip.create(element, content);
+			} else {
+				Tooltip.create(element);
 			}
 		}
 	}
-}
-
-class Store {
-	static readonly elements = new WeakMap<HTMLElement, Tooltip>();
 }
 
 class Tooltip {
@@ -94,7 +84,7 @@ class Tooltip {
 
 	readonly focusable: boolean;
 
-	constructor(private readonly anchor: HTMLElement, content: HTMLElement) {
+	constructor(private readonly anchor: HTMLElement) {
 		this.focusable = anchor.matches(focusableSelector);
 
 		this.callbacks = {
@@ -104,97 +94,115 @@ class Tooltip {
 			show: this.onShow.bind(this),
 		};
 
-		this.addCallbacks();
+		this.floater = this.createFloater();
 
-		this.floater = this.createFloater(content);
+		this.handleCallbacks(true);
 	}
 
-	static create(anchor: HTMLElement, content: HTMLElement): void {
-		if (!Store.elements.has(anchor)) {
-			Store.elements.set(anchor, new Tooltip(anchor, content));
+	static create(anchor: HTMLElement): void {
+		if (!store.has(anchor)) {
+			store.set(anchor, new Tooltip(anchor));
 		}
 	}
 
 	static destroy(element: HTMLElement): void {
-		const tooltip = Store.elements.get(element);
+		const tooltip = store.get(element);
 
 		if (tooltip == null) {
 			return;
 		}
 
-		tooltip.removeCallbacks();
+		tooltip.handleCallbacks(false);
 
-		Store.elements.delete(element);
+		store.delete(element);
 	}
 
 	onClick(): void {
-		this.onHide();
+		this.handleFloater(false);
 	}
 
 	onHide() {
-		document.removeEventListener('keydown', this.callbacks.key, eventOptions.passive);
-		document.removeEventListener('pointerdown', this.callbacks.click, eventOptions.active);
-
-		this.floater.parentElement?.removeChild(this.floater);
+		this.handleFloater(false);
 	}
 
-	onKey(event: KeyboardEvent): void {
-		if (event.key === 'Escape') {
-			this.onHide();
+	onKey(event: Event): void {
+		if (event instanceof KeyboardEvent && event.key === 'Escape') {
+			this.handleFloater(false);
 		}
 	}
 
 	onShow() {
-		if (this.floater.parentElement != null) {
+		const {anchor, floater} = this;
+
+		if (floater.parentElement != null) {
 			return;
 		}
 
-		document.addEventListener('keydown', this.callbacks.key, eventOptions.passive);
-		document.addEventListener('pointerdown', this.callbacks.click, eventOptions.active);
+		const content = this.getContent();
 
-		document.body.appendChild(this.floater);
+		if (content == null) {
+			return;
+		}
+
+		floater.innerHTML = content.innerHTML;
+
+		this.handleFloater(true);
 
 		Floated.update(
-			{anchor: this.anchor, floater: this.floater},
-			{all: positions, default: 'above'},
-			Manager.getCoordinate,
-			() => this.floater.parentElement == null);
+			{anchor, floater},
+			{all: types, default: 'above'},
+			Manager.getPosition,
+			() => floater.parentElement == null);
 	}
 
-	private addCallbacks(): void {
-		const {anchor, callbacks, focusable} = this;
-
-		anchor.addEventListener('mouseenter', callbacks.show, eventOptions.passive);
-		anchor.addEventListener('mouseleave', callbacks.hide, eventOptions.passive);
-
-		if (focusable) {
-			anchor.addEventListener('blur', callbacks.hide, eventOptions.passive);
-			anchor.addEventListener('focus', callbacks.show, eventOptions.passive);
-		}
-	}
-
-	private createFloater(content: HTMLElement): HTMLElement {
+	private createFloater(): HTMLElement {
 		const floater = document.createElement('div');
 
 		floater.setAttribute('aria-hidden', 'true');
 		floater.setAttribute(`${attribute}-content`, '');
 
 		floater.hidden = true;
-		floater.innerHTML = content.innerHTML;
 
 		return floater;
 	}
 
-	private removeCallbacks(): void {
+	private getContent(): HTMLElement | undefined {
+		const id = this.anchor.getAttribute('aria-describedby') ?? this.anchor.getAttribute('aria-labelledby');
+
+		if (id == null) {
+			return undefined;
+		}
+
+		return document.getElementById(id) ?? undefined;
+	}
+
+	private handleCallbacks(add: boolean): void {
 		const {anchor, callbacks, focusable} = this;
 
-		anchor.removeEventListener('mouseenter', callbacks.show, eventOptions.passive);
-		anchor.removeEventListener('mouseleave', callbacks.hide, eventOptions.passive);
-		anchor.removeEventListener('touchstart', callbacks.show, eventOptions.passive);
+		const method = add ? 'addEventListener' : 'removeEventListener';
+
+		anchor[method]('mouseenter', callbacks.show, eventOptions.passive);
+		anchor[method]('mouseleave', callbacks.hide, eventOptions.passive);
+		anchor[method]('touchstart', callbacks.show, eventOptions.passive);
 
 		if (focusable) {
-			anchor.removeEventListener('blur', callbacks.hide, eventOptions.passive);
-			anchor.removeEventListener('focus', callbacks.show, eventOptions.passive);
+			anchor[method]('blur', callbacks.hide, eventOptions.passive);
+			anchor[method]('focus', callbacks.show, eventOptions.passive);
+		}
+	}
+
+	private handleFloater(show: boolean): void {
+		const {callbacks, floater} = this;
+
+		const method = show ? 'addEventListener' : 'removeEventListener';
+
+		document[method]('keydown', callbacks.key, eventOptions.passive);
+		document[method]('pointerdown', callbacks.click, eventOptions.passive);
+
+		if (show) {
+			document.body.appendChild(floater);
+		} else {
+			this.floater.parentElement?.removeChild(this.floater);
 		}
 	}
 }
