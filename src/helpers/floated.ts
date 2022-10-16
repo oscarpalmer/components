@@ -1,4 +1,10 @@
-import {delay} from '.';
+import {delay, getAttribute} from '.';
+
+type Callbacks = {
+	after?: () => void;
+	getPosition: (type: string, elements: Rects) => Position;
+	validate: () => boolean;
+};
 
 export type Coordinate = {
 	left: number;
@@ -31,13 +37,13 @@ export class Floated {
 	static update(
 		elements: Elements,
 		types: Types,
-		getPosition: (type: string, elements: Rects) => Position,
-		stopUpdate: () => boolean,
+		callbacks: Callbacks,
 	): void {
 		const {anchor, floater, parent} = elements;
+		const {after, getPosition, validate} = callbacks;
 
 		function step() {
-			if (stopUpdate()) {
+			if (validate()) {
 				return;
 			}
 
@@ -52,17 +58,18 @@ export class Floated {
 			Floated.setPosition(floater, position);
 
 			delay(step);
+
+			after?.();
 		}
 
 		delay(step);
 	}
 
 	private static getType(element: HTMLElement, types: Types): string {
-		const position = element.getAttribute('position');
-		const normalized = position?.trim().toLowerCase();
+		const position = getAttribute(element, 'position', types.default);
 
-		return normalized != null && types.all.includes(normalized)
-			? normalized
+		return types.all.includes(position)
+			? position
 			: types.default;
 	}
 

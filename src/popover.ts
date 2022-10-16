@@ -14,6 +14,7 @@ type Elements = {
 type Values = {
 	anchors: WeakMap<PolitePopover, HTMLElement>;
 	click: WeakMap<PolitePopover, (event: Event) => void>;
+	connected: WeakMap<PolitePopover, void>;
 	floaters: WeakMap<PolitePopover, HTMLElement>;
 	keydown: WeakMap<PolitePopover, (event: Event) => void>;
 };
@@ -60,6 +61,24 @@ class Manager {
 		return minValue < 0
 			? defaultValue
 			: minValue;
+	}
+
+	static initialize(component: PolitePopover, anchor: HTMLElement, floater: HTMLElement): void {
+		floater.parentElement?.removeChild(floater);
+
+		floater.hidden = true;
+
+		if (!floater.id) {
+			floater.setAttribute('id', getUuid());
+		}
+
+		anchor.setAttribute('aria-controls', floater.id);
+		anchor.setAttribute('aria-expanded', 'false');
+		floater.setAttribute('tabindex', '-1');
+
+		anchor.addEventListener('click', Manager.toggle.bind(component), eventOptions.passive);
+
+		Store.add(component, anchor, floater);
 	}
 
 	static onClick(event: Event): void {
@@ -166,13 +185,32 @@ class Manager {
 
 		anchor.setAttribute('aria-expanded', String(!expanded));
 
-		(expanded ? anchor : (getFocusableElements(floater)[0] ?? floater)).focus();
+		if (expanded) {
+			anchor.focus();
+
+			return;
+		}
+
+		let called = false;
 
 		Floated.update(
 			{anchor, floater, parent: this},
 			{all: types, default: 'below'},
-			Manager.getPosition,
-			() => anchor.getAttribute('aria-expanded') !== 'true');
+			{
+				after() {
+					if (called) {
+						return;
+					}
+
+					called = true;
+
+					delay(() => {
+						(getFocusableElements(floater)[0] ?? floater).focus();
+					});
+				},
+				getPosition: Manager.getPosition,
+				validate: () => anchor.getAttribute('aria-expanded') !== 'true',
+			});
 	}
 }
 
@@ -180,9 +218,17 @@ class Store {
 	private static readonly values: Values = {
 		anchors: new WeakMap<PolitePopover, HTMLElement>(),
 		click: new WeakMap<PolitePopover, (event: Event) => void>(),
+		connected: new WeakMap<PolitePopover, void>(),
 		floaters: new WeakMap<PolitePopover, HTMLElement>(),
 		keydown: new WeakMap<PolitePopover, (event: Event) => void>(),
 	};
+
+	static add(component: PolitePopover, button: HTMLElement, content: HTMLElement): void {
+		Store.values.anchors?.set(component, button);
+		Store.values.floaters?.set(component, content);
+
+		Store.setCallbacks(component);
+	}
 
 	static getCallbacks(component: PolitePopover): Callbacks {
 		return {
@@ -198,21 +244,13 @@ class Store {
 		};
 	}
 
-	static remove(component: PolitePopover): void {
-		this.values.anchors.delete(component);
-		this.values.click.delete(component);
-		this.values.floaters.delete(component);
-		this.values.keydown.delete(component);
+	static isConnected(component: PolitePopover): boolean {
+		return Store.values.connected.has(component);
 	}
 
-	static setCallbacks(component: PolitePopover): void {
+	private static setCallbacks(component: PolitePopover): void {
 		this.values.click?.set(component, Manager.onClick.bind(component));
 		this.values.keydown?.set(component, Manager.onKeydown.bind(component));
-	}
-
-	static setElements(component: PolitePopover, button: HTMLElement, content: HTMLElement): void {
-		this.values.anchors?.set(component, button);
-		this.values.floaters?.set(component, content);
 	}
 }
 
@@ -226,41 +264,22 @@ class PolitePopover extends HTMLElement {
 	}
 
 	connectedCallback() {
-		const anchor = this.querySelector(':scope > [polite-popover-button]') as HTMLElement | undefined;
-		const floater = this.querySelector(':scope > [polite-popover-content]') as HTMLElement | undefined;
-
-		if (anchor == null) {
-			throw new Error('a');
+		if (Store.isConnected(this)) {
+			return;
 		}
 
-		if (!(anchor instanceof HTMLButtonElement) && anchor.getAttribute('role') !== 'button') {
-			throw new Error('b');
+		const anchor = this.querySelector(':scope > [polite-popover-button]');
+		const floater = this.querySelector(':scope > [polite-popover-content]');
+
+		if (anchor == null || !((anchor instanceof HTMLButtonElement) || (anchor instanceof HTMLElement && anchor.getAttribute('role') === 'button'))) {
+			throw new Error('<polite-popover> must have a <button>-element (or button-like element) with the attribute \'polite-poover-button\'');
 		}
 
-		if (floater == null) {
-			throw new Error('c');
+		if (floater == null || !(floater instanceof HTMLElement)) {
+			throw new Error('<polite-popover> must have an element with the attribute \'polite-popover-content\'');
 		}
 
-		floater.parentElement?.removeChild(floater);
-
-		floater.hidden = true;
-
-		if (!floater.id) {
-			floater.setAttribute('id', getUuid());
-		}
-
-		anchor.setAttribute('aria-controls', floater.id);
-		anchor.setAttribute('aria-expanded', 'false');
-		floater.setAttribute('tabindex', '-1');
-
-		Store.setElements(this, anchor, floater);
-		Store.setCallbacks(this);
-
-		anchor.addEventListener('click', Manager.toggle.bind(this), eventOptions.passive);
-	}
-
-	disconnectedCallback(): void {
-		Store.remove(this);
+		Manager.initialize(this, anchor, floater);
 	}
 
 	open() {

@@ -5,7 +5,42 @@ class Manager {
 		return Array.from(component.querySelectorAll(':scope > delicious-details > details, :scope > details'));
 	}
 
-	static onKeydown(event: KeyboardEvent): void {
+	static initializeList(component: DeliciousDetailsList): void {
+		const {children, connected, observer, open} = Store.list;
+
+		connected.set(component);
+
+		children.set(component, Manager.getChildren(component));
+		open.set(component, []);
+
+		observer.set(component, new MutationObserver(records => {
+			Observer.callback(component, records);
+		}));
+
+		observer.get(component)?.observe(component, Observer.options);
+
+		component.addEventListener('keydown', Manager.onLocalKeydown.bind(component), eventOptions.passive);
+
+		Manager.open(component, component.getAttribute('open') ?? undefined);
+	}
+
+	static onGlobalKeydown(event: KeyboardEvent): void {
+		if (event.key !== 'Escape') {
+			return;
+		}
+
+		const {containers} = Store.details;
+
+		const parent = findParent(document.activeElement as HTMLElement, element =>
+			containers.has(element as DeliciousDetails)
+			&& (containers.get(element as DeliciousDetails)?.open ?? true));
+
+		if (parent instanceof DeliciousDetails) {
+			Manager.onToggle.call(parent, false);
+		}
+	}
+
+	static onLocalKeydown(event: KeyboardEvent): void {
 		if (event.isComposing
 				|| (event.key !== 'ArrowDown' && event.key !== 'ArrowUp')
 				|| !(this instanceof DeliciousDetailsList)) {
@@ -38,22 +73,6 @@ class Manager {
 		const summary = details?.querySelector(':scope > summary');
 
 		(summary as HTMLButtonElement)?.focus();
-	}
-
-	static onKeyup(event: KeyboardEvent): void {
-		if (event.key !== 'Escape') {
-			return;
-		}
-
-		const {containers} = Store.details;
-
-		const parent = findParent(document.activeElement as HTMLElement, element =>
-			containers.has(element as DeliciousDetails)
-			&& (containers.get(element as DeliciousDetails)?.open ?? true));
-
-		if (parent instanceof DeliciousDetails) {
-			Manager.onToggle.call(parent, false);
-		}
 	}
 
 	static onToggle(open?: boolean): void {
@@ -195,36 +214,38 @@ class Observer {
 class Store {
 	static readonly details = {
 		buttons: new WeakMap<DeliciousDetails, HTMLButtonElement>(),
+		connected: new WeakMap<DeliciousDetails, void>(),
 		containers: new WeakMap<DeliciousDetails, HTMLDetailsElement>(),
 	};
 
 	static readonly list = {
 		children: new WeakMap<DeliciousDetailsList, HTMLDetailsElement[]>(),
+		connected: new WeakMap<DeliciousDetailsList, void>(),
 		observer: new WeakMap<DeliciousDetailsList, MutationObserver>(),
 		open: new WeakMap<DeliciousDetailsList, number[]>(),
 	};
 }
 
 class DeliciousDetails extends HTMLElement {
-	close(): void {
-		Manager.onToggle.call(this, false);
+	get open(): boolean {
+		return Store.details.containers.get(this)?.open ?? false;
+	}
+
+	set open(open: boolean) {
+		Manager.onToggle.call(this, open);
 	}
 
 	connectedCallback(): void {
+		if (Store.details.connected.has(this)) {
+			return;
+		}
+
 		const details = this.querySelector(':scope > details')!;
 		const summary = details?.querySelector(':scope > summary');
 
+		Store.details.connected.set(this);
 		Store.details.buttons.set(this, summary as HTMLButtonElement);
 		Store.details.containers.set(this, details as HTMLDetailsElement);
-	}
-
-	disconnectedCallback(): void {
-		Store.details.buttons.delete(this);
-		Store.details.containers.delete(this);
-	}
-
-	open(): void {
-		Manager.onToggle.call(this, true);
 	}
 
 	toggle(): void {
@@ -233,7 +254,7 @@ class DeliciousDetails extends HTMLElement {
 }
 
 class DeliciousDetailsList extends HTMLElement {
-	static get observedAttributes() {
+	static get observedAttributes(): string[] {
 		return ['multiple', 'open'];
 	}
 
@@ -275,33 +296,13 @@ class DeliciousDetailsList extends HTMLElement {
 	}
 
 	connectedCallback(): void {
-		const {children, observer, open} = Store.list;
-
-		children.set(this, Manager.getChildren(this));
-		open.set(this, []);
-
-		observer.set(this, new MutationObserver(records => {
-			Observer.callback(this, records);
-		}));
-
-		observer.get(this)?.observe(this, Observer.options);
-
-		this.addEventListener('keydown', Manager.onKeydown.bind(this), eventOptions.passive);
-
-		Manager.open(this, this.getAttribute('open') ?? undefined);
-	}
-
-	disconnectedCallback(): void {
-		const {children, observer, open} = Store.list;
-
-		children.delete(this);
-		observer.get(this)?.disconnect();
-		observer.delete(this);
-		open.delete(this);
+		if (!Store.list.connected.has(this)) {
+			Manager.initializeList(this);
+		}
 	}
 }
 
-addEventListener?.('keyup', Manager.onKeyup, eventOptions.passive);
+addEventListener?.('keydown', Manager.onGlobalKeydown, eventOptions.passive);
 
 customElements?.define('delicious-details', DeliciousDetails);
 customElements?.define('delicious-details-list', DeliciousDetailsList);

@@ -151,8 +151,10 @@ class Tooltip {
 		Floated.update(
 			{anchor, floater},
 			{all: types, default: 'above'},
-			Manager.getPosition,
-			() => floater.parentElement == null);
+			{
+				getPosition: Manager.getPosition,
+				validate: () => floater.parentElement == null,
+			});
 	}
 
 	private createFloater(): HTMLElement {

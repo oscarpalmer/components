@@ -31,6 +31,14 @@ export function findParent(element: HTMLElement, matches: (element: HTMLElement)
 	return parent ?? undefined;
 }
 
+export function getAttribute(element: HTMLElement, attribute: string, defaultValue: string): string {
+	const value = element.getAttribute(attribute);
+
+	return value == null || value.trim().length === 0
+		? defaultValue
+		: value;
+}
+
 export function getFocusableElements(context: Element): HTMLElement[] {
 	const focusable: HTMLElement[] = [];
 
@@ -49,4 +57,10 @@ export function getFocusableElements(context: Element): HTMLElement[] {
 
 export function getUuid(): string {
 	return URL.createObjectURL(new Blob()).replace(/^.*\/([\w-]+)$/, '$1').replace(/-/g, '_');
+}
+
+export function setProperty(element: HTMLElement, property: string, value: unknown): void {
+	if (typeof value === 'boolean') {
+		element?.setAttribute(property, String(value));
+	}
 }
