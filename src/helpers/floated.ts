@@ -43,7 +43,7 @@ export class Floated {
 		const {after, getPosition, validate} = callbacks;
 
 		function step() {
-			if (validate()) {
+			if (!validate()) {
 				return;
 			}
 
@@ -57,9 +57,9 @@ export class Floated {
 
 			Floated.setPosition(floater, position);
 
-			delay(step);
-
 			after?.();
+
+			delay(step);
 		}
 
 		delay(step);

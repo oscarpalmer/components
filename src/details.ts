@@ -1,4 +1,4 @@
-import {delay, eventOptions, findParent} from './helpers';
+import {delay, eventOptions, findParent, getAttribute, setAttribute} from './helpers';
 
 class Manager {
 	static getChildren(component: DeliciousDetailsList): HTMLDetailsElement[] {
@@ -21,7 +21,7 @@ class Manager {
 
 		component.addEventListener('keydown', Manager.onLocalKeydown.bind(component), eventOptions.passive);
 
-		Manager.open(component, component.getAttribute('open') ?? undefined);
+		Manager.open(component, getAttribute(component, 'open', ''));
 	}
 
 	static onGlobalKeydown(event: KeyboardEvent): void {
@@ -84,7 +84,7 @@ class Manager {
 
 		const container = containers.get(this);
 
-		if (container == null) {
+		if (typeof container === 'undefined') {
 			return;
 		}
 
@@ -95,11 +95,7 @@ class Manager {
 		}
 	}
 
-	static open(component: DeliciousDetailsList, value: string | undefined): void {
-		if (value == null) {
-			return;
-		}
-
+	static open(component: DeliciousDetailsList, value: string): void {
 		if (value.length > 0 && !/^[\s\d,]+$/.test(value)) {
 			throw new Error('The \'selected\'-attribute of a \'delicious-details-list\'-element must be a comma-separated string of numbers, e.g. \'\', \'0\' or \'0,1,2\'');
 		}
@@ -150,10 +146,12 @@ class Manager {
 		open.set(component, sorted);
 
 		delay(() => {
-			if (sorted.length === 0) {
-				component.removeAttribute('open');
-			} else {
-				component.setAttribute('open', sorted.join(','));
+			const emit = component.open !== sorted;
+
+			setAttribute(component, 'open', sorted.length === 0 ? null : sorted);
+
+			if (emit) {
+				component.dispatchEvent(new Event('toggle'));
 			}
 
 			delay(() => observer.get(component)?.observe(component, Observer.options));
@@ -263,11 +261,7 @@ class DeliciousDetailsList extends HTMLElement {
 	}
 
 	set multiple(multiple: boolean) {
-		if (multiple) {
-			this.setAttribute('multiple', '');
-		} else {
-			this.removeAttribute('multiple');
-		}
+		setAttribute(this, 'multiple', multiple ? '' : null);
 	}
 
 	get open(): number[] {
@@ -285,7 +279,7 @@ class DeliciousDetailsList extends HTMLElement {
 
 		switch (name) {
 			case 'multiple':
-				Manager.open(this, this.getAttribute('open') ?? undefined);
+				Manager.open(this, getAttribute(this, 'open', ''));
 				break;
 			case 'open':
 				Manager.open(this, newValue);

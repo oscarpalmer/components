@@ -47,7 +47,8 @@ export function getFocusableElements(context: Element): HTMLElement[] {
 	for (const element of elements) {
 		const style = window?.getComputedStyle?.(element);
 
-		if (style == null || (style.display !== 'none' && style.visibility !== 'hidden')) {
+		if (typeof style === 'undefined'
+				|| (style.display !== 'none' && style.visibility !== 'hidden')) {
 			focusable.push(element as HTMLElement);
 		}
 	}
@@ -57,6 +58,14 @@ export function getFocusableElements(context: Element): HTMLElement[] {
 
 export function getUuid(): string {
 	return URL.createObjectURL(new Blob()).replace(/^.*\/([\w-]+)$/, '$1').replace(/-/g, '_');
+}
+
+export function setAttribute(element: HTMLElement, attribute: string, value: unknown): void {
+	if (typeof value === 'undefined') {
+		element.removeAttribute(attribute);
+	} else {
+		element.setAttribute(attribute, String(value));
+	}
 }
 
 export function setProperty(element: HTMLElement, property: string, value: unknown): void {

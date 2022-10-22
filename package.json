@@ -6,11 +6,11 @@
 	"description": "A collection of web components.",
 	"devDependencies": {
 		"@tsconfig/recommended": "^1.0.0",
-		"@types/node": "^18.8.0",
+		"@types/node": "^18.11.0",
 		"@typescript-eslint/eslint-plugin": "^5.40.0",
 		"@typescript-eslint/parser": "^5.40.0",
 		"esbuild": "^0.15.0",
-		"eslint": "^8.25.0",
+		"eslint": "^8.26.0",
 		"eslint-config-xo": "^0.42.0",
 		"eslint-config-xo-typescript": "^0.53.0",
 		"typescript": "^4.8.0"
@@ -51,5 +51,5 @@
 	},
 	"type": "module",
 	"unpkg": "dist/iife/index.js",
-	"version": "0.6.0"
+	"version": "0.7.0"
 }

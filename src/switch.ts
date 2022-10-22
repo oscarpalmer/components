@@ -7,9 +7,9 @@ class Manager {
 		label.parentElement?.removeChild(label);
 		input.parentElement?.removeChild(input);
 
-		setProperty(component, 'aria-checked', input.checked);
-		setProperty(component, 'aria-disabled', input.disabled);
-		setProperty(component, 'aria-readonly', input.readOnly);
+		setProperty(component, 'aria-checked', input.checked || component.checked);
+		setProperty(component, 'aria-disabled', input.disabled || component.disabled);
+		setProperty(component, 'aria-readonly', input.readOnly || component.readOnly);
 
 		component.setAttribute('aria-labelledby', `${input.id}_label`);
 
@@ -49,9 +49,13 @@ class Manager {
 	}
 
 	private static toggle(component: SwankySwitch): void {
-		if (!component.disabled && !component.readOnly) {
-			component.checked = !component.checked;
+		if (component.disabled || component.readOnly) {
+			return;
 		}
+
+		component.checked = !component.checked;
+
+		component.dispatchEvent(new Event('change'));
 	}
 }
 
@@ -96,11 +100,11 @@ class SwankySwitch extends HTMLElement {
 		const input = this.querySelector('[swanky-switch-input]');
 		const label = this.querySelector('[swanky-switch-label]');
 
-		if (input == null || !(input instanceof HTMLInputElement) || input.type !== 'checkbox') {
+		if (typeof input === 'undefined' || !(input instanceof HTMLInputElement) || input.type !== 'checkbox') {
 			throw new Error('<swanky-switch> must have an <input>-element with type \'checkbox\' and the attribute \'swanky-switch-input\'');
 		}
 
-		if (label == null || !(label instanceof HTMLElement)) {
+		if (typeof label === 'undefined' || !(label instanceof HTMLElement)) {
 			throw new Error('<swanky-switch> must have a <label>-element with the attribute \'swanky-switch-label\'');
 		}
 

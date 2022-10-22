@@ -1,4 +1,4 @@
-import {delay, eventOptions, focusableSelector} from './helpers';
+import {delay, eventOptions, focusableSelector, setAttribute, setProperty} from './helpers';
 import {Floated, Position, Rects} from './helpers/floated';
 
 type Callbacks = {
@@ -108,7 +108,7 @@ class Tooltip {
 	static destroy(element: HTMLElement): void {
 		const tooltip = store.get(element);
 
-		if (tooltip == null) {
+		if (typeof tooltip === 'undefined') {
 			return;
 		}
 
@@ -140,7 +140,7 @@ class Tooltip {
 
 		const content = this.getContent();
 
-		if (content == null) {
+		if (typeof content === 'undefined') {
 			return;
 		}
 
@@ -153,15 +153,15 @@ class Tooltip {
 			{all: types, default: 'above'},
 			{
 				getPosition: Manager.getPosition,
-				validate: () => floater.parentElement == null,
+				validate: () => floater.parentElement != null,
 			});
 	}
 
 	private createFloater(): HTMLElement {
 		const floater = document.createElement('div');
 
-		floater.setAttribute('aria-hidden', 'true');
-		floater.setAttribute(`${attribute}-content`, '');
+		setAttribute(floater, `${attribute}-content`, '');
+		setProperty(floater, 'aria-hidden', true);
 
 		floater.hidden = true;
 
