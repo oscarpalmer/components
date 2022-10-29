@@ -51,7 +51,7 @@ class Manager {
 
 		const maxValue = anchorMax + floaterSize;
 
-		if (maxValue <= (left ? window.innerWidth : window.innerHeight)) {
+		if (maxValue <= (left ? globalThis.innerWidth : globalThis.innerHeight)) {
 			return anchorMax;
 		}
 

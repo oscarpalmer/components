@@ -1,8 +1,21 @@
-import {eventOptions, getAttribute, setProperty} from './helpers';
+import {eventOptions, getAttribute, render, setProperty} from './helpers';
 
-const template = `<div id="__id__" class="swanky-switch__label">__label__</div><div class="swanky-switch__indicator" aria-hidden="true"><span class="swanky-switch__indicator__value"></span></div><div class="swanky-switch__status" aria-hidden="true"><span class="swanky-switch__status__off">__off__</span><span class="swanky-switch__status__on">__on__</span></div>`;
+const templates = {
+	full: '{{label}}{{indicator}}{{status}}',
+	indicator: '<div class="swanky-switch__indicator" aria-hidden="true"><span class="swanky-switch__indicator__value"></span></div>',
+	label: '<div id="{{id}}" class="swanky-switch__label">{{html}}</div>',
+	status: {
+		item: '<span class="swanky-switch__status__{{type}}">{{html}}</span>',
+		wrapper: '<div class="swanky-switch__status" aria-hidden="true">{{off}}{{on}}</div>',
+	},
+};
 
 class Manager {
+	static addListeners(component: SwankySwitch): void {
+		component.addEventListener('click', Manager.onToggle.bind(component), eventOptions.passive);
+		component.addEventListener('keydown', Manager.onKey.bind(component), eventOptions.passive);
+	}
+
 	static initialize(component: SwankySwitch, label: HTMLElement, input: HTMLInputElement): void {
 		label.parentElement?.removeChild(label);
 		input.parentElement?.removeChild(input);
@@ -24,8 +37,7 @@ class Manager {
 
 		component.insertAdjacentHTML('afterbegin', Manager.render(input.id, label, off, on));
 
-		component.addEventListener('click', Manager.onToggle.bind(component), eventOptions.passive);
-		component.addEventListener('keydown', Manager.onKey.bind(component), eventOptions.passive);
+		Manager.addListeners(component);
 	}
 
 	static onKey(event: KeyboardEvent): void {
@@ -41,11 +53,23 @@ class Manager {
 	}
 
 	static render(id: string, label: HTMLElement, off: string, on: string): string {
-		return template
-			.replace('__id__', `${id}_label`)
-			.replace('__label__', label.innerHTML)
-			.replace('__off__', off)
-			.replace('__on__', on);
+		return render(templates.full, {
+			indicator: templates.indicator,
+			label: render(templates.label, {
+				html: label.innerHTML,
+				id: `${id}_label`,
+			}),
+			status: render(templates.status.wrapper, {
+				off: render(templates.status.item, {
+					html: off,
+					type: 'off',
+				}),
+				on: render(templates.status.item, {
+					html: on,
+					type: 'on',
+				}),
+			}),
+		});
 	}
 
 	private static toggle(component: SwankySwitch): void {
@@ -58,8 +82,6 @@ class Manager {
 		component.dispatchEvent(new Event('change'));
 	}
 }
-
-const connected = new WeakMap<SwankySwitch, void>();
 
 class SwankySwitch extends HTMLElement {
 	get checked(): boolean {
@@ -86,16 +108,18 @@ class SwankySwitch extends HTMLElement {
 		setProperty(this, 'aria-readonly', readonly);
 	}
 
-	get value(): string | undefined {
+	get value(): string {
 		return this.checked ? 'on' : 'off';
 	}
 
-	connectedCallback(): void {
-		if (connected.has(this)) {
+	constructor() {
+		super();
+
+		if (this.querySelector('.swanky-switch__label') != null) {
+			Manager.addListeners(this);
+
 			return;
 		}
-
-		connected.set(this);
 
 		const input = this.querySelector('[swanky-switch-input]');
 		const label = this.querySelector('[swanky-switch-label]');

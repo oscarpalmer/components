@@ -1,23 +1,14 @@
-import {delay, eventOptions, getFocusableElements, getUuid, setProperty} from './helpers';
+import {delay, eventOptions, getFocusableElements, isNullOrWhitespace, setProperty} from './helpers';
 import {Floated, Position, Rects} from './helpers/floated';
-
-type Callbacks = {
-	click?: (event: Event) => void;
-	keydown?: (event: Event) => void;
-};
-
-type Elements = {
-	anchor?: HTMLElement;
-	floater?: HTMLElement;
-};
 
 type Values = {
 	anchors: WeakMap<PolitePopover, HTMLElement>;
 	click: WeakMap<PolitePopover, (event: Event) => void>;
-	connected: WeakMap<PolitePopover, void>;
 	floaters: WeakMap<PolitePopover, HTMLElement>;
 	keydown: WeakMap<PolitePopover, (event: Event) => void>;
 };
+
+let index = 0;
 
 const types = ['any'].concat(...['above', 'below'].map(position => [position, `${position}-left`, `${position}-right`]));
 
@@ -61,7 +52,7 @@ class Manager {
 
 		const maxValue = defaultValue + floaterSize;
 
-		if (maxValue <= (left ? window.innerWidth : window.innerHeight)) {
+		if (maxValue <= (left ? globalThis.innerWidth : globalThis.innerHeight)) {
 			return defaultValue;
 		}
 
@@ -73,8 +64,10 @@ class Manager {
 	static initialize(component: PolitePopover, anchor: HTMLElement, floater: HTMLElement): void {
 		floater.hidden = true;
 
-		if (!floater.id) {
-			floater.setAttribute('id', getUuid());
+		if (isNullOrWhitespace(floater.id)) {
+			floater.setAttribute('id', isNullOrWhitespace(component.id)
+				? `polite_popover_${index++}`
+				: `${component.id}_content`);
 		}
 
 		anchor.setAttribute('aria-controls', floater.id);
@@ -82,8 +75,6 @@ class Manager {
 		floater.setAttribute('tabindex', '-1');
 
 		anchor.addEventListener('click', Manager.toggle.bind(component), eventOptions.passive);
-
-		Store.add(component, anchor, floater);
 	}
 
 	static onClick(event: Event): void {
@@ -91,25 +82,17 @@ class Manager {
 			return;
 		}
 
-		const {anchor, floater} = Store.getElements(this);
+		const anchor = Store.values.anchors.get(this);
+		const floater = Store.values.floaters.get(this);
 
-		if (event.target !== anchor
-				&& event.target !== floater
+		if (event.target !== anchor && event.target !== floater
 				&& !(floater?.contains(event.target as Element) ?? false)) {
 			Manager.toggle.call(this, false);
 		}
 	}
 
 	static onKeydown(event: Event): void {
-		if (!(this instanceof PolitePopover)
-				|| !this.open
-				|| !(event instanceof KeyboardEvent)) {
-			return;
-		}
-
-		const {anchor, floater} = Store.getElements(this);
-
-		if (typeof anchor === 'undefined' || typeof floater === 'undefined') {
+		if (!(this instanceof PolitePopover) || !this.open || !(event instanceof KeyboardEvent)) {
 			return;
 		}
 
@@ -117,7 +100,9 @@ class Manager {
 			Manager.toggle.call(this, false);
 		}
 
-		if (event.key !== 'Tab') {
+		const floater = Store.values.floaters.get(this);
+
+		if (event.key !== 'Tab' || floater == null) {
 			return;
 		}
 
@@ -159,9 +144,10 @@ class Manager {
 			return;
 		}
 
-		const {anchor, floater} = Store.getElements(this);
+		const anchor = Store.values.anchors.get(this);
+		const floater = Store.values.floaters.get(this);
 
-		if (typeof anchor === 'undefined' || typeof floater === 'undefined') {
+		if (anchor == null || floater == null) {
 			return;
 		}
 
@@ -169,7 +155,9 @@ class Manager {
 			? !expand
 			: this.open;
 
-		const {click, keydown} = Store.getCallbacks(this);
+		const click = Store.values.click.get(this);
+		const keydown = Store.values.keydown.get(this);
+
 		const method = expanded ? 'removeEventListener' : 'addEventListener';
 
 		if (click != null) {
@@ -220,52 +208,52 @@ class Manager {
 }
 
 class Store {
-	private static readonly values: Values = {
+	static readonly values: Values = {
 		anchors: new WeakMap<PolitePopover, HTMLElement>(),
 		click: new WeakMap<PolitePopover, (event: Event) => void>(),
-		connected: new WeakMap<PolitePopover, void>(),
 		floaters: new WeakMap<PolitePopover, HTMLElement>(),
 		keydown: new WeakMap<PolitePopover, (event: Event) => void>(),
 	};
 
-	static add(component: PolitePopover, button: HTMLElement, content: HTMLElement): void {
-		Store.values.anchors?.set(component, button);
-		Store.values.floaters?.set(component, content);
+	static add(component: PolitePopover): void {
+		const button = component.querySelector(':scope > [polite-popover-button]');
+		const content = component.querySelector(':scope > [polite-popover-content]');
 
-		Store.setCallbacks(component);
+		if (button == null || content == null) {
+			return;
+		}
+
+		Store.values.anchors?.set(component, button as HTMLElement);
+		Store.values.floaters?.set(component, content as HTMLElement);
+
+		Store.values.click?.set(component, Manager.onClick.bind(component));
+		Store.values.keydown?.set(component, Manager.onKeydown.bind(component));
 	}
 
-	static getCallbacks(component: PolitePopover): Callbacks {
-		return {
-			click: this.values.click.get(component),
-			keydown: this.values.keydown.get(component),
-		};
-	}
+	static remove(component: PolitePopover): void {
+		const floater = Store.values.floaters.get(component);
 
-	static getElements(component: PolitePopover): Elements {
-		return {
-			anchor: this.values.anchors.get(component),
-			floater: this.values.floaters.get(component),
-		};
-	}
+		if (floater != null) {
+			floater.hidden = true;
 
-	static isConnected(component: PolitePopover): boolean {
-		return Store.values.connected.has(component);
-	}
+			component.appendChild(floater);
+		}
 
-	private static setCallbacks(component: PolitePopover): void {
-		this.values.click?.set(component, Manager.onClick.bind(component));
-		this.values.keydown?.set(component, Manager.onKeydown.bind(component));
+		Store.values.anchors.delete(component);
+		Store.values.floaters.delete(component);
+
+		Store.values.click.delete(component);
+		Store.values.keydown.delete(component);
 	}
 }
 
 class PolitePopover extends HTMLElement {
 	get button(): HTMLElement | undefined {
-		return Store.getElements(this).anchor;
+		return Store.values.anchors.get(this);
 	}
 
 	get content(): HTMLElement | undefined {
-		return Store.getElements(this).floater;
+		return Store.values.floaters.get(this);
 	}
 
 	get open(): boolean {
@@ -276,10 +264,8 @@ class PolitePopover extends HTMLElement {
 		Manager.toggle.call(this, open);
 	}
 
-	connectedCallback() {
-		if (Store.isConnected(this)) {
-			return;
-		}
+	constructor() {
+		super();
 
 		const anchor = this.querySelector(':scope > [polite-popover-button]');
 		const floater = this.querySelector(':scope > [polite-popover-content]');
@@ -298,7 +284,15 @@ class PolitePopover extends HTMLElement {
 		Manager.initialize(this, anchor, floater);
 	}
 
-	toggle() {
+	connectedCallback(): void {
+		Store.add(this);
+	}
+
+	disconnectedCallback(): void {
+		Store.remove(this);
+	}
+
+	toggle(): void {
 		Manager.toggle.call(this);
 	}
 }

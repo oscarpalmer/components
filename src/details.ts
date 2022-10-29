@@ -1,14 +1,22 @@
 import {delay, eventOptions, findParent, getAttribute, setAttribute} from './helpers';
 
 class Manager {
+	static destroyList(component: DeliciousDetailsList): void {
+		const {children, observer, open} = Store.list;
+
+		children.delete(component);
+		open.delete(component);
+
+		observer.get(component)?.disconnect();
+		observer.delete(component);
+	}
+
 	static getChildren(component: DeliciousDetailsList): HTMLDetailsElement[] {
 		return Array.from(component.querySelectorAll(':scope > delicious-details > details, :scope > details'));
 	}
 
 	static initializeList(component: DeliciousDetailsList): void {
-		const {children, connected, observer, open} = Store.list;
-
-		connected.set(component);
+		const {children, observer, open} = Store.list;
 
 		children.set(component, Manager.getChildren(component));
 		open.set(component, []);
@@ -18,8 +26,6 @@ class Manager {
 		}));
 
 		observer.get(component)?.observe(component, Observer.options);
-
-		component.addEventListener('keydown', Manager.onLocalKeydown.bind(component), eventOptions.passive);
 
 		Manager.open(component, getAttribute(component, 'open', ''));
 	}
@@ -84,7 +90,7 @@ class Manager {
 
 		const container = containers.get(this);
 
-		if (typeof container === 'undefined') {
+		if (container == null) {
 			return;
 		}
 
@@ -96,6 +102,12 @@ class Manager {
 	}
 
 	static open(component: DeliciousDetailsList, value: string): void {
+		if (value == null) {
+			Manager.update(component, []);
+
+			return;
+		}
+
 		if (value.length > 0 && !/^[\s\d,]+$/.test(value)) {
 			throw new Error('The \'selected\'-attribute of a \'delicious-details-list\'-element must be a comma-separated string of numbers, e.g. \'\', \'0\' or \'0,1,2\'');
 		}
@@ -118,8 +130,8 @@ class Manager {
 		const {children, observer, open} = Store.list;
 
 		let sorted = selection
-			.filter((v, i, a) => a.indexOf(v) === i)
-			.sort((f, s) => f - s);
+			.filter((value, index, array) => array.indexOf(value) === index)
+			.sort((first, second) => first - second);
 
 		if (!component.multiple) {
 			sorted = sorted.length > 0 && sorted[0] != null
@@ -129,7 +141,10 @@ class Manager {
 				: [];
 		}
 
-		if (sorted.every((v, i) => component.open[i] === v)) {
+		const current = component.open;
+
+		if (sorted.length === current.length
+				&& sorted.every((value, index) => current[index] === value)) {
 			return;
 		}
 
@@ -143,16 +158,12 @@ class Manager {
 			}
 		}
 
-		open.set(component, sorted);
-
 		delay(() => {
-			const emit = component.open !== sorted;
+			open.set(component, sorted);
 
 			setAttribute(component, 'open', sorted.length === 0 ? null : sorted);
 
-			if (emit) {
-				component.dispatchEvent(new Event('toggle'));
-			}
+			component.dispatchEvent(new Event('toggle'));
 
 			delay(() => observer.get(component)?.observe(component, Observer.options));
 		});
@@ -212,13 +223,11 @@ class Observer {
 class Store {
 	static readonly details = {
 		buttons: new WeakMap<DeliciousDetails, HTMLButtonElement>(),
-		connected: new WeakMap<DeliciousDetails, void>(),
 		containers: new WeakMap<DeliciousDetails, HTMLDetailsElement>(),
 	};
 
 	static readonly list = {
 		children: new WeakMap<DeliciousDetailsList, HTMLDetailsElement[]>(),
-		connected: new WeakMap<DeliciousDetailsList, void>(),
 		observer: new WeakMap<DeliciousDetailsList, MutationObserver>(),
 		open: new WeakMap<DeliciousDetailsList, number[]>(),
 	};
@@ -234,16 +243,16 @@ class DeliciousDetails extends HTMLElement {
 	}
 
 	connectedCallback(): void {
-		if (Store.details.connected.has(this)) {
-			return;
-		}
-
 		const details = this.querySelector(':scope > details')!;
 		const summary = details?.querySelector(':scope > summary');
 
-		Store.details.connected.set(this);
 		Store.details.buttons.set(this, summary as HTMLButtonElement);
 		Store.details.containers.set(this, details as HTMLDetailsElement);
+	}
+
+	disconnectedCallback(): void {
+		Store.details.buttons.delete(this);
+		Store.details.containers.delete(this);
 	}
 
 	toggle(): void {
@@ -272,6 +281,12 @@ class DeliciousDetailsList extends HTMLElement {
 		Manager.update(this, indices);
 	}
 
+	constructor() {
+		super();
+
+		this.addEventListener('keydown', Manager.onLocalKeydown.bind(this), eventOptions.passive);
+	}
+
 	attributeChangedCallback(name: string, oldValue: string, newValue: string): void {
 		if (oldValue === newValue) {
 			return;
@@ -290,9 +305,11 @@ class DeliciousDetailsList extends HTMLElement {
 	}
 
 	connectedCallback(): void {
-		if (!Store.list.connected.has(this)) {
-			Manager.initializeList(this);
-		}
+		Manager.initializeList(this);
+	}
+
+	disconnectedCallback(): void {
+		Manager.destroyList(this);
 	}
 }
 

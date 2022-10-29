@@ -8,7 +8,7 @@ export const focusableSelector = ['[href]', '[tabindex]', 'button', 'input', 'se
 	.join(',');
 
 export function delay(callback: (time: DOMHighResTimeStamp) => void): number {
-	return requestAnimationFrame?.(callback) ?? setTimeout?.(() => {
+	return globalThis.requestAnimationFrame?.(callback) ?? globalThis.setTimeout?.(() => {
 		callback(Date.now());
 	}, 16);
 }
@@ -45,10 +45,9 @@ export function getFocusableElements(context: Element): HTMLElement[] {
 	const elements = Array.from(context.querySelectorAll(focusableSelector));
 
 	for (const element of elements) {
-		const style = window?.getComputedStyle?.(element);
+		const style = globalThis.getComputedStyle?.(element);
 
-		if (typeof style === 'undefined'
-				|| (style.display !== 'none' && style.visibility !== 'hidden')) {
+		if (style == null || (style.display !== 'none' && style.visibility !== 'hidden')) {
 			focusable.push(element as HTMLElement);
 		}
 	}
@@ -56,12 +55,26 @@ export function getFocusableElements(context: Element): HTMLElement[] {
 	return focusable;
 }
 
-export function getUuid(): string {
-	return URL.createObjectURL(new Blob()).replace(/^.*\/([\w-]+)$/, '$1').replace(/-/g, '_');
+export function isNullOrWhitespace(value: string): boolean {
+	if (value == null) {
+		return true;
+	}
+
+	return value.trim().length === 0;
+}
+
+export function render(template: string, variables: Record<string, unknown>): string {
+	return template.replace(/\{\{(\w+)\}\}/g, (match: string, ...parts: any[]): string => {
+		if (parts == null || parts.length === 0) {
+			return match;
+		}
+
+		return String(variables?.[parts[0]] ?? match);
+	});
 }
 
 export function setAttribute(element: HTMLElement, attribute: string, value: unknown): void {
-	if (typeof value === 'undefined') {
+	if (value == null) {
 		element.removeAttribute(attribute);
 	} else {
 		element.setAttribute(attribute, String(value));
