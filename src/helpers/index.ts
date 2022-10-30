@@ -13,8 +13,10 @@ export function delay(callback: (time: DOMHighResTimeStamp) => void): number {
 	}, 16);
 }
 
-export function findParent(element: HTMLElement, matches: (element: HTMLElement) => boolean): HTMLElement | undefined {
-	if (matches(element)) {
+export function findParent(element: HTMLElement, match: string | ((element: HTMLElement) => boolean)): HTMLElement | undefined {
+	const matchIsSelector = typeof match === 'string';
+
+	if (matchIsSelector ? element.matches(match) : match(element)) {
 		return element;
 	}
 
@@ -25,7 +27,7 @@ export function findParent(element: HTMLElement, matches: (element: HTMLElement)
 			return;
 		}
 
-		if (matches(parent)) {
+		if (matchIsSelector ? parent.matches(match) : match(parent)) {
 			break;
 		}
 

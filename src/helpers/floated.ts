@@ -42,7 +42,7 @@ export class Floated {
 		const {anchor, floater, parent} = elements;
 		const {after, getPosition, validate} = callbacks;
 
-		function step() {
+		function step(): void {
 			if (!validate()) {
 				return;
 			}

@@ -1,5 +1,6 @@
 import {delay, eventOptions, getFocusableElements, isNullOrWhitespace, setAttribute, setProperty} from './helpers';
 import {Floated, Position, Rects} from './helpers/floated';
+import {attribute} from './focus-trap';
 
 type Values = {
 	anchors: WeakMap<PolitePopover, HTMLElement>;
@@ -65,7 +66,7 @@ class Manager {
 		floater.hidden = true;
 
 		if (isNullOrWhitespace(floater.id)) {
-			floater.setAttribute('id', isNullOrWhitespace(component.id)
+			setAttribute(floater, 'id', isNullOrWhitespace(component.id)
 				? `polite_popover_${index++}`
 				: `${component.id}_content`);
 		}
@@ -74,7 +75,7 @@ class Manager {
 		setProperty(anchor, 'aria-expanded', false);
 
 		setAttribute(floater, 'role', 'dialog');
-		setAttribute(floater, 'tabindex', '-1');
+		setAttribute(floater, attribute, '');
 		setProperty(floater, 'aria-modal', true);
 
 		anchor.addEventListener('click', Manager.toggle.bind(component), eventOptions.passive);
@@ -95,51 +96,9 @@ class Manager {
 	}
 
 	static onKeydown(event: Event): void {
-		if (!(this instanceof PolitePopover) || !this.open || !(event instanceof KeyboardEvent)) {
-			return;
-		}
-
-		if (event.key === 'Escape') {
+		if ((this instanceof PolitePopover) && this.open && (event instanceof KeyboardEvent) && event.key === 'Escape') {
 			Manager.toggle.call(this, false);
 		}
-
-		const floater = Store.values.floaters.get(this);
-
-		if (event.key !== 'Tab' || floater == null) {
-			return;
-		}
-
-		event.preventDefault();
-
-		const elements = getFocusableElements(floater);
-
-		if (document.activeElement === floater) {
-			delay(() => {
-				(elements[event.shiftKey ? elements.length - 1 : 0] ?? floater).focus();
-			});
-
-			return;
-		}
-
-		const index = elements.indexOf(document.activeElement as HTMLElement);
-
-		let element = floater;
-
-		if (index > -1) {
-			let position = index + (event.shiftKey ? -1 : 1);
-
-			if (position < 0) {
-				position = elements.length - 1;
-			} else if (position >= elements.length) {
-				position = 0;
-			}
-
-			element = elements[position] ?? floater;
-		}
-
-		delay(() => {
-			element.focus();
-		});
 	}
 
 	static toggle(expand?: boolean | Event): void {
@@ -150,18 +109,16 @@ class Manager {
 		const anchor = Store.values.anchors.get(this);
 		const floater = Store.values.floaters.get(this);
 
-		if (anchor == null || floater == null) {
-			return;
+		if (anchor != null && floater != null) {
+			Manager.handleToggle(this, anchor, floater, expand);
 		}
+	}
 
-		const expanded = typeof expand === 'boolean'
-			? !expand
-			: this.open;
+	private static handleCallbacks(component: PolitePopover, add: boolean): void {
+		const click = Store.values.click.get(component);
+		const keydown = Store.values.keydown.get(component);
 
-		const click = Store.values.click.get(this);
-		const keydown = Store.values.keydown.get(this);
-
-		const method = expanded ? 'removeEventListener' : 'addEventListener';
+		const method = add ? 'addEventListener' : 'removeEventListener';
 
 		if (click != null) {
 			document[method]('click', click, eventOptions.passive);
@@ -170,12 +127,20 @@ class Manager {
 		if (keydown != null) {
 			document[method]('keydown', keydown, eventOptions.active);
 		}
+	}
+
+	private static handleToggle(component: PolitePopover, anchor: HTMLElement, floater: HTMLElement, expand?: boolean | Event): void {
+		const expanded = typeof expand === 'boolean'
+			? !expand
+			: component.open;
+
+		Manager.handleCallbacks(component, !expanded);
 
 		floater.hidden = expanded;
 
 		setProperty(anchor, 'aria-expanded', !expanded);
 
-		this.dispatchEvent(new Event('toggle'));
+		component.dispatchEvent(new Event('toggle'));
 
 		if (expanded) {
 			anchor.focus();
@@ -186,7 +151,7 @@ class Manager {
 		let called = false;
 
 		Floated.update(
-			{anchor, floater, parent: this},
+			{anchor, floater, parent: component},
 			{all: types, default: 'below'},
 			{
 				after() {
@@ -201,7 +166,7 @@ class Manager {
 					});
 				},
 				getPosition: Manager.getPosition,
-				validate: () => (this as unknown as PolitePopover).open,
+				validate: () => component.open,
 			});
 	}
 }

@@ -61,13 +61,13 @@ class Manager {
 			: minValue;
 	}
 
-	static observer(entries: MutationRecord[]): void {
-		for (const entry of entries) {
-			if (entry.type !== 'attributes') {
+	static observer(records: MutationRecord[]): void {
+		for (const record of records) {
+			if (record.type !== 'attributes') {
 				continue;
 			}
 
-			const element = entry.target as HTMLElement;
+			const element = record.target as HTMLElement;
 
 			if (element.getAttribute(attribute) == null) {
 				Tooltip.destroy(element);
@@ -136,7 +136,7 @@ class Tooltip {
 	}
 
 	onClick(event: Event): void {
-		const parent = findParent(event.target as HTMLElement, element => element.hasAttribute(contentAttribute));
+		const parent = findParent(event.target as HTMLElement, `[${contentAttribute}]`);
 
 		if (parent !== this.floater) {
 			this.handleFloater(false);
