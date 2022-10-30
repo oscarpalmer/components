@@ -313,7 +313,7 @@ class DeliciousDetailsList extends HTMLElement {
 	}
 }
 
-addEventListener?.('keydown', Manager.onGlobalKeydown, eventOptions.passive);
+globalThis.addEventListener('keydown', Manager.onGlobalKeydown, eventOptions.passive);
 
-customElements?.define('delicious-details', DeliciousDetails);
-customElements?.define('delicious-details-list', DeliciousDetailsList);
+globalThis.customElements.define('delicious-details', DeliciousDetails);
+globalThis.customElements.define('delicious-details-list', DeliciousDetailsList);

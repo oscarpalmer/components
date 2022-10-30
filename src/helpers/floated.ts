@@ -76,11 +76,19 @@ export class Floated {
 	private static setPosition(floater: HTMLElement, position: Position): void {
 		const {left, top} = position.coordinate;
 
-		floater.setAttribute('position', position.type);
+		if (floater.getAttribute('position') !== position.type) {
+			floater.setAttribute('position', position.type);
+		}
+
+		const matrix = `matrix(1, 0, 0, 1, ${left}, ${top})`;
+
+		if (floater.style.transform === matrix) {
+			return;
+		}
 
 		floater.style.inset = '0 auto auto 0';
 		floater.style.position = 'fixed';
-		floater.style.transform = `translate3d(${left}px, ${top}px, 0)`;
+		floater.style.transform = matrix;
 
 		if (floater.hidden) {
 			delay(() => {

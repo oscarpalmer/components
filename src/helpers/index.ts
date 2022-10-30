@@ -14,6 +14,10 @@ export function delay(callback: (time: DOMHighResTimeStamp) => void): number {
 }
 
 export function findParent(element: HTMLElement, matches: (element: HTMLElement) => boolean): HTMLElement | undefined {
+	if (matches(element)) {
+		return element;
+	}
+
 	let parent = element?.parentElement;
 
 	while (parent != null) {

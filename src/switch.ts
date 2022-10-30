@@ -136,4 +136,4 @@ class SwankySwitch extends HTMLElement {
 	}
 }
 
-customElements?.define('swanky-switch', SwankySwitch);
+globalThis.customElements.define('swanky-switch', SwankySwitch);

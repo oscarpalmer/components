@@ -1,4 +1,4 @@
-import {delay, eventOptions, focusableSelector, setAttribute, setProperty} from './helpers';
+import {delay, eventOptions, findParent, focusableSelector, setAttribute, setProperty} from './helpers';
 import {Floated, Position, Rects} from './helpers/floated';
 
 type Callbacks = {
@@ -9,6 +9,7 @@ type Callbacks = {
 };
 
 const attribute = 'toasty-tooltip';
+const contentAttribute = `${attribute}-content`;
 const store = new WeakMap<HTMLElement, Tooltip>();
 const types = ['above', 'below', 'horizontal', 'left', 'right', 'vertical'];
 
@@ -85,6 +86,7 @@ class Tooltip {
 	readonly focusable: boolean;
 
 	constructor(private readonly anchor: HTMLElement) {
+		this.floater = Tooltip.getFloater(anchor);
 		this.focusable = anchor.matches(focusableSelector);
 
 		this.callbacks = {
@@ -93,8 +95,6 @@ class Tooltip {
 			key: this.onKey.bind(this),
 			show: this.onShow.bind(this),
 		};
-
-		this.floater = this.createFloater();
 
 		this.handleCallbacks(true);
 	}
@@ -117,8 +117,30 @@ class Tooltip {
 		store.delete(element);
 	}
 
-	onClick(): void {
-		this.handleFloater(false);
+	private static getFloater(anchor: HTMLElement): HTMLElement {
+		const id = anchor.getAttribute('aria-describedby') ?? anchor.getAttribute('aria-labelledby');
+		const floater = id == null ? null : document.getElementById(id);
+
+		if (floater == null) {
+			throw new Error(`A '${attribute}'-attributed element must have a valid id reference in either the 'aria-describedby' or 'aria-labelledby' attribute.`);
+		}
+
+		floater.hidden = true;
+
+		setAttribute(floater, contentAttribute, '');
+		setAttribute(floater, 'role', 'tooltip');
+
+		setProperty(floater, 'aria-hidden', true);
+
+		return floater;
+	}
+
+	onClick(event: Event): void {
+		const parent = findParent(event.target as HTMLElement, element => element.hasAttribute(contentAttribute));
+
+		if (parent !== this.floater) {
+			this.handleFloater(false);
+		}
 	}
 
 	onHide() {
@@ -134,18 +156,6 @@ class Tooltip {
 	onShow() {
 		const {anchor, floater} = this;
 
-		if (floater.parentElement != null) {
-			return;
-		}
-
-		const content = this.getContent();
-
-		if (typeof content === 'undefined') {
-			return;
-		}
-
-		floater.innerHTML = content.innerHTML;
-
 		this.handleFloater(true);
 
 		Floated.update(
@@ -153,39 +163,20 @@ class Tooltip {
 			{all: types, default: 'above'},
 			{
 				getPosition: Manager.getPosition,
-				validate: () => floater.parentElement != null,
+				validate: () => !floater.hidden,
 			});
 	}
 
-	private createFloater(): HTMLElement {
-		const floater = document.createElement('div');
-
-		setAttribute(floater, `${attribute}-content`, '');
-		setProperty(floater, 'aria-hidden', true);
-
-		floater.hidden = true;
-
-		return floater;
-	}
-
-	private getContent(): HTMLElement | undefined {
-		const id = this.anchor.getAttribute('aria-describedby') ?? this.anchor.getAttribute('aria-labelledby');
-
-		if (id == null) {
-			return undefined;
-		}
-
-		return document.getElementById(id) ?? undefined;
-	}
-
 	private handleCallbacks(add: boolean): void {
-		const {anchor, callbacks, focusable} = this;
+		const {anchor, callbacks, floater, focusable} = this;
 
 		const method = add ? 'addEventListener' : 'removeEventListener';
 
-		anchor[method]('mouseenter', callbacks.show, eventOptions.passive);
-		anchor[method]('mouseleave', callbacks.hide, eventOptions.passive);
-		anchor[method]('touchstart', callbacks.show, eventOptions.passive);
+		for (const element of [anchor, floater]) {
+			element[method]('mouseenter', callbacks.show, eventOptions.passive);
+			element[method]('mouseleave', callbacks.hide, eventOptions.passive);
+			element[method]('touchstart', callbacks.show, eventOptions.passive);
+		}
 
 		if (focusable) {
 			anchor[method]('blur', callbacks.hide, eventOptions.passive);
@@ -201,11 +192,7 @@ class Tooltip {
 		document[method]('keydown', callbacks.key, eventOptions.passive);
 		document[method]('pointerdown', callbacks.click, eventOptions.passive);
 
-		if (show) {
-			document.body.appendChild(floater);
-		} else {
-			this.floater.parentElement?.removeChild(this.floater);
-		}
+		floater.hidden = !show;
 	}
 }
 

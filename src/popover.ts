@@ -1,4 +1,4 @@
-import {delay, eventOptions, getFocusableElements, isNullOrWhitespace, setProperty} from './helpers';
+import {delay, eventOptions, getFocusableElements, isNullOrWhitespace, setAttribute, setProperty} from './helpers';
 import {Floated, Position, Rects} from './helpers/floated';
 
 type Values = {
@@ -70,9 +70,12 @@ class Manager {
 				: `${component.id}_content`);
 		}
 
-		anchor.setAttribute('aria-controls', floater.id);
-		anchor.setAttribute('aria-expanded', 'false');
-		floater.setAttribute('tabindex', '-1');
+		setAttribute(anchor, 'aria-controls', floater.id);
+		setProperty(anchor, 'aria-expanded', false);
+
+		setAttribute(floater, 'role', 'dialog');
+		setAttribute(floater, 'tabindex', '-1');
+		setProperty(floater, 'aria-modal', true);
 
 		anchor.addEventListener('click', Manager.toggle.bind(component), eventOptions.passive);
 	}
@@ -168,11 +171,7 @@ class Manager {
 			document[method]('keydown', keydown, eventOptions.active);
 		}
 
-		if (expanded) {
-			floater.parentElement?.removeChild(floater);
-		} else {
-			document.body.appendChild(floater);
-		}
+		floater.hidden = expanded;
 
 		setProperty(anchor, 'aria-expanded', !expanded);
 
@@ -297,4 +296,4 @@ class PolitePopover extends HTMLElement {
 	}
 }
 
-customElements?.define('polite-popover', PolitePopover);
+globalThis.customElements.define('polite-popover', PolitePopover);
