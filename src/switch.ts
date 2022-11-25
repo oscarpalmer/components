@@ -1,14 +1,14 @@
 import {eventOptions, getAttribute, render, setProperty} from './helpers';
 
-const templates = {
-	full: '{{label}}{{indicator}}{{status}}',
-	indicator: '<div class="swanky-switch__indicator" aria-hidden="true"><span class="swanky-switch__indicator__value"></span></div>',
-	label: '<div id="{{id}}" class="swanky-switch__label">{{html}}</div>',
-	status: {
-		item: '<span class="swanky-switch__status__{{type}}">{{html}}</span>',
-		wrapper: '<div class="swanky-switch__status" aria-hidden="true">{{off}}{{on}}</div>',
-	},
-};
+const template
+= `<swanky-switch-label id="{{id}}">{{label}}</swanky-switch-label>
+<swanky-switch-status aria-hidden="true">
+	<swanky-switch-status-indicator></swanky-switch-status-indicator>
+</swanky-switch-status>
+<swanky-switch-text aria-hidden="true">
+	<swanky-switch-text-off>{{off}}</swanky-switch-text-off>
+	<swanky-switch-text-on>{{on}}</swanky-switch-text-on>
+</swanky-switch-text>`;
 
 class Manager {
 	static addListeners(component: SwankySwitch): void {
@@ -53,22 +53,11 @@ class Manager {
 	}
 
 	static render(id: string, label: HTMLElement, off: string, on: string): string {
-		return render(templates.full, {
-			indicator: templates.indicator,
-			label: render(templates.label, {
-				html: label.innerHTML,
-				id: `${id}_label`,
-			}),
-			status: render(templates.status.wrapper, {
-				off: render(templates.status.item, {
-					html: off,
-					type: 'off',
-				}),
-				on: render(templates.status.item, {
-					html: on,
-					type: 'on',
-				}),
-			}),
+		return render(template, {
+			off,
+			on,
+			id: `${id}_label`,
+			label: label.innerHTML,
 		});
 	}
 
@@ -114,12 +103,6 @@ class SwankySwitch extends HTMLElement {
 
 	constructor() {
 		super();
-
-		if (this.querySelector('.swanky-switch__label') != null) {
-			Manager.addListeners(this);
-
-			return;
-		}
 
 		const input = this.querySelector('[swanky-switch-input]');
 		const label = this.querySelector('[swanky-switch-label]');
