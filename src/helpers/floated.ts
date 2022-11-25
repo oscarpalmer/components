@@ -1,15 +1,4 @@
-import {delay, getAttribute} from '.';
-
-type Callbacks = {
-	after?: () => void;
-	getPosition: (type: string, elements: Rects) => Position;
-	validate: () => boolean;
-};
-
-export type Coordinate = {
-	left: number;
-	top: number;
-};
+import {delay} from '.';
 
 type Elements = {
 	anchor: HTMLElement;
@@ -17,83 +6,121 @@ type Elements = {
 	parent?: HTMLElement;
 };
 
-export type Position = {
-	coordinate: Coordinate;
-	type: string;
-};
+type Position = 'above' | 'above-left' | 'above-right' | 'below' | 'below-left' | 'below-right' | 'horizontal' | 'left' | 'right' | 'vertical';
 
-export type Types = {
-	all: string[];
-	default: string;
-};
-
-export type Rects = {
+type Rectangles = {
 	anchor: DOMRect;
 	floater: DOMRect;
-	parent?: DOMRect;
 };
 
-export class Floated {
-	static update(
-		elements: Elements,
-		types: Types,
-		callbacks: Callbacks,
-	): void {
-		const {anchor, floater, parent} = elements;
-		const {after, getPosition, validate} = callbacks;
+const positions: Position[] = ['above', 'above-left', 'above-right', 'below', 'below-left', 'below-right', 'horizontal', 'left', 'right', 'vertical'];
 
-		function step(): void {
-			if (!validate()) {
+export class Floated {
+	static update(elements: Elements, position: Position): void {
+		const {anchor, floater, parent} = elements;
+
+		function update(): any {
+			if (floater.hidden) {
+				anchor.insertAdjacentElement('afterend', floater);
+
 				return;
 			}
 
-			const type = Floated.getType(parent ?? anchor, types);
+			const floatedPosition = Floated.getPosition((parent ?? anchor).getAttribute('position') ?? '', position);
 
-			const position = getPosition(type, {
+			const rectangles: Rectangles = {
 				anchor: anchor.getBoundingClientRect(),
 				floater: floater.getBoundingClientRect(),
-				parent: parent?.getBoundingClientRect(),
-			});
+			};
 
-			Floated.setPosition(floater, position);
+			const top = Floated.getTop(rectangles, floatedPosition);
+			const left = Floated.getLeft(rectangles, floatedPosition);
 
-			after?.();
+			const matrix = `matrix(1, 0, 0, 1, ${left}, ${top})`;
 
-			delay(step);
+			floater.style.position = 'fixed';
+			floater.style.inset = '0 auto auto 0';
+			floater.style.transform = matrix;
+
+			delay(update);
 		}
 
-		delay(step);
+		document.body.appendChild(floater);
+
+		floater.hidden = false;
+
+		delay(update);
 	}
 
-	private static getType(element: HTMLElement, types: Types): string {
-		const position = getAttribute(element, 'position', types.default);
+	private static getLeft(rectangles: Rectangles, position: Position): number {
+		const {left, right} = rectangles.anchor;
+		const {width} = rectangles.floater;
 
-		return types.all.includes(position)
-			? position
-			: types.default;
+		switch (position) {
+			case 'above':
+			case 'below':
+			case 'vertical':
+				return left + (rectangles.anchor.width / 2) - (width / 2);
+			case 'above-left':
+			case 'below-left':
+				return left;
+			case 'above-right':
+			case 'below-right':
+				return right - width;
+			case 'horizontal':
+				return (right + width) > globalThis.innerWidth
+					? (left - width < 0
+						? right
+						: left - width)
+					: right;
+			case 'left':
+				return left - width;
+			case 'right':
+				return right;
+			default:
+				return 0;
+		}
 	}
 
-	private static setPosition(floater: HTMLElement, position: Position): void {
-		const {left, top} = position.coordinate;
+	private static getTop(rectangles: Rectangles, position: Position): number {
+		const {bottom, top} = rectangles.anchor;
+		const {height} = rectangles.floater;
 
-		if (floater.getAttribute('position') !== position.type) {
-			floater.setAttribute('position', position.type);
+		switch (position) {
+			case 'above':
+			case 'above-left':
+			case 'above-right':
+				return top - height;
+			case 'below':
+			case 'below-left':
+			case 'below-right':
+				return bottom;
+			case 'horizontal':
+			case 'left':
+			case 'right':
+				return top + (rectangles.anchor.height / 2) - (height / 2);
+			case 'vertical':
+				return (bottom + height) > globalThis.innerHeight
+					? (top - height < 0
+						? bottom
+						: top - height)
+					: bottom;
+			default:
+				return 0;
+		}
+	}
+
+	private static getPosition(currentPosition: string, defaultPosition: Position): Position {
+		if (currentPosition == null) {
+			return defaultPosition;
 		}
 
-		const matrix = `matrix(1, 0, 0, 1, ${left}, ${top})`;
+		const normalized = currentPosition.trim().toLowerCase();
 
-		if (floater.style.transform === matrix) {
-			return;
-		}
+		const index = positions.indexOf(normalized as Position);
 
-		floater.style.inset = '0 auto auto 0';
-		floater.style.position = 'fixed';
-		floater.style.transform = matrix;
-
-		if (floater.hidden) {
-			delay(() => {
-				floater.hidden = false;
-			});
-		}
+		return index > -1
+			? positions[index] ?? defaultPosition
+			: defaultPosition;
 	}
 }

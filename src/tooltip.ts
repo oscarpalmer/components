@@ -1,66 +1,18 @@
 import {delay, eventOptions, findParent, focusableSelector, setAttribute, setProperty} from './helpers';
-import {Floated, Position, Rects} from './helpers/floated';
+import {Floated} from './helpers/floated';
 
 type Callbacks = {
 	click: (event: Event) => void;
 	hide: (event: Event) => void;
-	key: (event: Event) => void;
+	keydown: (event: Event) => void;
 	show: (event: Event) => void;
 };
 
 const attribute = 'toasty-tooltip';
 const contentAttribute = `${attribute}-content`;
 const store = new WeakMap<HTMLElement, Tooltip>();
-const types = ['above', 'below', 'horizontal', 'left', 'right', 'vertical'];
 
 class Manager {
-	static getPosition(type: string, elements: Rects): Position {
-		const left = Manager.getValue(type, ['horizontal', 'left', 'right'], elements, true);
-		const top = Manager.getValue(type, ['vertical', 'above', 'below'], elements, false);
-
-		if (!['horizontal', 'vertical'].includes(type)) {
-			return {coordinate: {left, top}, type};
-		}
-
-		return {
-			coordinate: {left, top},
-			type: type === 'horizontal'
-				? (left === elements.anchor.right ? 'right' : 'left')
-				: (top === elements.anchor.bottom ? 'below' : 'above'),
-		};
-	}
-
-	static getValue(type: string, types: string[], elements: Rects, left: boolean): number {
-		const {anchor, floater} = elements;
-
-		const anchorMax = left ? anchor.right : anchor.bottom;
-		const anchorMin = left ? anchor.left : anchor.top;
-
-		const floaterSize = left ? floater.width : floater.height;
-
-		const index = types.indexOf(type);
-
-		if (index === -1) {
-			return ((anchorMin + ((left ? anchor.width : anchor.height) / 2)) - (floaterSize / 2));
-		}
-
-		const minValue = anchorMin - floaterSize;
-
-		if (index > 0) {
-			return index === 1 ? minValue : anchorMax;
-		}
-
-		const maxValue = anchorMax + floaterSize;
-
-		if (maxValue <= (left ? globalThis.innerWidth : globalThis.innerHeight)) {
-			return anchorMax;
-		}
-
-		return minValue < 0
-			? anchorMax
-			: minValue;
-	}
-
 	static observer(records: MutationRecord[]): void {
 		for (const record of records) {
 			if (record.type !== 'attributes') {
@@ -79,22 +31,20 @@ class Manager {
 }
 
 class Tooltip {
+	private readonly callbacks: Callbacks = {
+		click: this.onClick.bind(this),
+		hide: this.onHide.bind(this),
+		keydown: this.onKeyDown.bind(this),
+		show: this.onShow.bind(this),
+	};
+
 	private readonly floater: HTMLElement;
-
-	readonly callbacks: Callbacks;
-
-	readonly focusable: boolean;
+	private readonly focusable: boolean;
 
 	constructor(private readonly anchor: HTMLElement) {
-		this.floater = Tooltip.getFloater(anchor);
 		this.focusable = anchor.matches(focusableSelector);
 
-		this.callbacks = {
-			click: this.onClick.bind(this),
-			hide: this.onHide.bind(this),
-			key: this.onKey.bind(this),
-			show: this.onShow.bind(this),
-		};
+		this.floater = Tooltip.createFloater(anchor);
 
 		this.handleCallbacks(true);
 	}
@@ -117,82 +67,78 @@ class Tooltip {
 		store.delete(element);
 	}
 
-	private static getFloater(anchor: HTMLElement): HTMLElement {
+	private static createFloater(anchor: HTMLElement): HTMLElement {
 		const id = anchor.getAttribute('aria-describedby') ?? anchor.getAttribute('aria-labelledby');
-		const floater = id == null ? null : document.getElementById(id);
 
-		if (floater == null) {
-			throw new Error(`A '${attribute}'-attributed element must have a valid id reference in either the 'aria-describedby' or 'aria-labelledby' attribute.`);
+		const element = id == null
+			? null
+			: document.getElementById(id);
+
+		if (element == null) {
+			throw new Error(`A '${attribute}'-attributed element must have a valid id reference in either the 'aria-describedby' or 'aria-labelledby'-attribute.`);
 		}
 
-		floater.hidden = true;
+		element.hidden = true;
 
-		setAttribute(floater, contentAttribute, '');
-		setAttribute(floater, 'role', 'tooltip');
+		setAttribute(element, contentAttribute, '');
+		setAttribute(element, 'role', 'tooltip');
+		setProperty(element, 'aria-hidden', true);
 
-		setProperty(floater, 'aria-hidden', true);
-
-		return floater;
+		return element;
 	}
 
 	onClick(event: Event): void {
-		const parent = findParent(event.target as HTMLElement, `[${contentAttribute}]`);
-
-		if (parent !== this.floater) {
-			this.handleFloater(false);
+		if (findParent(event.target as never, element => [this.anchor, this.floater].includes(element)) == null) {
+			this.toggle(false);
 		}
 	}
 
 	onHide() {
-		this.handleFloater(false);
+		this.toggle(false);
 	}
 
-	onKey(event: Event): void {
-		if (event instanceof KeyboardEvent && event.key === 'Escape') {
-			this.handleFloater(false);
+	onKeyDown(event: Event): void {
+		if ((event instanceof KeyboardEvent) && event.key === 'Escape') {
+			this.toggle(false);
 		}
 	}
 
 	onShow() {
-		const {anchor, floater} = this;
+		this.toggle(true);
+	}
 
-		this.handleFloater(true);
+	toggle(show: boolean): void {
+		const method = show
+			? 'addEventListener'
+			: 'removeEventListener';
 
-		Floated.update(
-			{anchor, floater},
-			{all: types, default: 'above'},
-			{
-				getPosition: Manager.getPosition,
-				validate: () => !floater.hidden,
-			});
+		document[method]('click', this.callbacks.click, eventOptions.passive);
+		document[method]('keydown', this.callbacks.keydown, eventOptions.passive);
+
+		if (show) {
+			Floated.update(this as never, 'above');
+		} else {
+			this.floater.hidden = true;
+		}
 	}
 
 	private handleCallbacks(add: boolean): void {
-		const {anchor, callbacks, floater, focusable} = this;
+		const {anchor, floater, focusable} = this;
 
-		const method = add ? 'addEventListener' : 'removeEventListener';
+		const method = add
+			? 'addEventListener'
+			: 'removeEventListener';
 
 		for (const element of [anchor, floater]) {
-			element[method]('mouseenter', callbacks.show, eventOptions.passive);
-			element[method]('mouseleave', callbacks.hide, eventOptions.passive);
-			element[method]('touchstart', callbacks.show, eventOptions.passive);
+			element[method]('mouseenter', this.callbacks.show, eventOptions.passive);
+			element[method]('mouseleave', this.callbacks.hide, eventOptions.passive);
+			element[method]('touchstart', this.callbacks.show, eventOptions.passive);
 		}
 
 		if (focusable) {
-			anchor[method]('blur', callbacks.hide, eventOptions.passive);
-			anchor[method]('focus', callbacks.show, eventOptions.passive);
+			anchor[method]('blur', this.callbacks.hide, eventOptions.passive);
+			anchor[method]('focus', this.callbacks.show, eventOptions.passive);
 		}
-	}
-
-	private handleFloater(show: boolean): void {
-		const {callbacks, floater} = this;
-
-		const method = show ? 'addEventListener' : 'removeEventListener';
-
-		document[method]('keydown', callbacks.key, eventOptions.passive);
-		document[method]('pointerdown', callbacks.click, eventOptions.passive);
-
-		floater.hidden = !show;
 	}
 }
 

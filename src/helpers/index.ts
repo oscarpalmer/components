@@ -3,7 +3,21 @@ export const eventOptions = {
 	passive: {capture: false, passive: true},
 };
 
-export const focusableSelector = ['[href]', '[tabindex]', 'button', 'input', 'select', 'textarea']
+const focusableSelectors = [
+	'[contenteditable]:not([contenteditable="false"])',
+	'[href]',
+	'[tabindex]:not(slot)',
+	'audio[controls]',
+	'button',
+	'details',
+	'details[open] > summary',
+	'input',
+	'select',
+	'textarea',
+	'video[controls]',
+];
+
+export const focusableSelector = focusableSelectors
 	.map(selector => `${selector}:not([disabled]):not([hidden]):not([tabindex="-1"])`)
 	.join(',');
 
@@ -88,7 +102,5 @@ export function setAttribute(element: HTMLElement, attribute: string, value: unk
 }
 
 export function setProperty(element: HTMLElement, property: string, value: unknown): void {
-	if (typeof value === 'boolean') {
-		element?.setAttribute(property, String(value));
-	}
+	element.setAttribute(property, String(typeof value === 'boolean' ? value : false));
 }

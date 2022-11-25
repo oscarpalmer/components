@@ -1,223 +1,189 @@
-import {delay, eventOptions, getFocusableElements, isNullOrWhitespace, setAttribute, setProperty} from './helpers';
-import {Floated, Position, Rects} from './helpers/floated';
+import {delay, eventOptions, findParent, getFocusableElements, isNullOrWhitespace, setAttribute, setProperty} from './helpers';
+import {Floated} from './helpers/floated';
 import {attribute} from './focus-trap';
 
-type Values = {
-	anchors: WeakMap<PolitePopover, HTMLElement>;
-	click: WeakMap<PolitePopover, (event: Event) => void>;
-	floaters: WeakMap<PolitePopover, HTMLElement>;
-	keydown: WeakMap<PolitePopover, (event: Event) => void>;
+type Callbacks = {
+	click: (event: Event) => void;
+	keydown: (event: Event) => void;
+};
+
+type Elements = {
+	anchor: HTMLElement;
+	floater: HTMLElement;
 };
 
 let index = 0;
 
-const types = ['any'].concat(...['above', 'below'].map(position => [position, `${position}-left`, `${position}-right`]));
-
 class Manager {
-	static getPosition(type: string, elements: Rects): Position {
-		const left = Manager.getValue(type, ['left', 'right'], elements, true);
-		const top = Manager.getValue(type, ['below', 'above'], elements, false);
-
-		const suffix = elements.anchor.left === left ? 'left' : 'right';
-
-		if (type !== 'any') {
-			return {
-				coordinate: {left, top},
-				type: ['above', 'below'].includes(type)
-					? `${type}-${suffix}`
-					: type,
-			};
-		}
-
-		const prefix = elements.anchor.bottom === top ? 'below' : 'above';
-
-		return {
-			coordinate: {left, top},
-			type: `${prefix}-${suffix}`,
-		};
-	}
-
-	static getValue(type: string, types: string[], elements: Rects, left: boolean): number {
-		const {anchor, floater} = elements;
-
-		const floaterSize = left ? floater.width : floater.height;
-
-		const defaultValue = left ? anchor.left : anchor.bottom;
-		const minValue = (left ? anchor.right : anchor.top) - floaterSize;
-
-		if (types.some(t => type.includes(t))) {
-			return type.includes(types[0] ?? '_')
-				? defaultValue
-				: minValue;
-		}
-
-		const maxValue = defaultValue + floaterSize;
-
-		if (maxValue <= (left ? globalThis.innerWidth : globalThis.innerHeight)) {
-			return defaultValue;
-		}
-
-		return minValue < 0
-			? defaultValue
-			: minValue;
-	}
-
 	static initialize(component: PolitePopover, anchor: HTMLElement, floater: HTMLElement): void {
 		floater.hidden = true;
 
+		if (isNullOrWhitespace(component.id)) {
+			setAttribute(component, 'id', `polite_popover_${index++}`);
+		}
+
+		if (isNullOrWhitespace(anchor.id)) {
+			setAttribute(anchor, 'id', `${component.id}_button`);
+		}
+
 		if (isNullOrWhitespace(floater.id)) {
-			setAttribute(floater, 'id', isNullOrWhitespace(component.id)
-				? `polite_popover_${index++}`
-				: `${component.id}_content`);
+			setAttribute(floater, 'id', `${component.id}_content`);
 		}
 
 		setAttribute(anchor, 'aria-controls', floater.id);
 		setProperty(anchor, 'aria-expanded', false);
+		setAttribute(anchor, 'aria-haspopup', 'dialog');
 
-		setAttribute(floater, 'role', 'dialog');
 		setAttribute(floater, attribute, '');
-		setProperty(floater, 'aria-modal', true);
+		setAttribute(floater, 'role', 'dialog');
+		setAttribute(floater, 'aria-modal', 'false');
 
 		anchor.addEventListener('click', Manager.toggle.bind(component), eventOptions.passive);
 	}
 
 	static onClick(event: Event): void {
-		if (!(this instanceof PolitePopover) || !this.open) {
-			return;
-		}
-
-		const anchor = Store.values.anchors.get(this);
-		const floater = Store.values.floaters.get(this);
-
-		if (event.target !== anchor && event.target !== floater
-				&& !(floater?.contains(event.target as Element) ?? false)) {
-			Manager.toggle.call(this, false);
+		if ((this instanceof PolitePopover) && this.open) {
+			Manager.handleGlobalEvent(event, this, event.target as never);
 		}
 	}
 
 	static onKeydown(event: Event): void {
 		if ((this instanceof PolitePopover) && this.open && (event instanceof KeyboardEvent) && event.key === 'Escape') {
-			Manager.toggle.call(this, false);
+			Manager.handleGlobalEvent(event, this, document.activeElement as never);
 		}
 	}
 
 	static toggle(expand?: boolean | Event): void {
-		if (!(this instanceof PolitePopover)) {
-			return;
+		const elements = this instanceof PolitePopover
+			? Store.elements.get(this)
+			: null;
+
+		if (elements != null) {
+			Manager.handleToggle(this as never, elements, expand);
 		}
+	}
 
-		const anchor = Store.values.anchors.get(this);
-		const floater = Store.values.floaters.get(this);
+	private static afterToggle(component: PolitePopover, elements: Elements, active: boolean): void {
+		Manager.handleCallbacks(component, active);
 
-		if (anchor != null && floater != null) {
-			Manager.handleToggle(this, anchor, floater, expand);
+		if (active) {
+			(getFocusableElements(elements.floater)?.[0] ?? elements.floater).focus();
+		} else {
+			elements.anchor.focus();
 		}
 	}
 
 	private static handleCallbacks(component: PolitePopover, add: boolean): void {
-		const click = Store.values.click.get(component);
-		const keydown = Store.values.keydown.get(component);
+		const callbacks = Store.callbacks.get(component);
 
-		const method = add ? 'addEventListener' : 'removeEventListener';
-
-		if (click != null) {
-			document[method]('click', click, eventOptions.passive);
+		if (callbacks == null) {
+			return;
 		}
 
-		if (keydown != null) {
-			document[method]('keydown', keydown, eventOptions.active);
+		const method = add
+			? 'addEventListener'
+			: 'removeEventListener';
+
+		document[method]('click', callbacks.click, eventOptions.passive);
+		document[method]('keydown', callbacks.keydown, eventOptions.passive);
+	}
+
+	private static handleGlobalEvent(event: Event, component: PolitePopover, target: HTMLElement): void {
+		const elements = Store.elements.get(component);
+
+		if (elements == null) {
+			return;
+		}
+
+		const floater = findParent(target, '[polite-popover-content]');
+
+		if (floater == null) {
+			this.handleToggle(component, elements, false);
+
+			return;
+		}
+
+		event.stopPropagation();
+
+		const children = Array.from(document.body.children);
+		const difference = children.indexOf(floater) - children.indexOf(elements.floater);
+
+		if (difference < (event instanceof KeyboardEvent ? 1 : 0)) {
+			Manager.handleToggle(component, elements, false);
 		}
 	}
 
-	private static handleToggle(component: PolitePopover, anchor: HTMLElement, floater: HTMLElement, expand?: boolean | Event): void {
+	private static handleToggle(component: PolitePopover, elements: Elements, expand?: boolean | Event): void {
 		const expanded = typeof expand === 'boolean'
 			? !expand
 			: component.open;
 
-		Manager.handleCallbacks(component, !expanded);
-
-		floater.hidden = expanded;
-
-		setProperty(anchor, 'aria-expanded', !expanded);
-
-		component.dispatchEvent(new Event('toggle'));
+		setProperty(elements.anchor, 'aria-expanded', !expanded);
 
 		if (expanded) {
-			anchor.focus();
+			elements.floater.hidden = true;
 
-			return;
+			Manager.afterToggle(component, elements, false);
+		} else {
+			Floated.update({
+				anchor: elements.anchor,
+				floater: elements.floater,
+				parent: component,
+			}, 'below-left');
+
+			delay(() => {
+				Manager.afterToggle(component, elements, true);
+			});
 		}
 
-		let called = false;
-
-		Floated.update(
-			{anchor, floater, parent: component},
-			{all: types, default: 'below'},
-			{
-				after() {
-					if (called) {
-						return;
-					}
-
-					called = true;
-
-					delay(() => {
-						(getFocusableElements(floater)[0] ?? floater).focus();
-					});
-				},
-				getPosition: Manager.getPosition,
-				validate: () => component.open,
-			});
+		component.dispatchEvent(new Event('toggle'));
 	}
 }
 
 class Store {
-	static readonly values: Values = {
-		anchors: new WeakMap<PolitePopover, HTMLElement>(),
-		click: new WeakMap<PolitePopover, (event: Event) => void>(),
-		floaters: new WeakMap<PolitePopover, HTMLElement>(),
-		keydown: new WeakMap<PolitePopover, (event: Event) => void>(),
-	};
+	static readonly callbacks = new WeakMap<PolitePopover, Callbacks>();
+	static readonly elements = new WeakMap<PolitePopover, Elements>();
 
 	static add(component: PolitePopover): void {
-		const button = component.querySelector(':scope > [polite-popover-button]');
-		const content = component.querySelector(':scope > [polite-popover-content]');
+		const anchor = component.querySelector(':scope > [polite-popover-button]');
+		const floater = component.querySelector(':scope > [polite-popover-content]');
 
-		if (button == null || content == null) {
+		if (anchor == null || floater == null) {
 			return;
 		}
 
-		Store.values.anchors?.set(component, button as HTMLElement);
-		Store.values.floaters?.set(component, content as HTMLElement);
+		Store.callbacks.set(component, {
+			click: Manager.onClick.bind(component),
+			keydown: Manager.onKeydown.bind(component),
+		});
 
-		Store.values.click?.set(component, Manager.onClick.bind(component));
-		Store.values.keydown?.set(component, Manager.onKeydown.bind(component));
+		Store.elements.set(component, {
+			anchor: anchor as never,
+			floater: floater as never,
+		});
 	}
 
 	static remove(component: PolitePopover): void {
-		const floater = Store.values.floaters.get(component);
+		const elements = Store.elements.get(component);
 
-		if (floater != null) {
-			floater.hidden = true;
+		if (elements?.floater instanceof HTMLElement) {
+			elements.floater.hidden = true;
 
-			component.appendChild(floater);
+			elements.anchor?.insertAdjacentElement('afterend', elements.floater);
 		}
 
-		Store.values.anchors.delete(component);
-		Store.values.floaters.delete(component);
-
-		Store.values.click.delete(component);
-		Store.values.keydown.delete(component);
+		Store.callbacks.delete(component);
+		Store.elements.delete(component);
 	}
 }
 
 class PolitePopover extends HTMLElement {
 	get button(): HTMLElement | undefined {
-		return Store.values.anchors.get(this);
+		return Store.elements.get(this)?.anchor;
 	}
 
 	get content(): HTMLElement | undefined {
-		return Store.values.floaters.get(this);
+		return Store.elements.get(this)?.floater;
 	}
 
 	get open(): boolean {
@@ -240,8 +206,7 @@ class PolitePopover extends HTMLElement {
 			throw new Error('<polite-popover> must have a <button>-element (or button-like element) with the attribute \'polite-popover-button\'');
 		}
 
-		if (floater == null
-				|| !(floater instanceof HTMLElement)) {
+		if (floater == null || !(floater instanceof HTMLElement)) {
 			throw new Error('<polite-popover> must have an element with the attribute \'polite-popover-content\'');
 		}
 
