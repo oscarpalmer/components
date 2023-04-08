@@ -161,8 +161,8 @@ function findParent(element, match) {
   }
   return parent ?? void 0;
 }
-function getAttribute(element, attribute3, defaultValue) {
-  const value = element.getAttribute(attribute3);
+function getAttribute(element, attribute4, defaultValue) {
+  const value = element.getAttribute(attribute4);
   return value == null || value.trim().length === 0 ? defaultValue : value;
 }
 function getFocusableElements(context) {
@@ -182,11 +182,11 @@ function isNullOrWhitespace(value) {
   }
   return value.trim().length === 0;
 }
-function setAttribute(element, attribute3, value) {
+function setAttribute(element, attribute4, value) {
   if (value == null) {
-    element.removeAttribute(attribute3);
+    element.removeAttribute(attribute4);
   } else {
-    element.setAttribute(attribute3, String(value));
+    element.setAttribute(attribute4, String(value));
   }
 }
 function setProperty(element, property, value) {
@@ -194,232 +194,78 @@ function setProperty(element, property, value) {
 }
 
 // src/details.ts
-var Manager = class {
-  static destroyList(component) {
-    const { children, observer: observer2, open } = Store.list;
-    children.delete(component);
-    open.delete(component);
-    observer2.get(component)?.disconnect();
-    observer2.delete(component);
-  }
-  static getChildren(component) {
-    return Array.from(component.querySelectorAll(":scope > delicious-details > details, :scope > details"));
-  }
-  static initializeList(component) {
-    const { children, observer: observer2, open } = Store.list;
-    children.set(component, Manager.getChildren(component));
-    open.set(component, []);
-    observer2.set(component, new MutationObserver((records) => {
-      Observer.callback(component, records);
-    }));
-    observer2.get(component)?.observe(component, Observer.options);
-    Manager.open(component, getAttribute(component, "open", ""));
-  }
-  static onGlobalKeydown(event) {
-    if (event.key !== "Escape") {
-      return;
-    }
-    const { containers } = Store.details;
-    const parent = findParent(document.activeElement, (element) => containers.has(element) && (containers.get(element)?.open ?? true));
-    if (parent instanceof DeliciousDetails) {
-      Manager.onToggle.call(parent, false);
-    }
-  }
-  static onLocalKeydown(event) {
-    if (event.isComposing || event.key !== "ArrowDown" && event.key !== "ArrowUp" || !(this instanceof DeliciousDetailsList)) {
-      return;
-    }
-    const { target } = event;
-    if (!(target instanceof HTMLElement)) {
-      return;
-    }
-    const children = Store.list.children.get(this) ?? [];
-    const parent = target.parentElement;
-    const index2 = children.indexOf(parent);
-    if (index2 === -1) {
-      return;
-    }
-    let position = index2 + (event.key === "ArrowDown" ? 1 : -1);
-    if (position < 0) {
-      position = children.length - 1;
-    } else if (position >= children.length) {
-      position = 0;
-    }
-    const details = children[position];
-    const summary = details?.querySelector(":scope > summary");
-    summary?.focus();
-  }
-  static onToggle(open) {
-    if (!(this instanceof DeliciousDetails)) {
-      return;
-    }
-    const { buttons, containers } = Store.details;
-    const container = containers.get(this);
-    if (container == null) {
-      return;
-    }
-    container.open = open ?? !container.open;
-    if (!container.open) {
-      buttons.get(this)?.focus();
-    }
-  }
-  static open(component, value) {
-    if (value == null) {
-      Manager.update(component, []);
-      return;
-    }
-    if (value.length > 0 && !/^[\s\d,]+$/.test(value)) {
-      throw new Error("The 'selected'-attribute of a 'delicious-details-list'-element must be a comma-separated string of numbers, e.g. '', '0' or '0,1,2'");
-    }
-    const parts = value.length > 0 ? value.split(",").filter((index2) => index2.trim().length > 0).map((index2) => Number.parseInt(index2, 10)) : [];
-    Manager.update(component, parts);
-  }
-  static update(component, selection) {
-    if (typeof selection === "undefined") {
-      return;
-    }
-    const { children, observer: observer2, open } = Store.list;
-    let sorted = selection.filter((value, index2, array) => array.indexOf(value) === index2).sort((first, second) => first - second);
-    if (!component.multiple) {
-      sorted = sorted.length > 0 && sorted[0] != null ? sorted.length > 1 ? [sorted[0]] : sorted : [];
-    }
-    const current = component.open;
-    if (sorted.length === current.length && sorted.every((value, index2) => current[index2] === value)) {
-      return;
-    }
-    observer2.get(component)?.disconnect();
-    const elements = children.get(component) ?? [];
-    for (const element of elements) {
-      if (sorted.includes(elements.indexOf(element)) !== element.open) {
-        element.open = !element.open;
-      }
-    }
-    wait(() => {
-      open.set(component, sorted);
-      setAttribute(component, "open", sorted.length === 0 ? null : sorted);
-      component.dispatchEvent(new Event("toggle"));
-      wait(() => observer2.get(component)?.observe(component, Observer.options), 0);
-    }, 0);
-  }
-};
-var Observer = class {
-  static callback(component, records) {
-    if (records.length === 0) {
-      return;
-    }
-    const { children } = Store.list;
-    const record = records[0];
-    const added = Array.from(record?.addedNodes ?? []);
-    const removed = Array.from(record?.removedNodes ?? []);
-    if (added.concat(removed).some((element2) => element2.parentElement === component)) {
-      children.set(component, Manager.getChildren(component));
-      return;
-    }
-    if (record?.type !== "attributes" || !(record?.target instanceof HTMLDetailsElement)) {
-      return;
+var attribute = "delicious-details";
+var store = /* @__PURE__ */ new WeakMap();
+function observe(records) {
+  for (const record of records) {
+    if (record.type !== "attributes") {
+      continue;
     }
     const element = record.target;
-    const elements = children.get(component) ?? [];
-    const index2 = elements.indexOf(element);
-    if (index2 === -1) {
+    if (!(element instanceof HTMLDetailsElement)) {
+      throw new Error(`An element with the '${attribute}'-attribute must be a <details>-element`);
+    }
+    if (element.getAttribute(attribute) == null) {
+      DeliciousDetails.destroy(element);
+    } else {
+      DeliciousDetails.create(element);
+    }
+  }
+}
+var DeliciousDetails = class {
+  callbacks;
+  details;
+  summary;
+  constructor(element) {
+    this.details = element;
+    this.summary = element.querySelector(":scope > summary") ?? void 0;
+    this.callbacks = {
+      onKeydown: this.onKeydown.bind(this),
+      onToggle: this.onToggle.bind(this)
+    };
+    this.details.addEventListener("toggle", this.callbacks.onToggle, eventOptions.passive);
+  }
+  onKeydown(event) {
+    if (event.key !== "Escape" || !this.details.open) {
       return;
     }
-    let selection = [];
-    if (component.multiple) {
-      selection = element.open ? component.open.concat([index2]) : component.open.filter((v) => v !== index2);
-    } else {
-      selection = element.open ? [index2] : [];
+    const children = [...this.details.querySelectorAll(`[${attribute}][open]`)];
+    if (children.some((child) => child.contains(document.activeElement)) || !this.details.contains(document.activeElement)) {
+      return;
     }
-    Manager.update(component, selection);
+    this.details.open = false;
+    wait(() => this.summary?.focus(), 0);
+  }
+  onToggle() {
+    document[this.details.open ? "addEventListener" : "removeEventListener"]?.("keydown", this.callbacks.onKeydown, eventOptions.passive);
+  }
+  static create(element) {
+    if (!store.has(element)) {
+      store.set(element, new DeliciousDetails(element));
+    }
+  }
+  static destroy(element) {
+    store.delete(element);
   }
 };
-__publicField(Observer, "options", {
-  attributeFilter: ["open"],
+var observer = new MutationObserver(observe);
+observer.observe(document, {
+  attributeFilter: [attribute],
+  attributeOldValue: true,
   attributes: true,
   childList: true,
   subtree: true
 });
-var Store = class {
-};
-__publicField(Store, "details", {
-  buttons: /* @__PURE__ */ new WeakMap(),
-  containers: /* @__PURE__ */ new WeakMap()
-});
-__publicField(Store, "list", {
-  children: /* @__PURE__ */ new WeakMap(),
-  observer: /* @__PURE__ */ new WeakMap(),
-  open: /* @__PURE__ */ new WeakMap()
-});
-var DeliciousDetails = class extends HTMLElement {
-  get open() {
-    return Store.details.containers.get(this)?.open ?? false;
+wait(() => {
+  const details = Array.from(document.querySelectorAll(`[${attribute}]`));
+  for (const detail of details) {
+    detail.setAttribute(attribute, "");
   }
-  set open(open) {
-    Manager.onToggle.call(this, open);
-  }
-  connectedCallback() {
-    const details = this.querySelector(":scope > details");
-    const summary = details?.querySelector(":scope > summary");
-    Store.details.buttons.set(this, summary);
-    Store.details.containers.set(this, details);
-  }
-  disconnectedCallback() {
-    Store.details.buttons.delete(this);
-    Store.details.containers.delete(this);
-  }
-  toggle() {
-    Manager.onToggle.call(this);
-  }
-};
-var DeliciousDetailsList = class extends HTMLElement {
-  static get observedAttributes() {
-    return ["multiple", "open"];
-  }
-  get multiple() {
-    return this.getAttribute("multiple") != null;
-  }
-  set multiple(multiple) {
-    setAttribute(this, "multiple", multiple ? "" : null);
-  }
-  get open() {
-    return Store.list.open.get(this) ?? [];
-  }
-  set open(indices) {
-    Manager.update(this, indices);
-  }
-  constructor() {
-    super();
-    this.addEventListener("keydown", Manager.onLocalKeydown.bind(this), eventOptions.passive);
-  }
-  attributeChangedCallback(name, oldValue, newValue) {
-    if (oldValue === newValue) {
-      return;
-    }
-    switch (name) {
-      case "multiple":
-        Manager.open(this, getAttribute(this, "open", ""));
-        break;
-      case "open":
-        Manager.open(this, newValue);
-        break;
-      default:
-        break;
-    }
-  }
-  connectedCallback() {
-    Manager.initializeList(this);
-  }
-  disconnectedCallback() {
-    Manager.destroyList(this);
-  }
-};
-globalThis.addEventListener("keydown", Manager.onGlobalKeydown, eventOptions.passive);
-globalThis.customElements.define("delicious-details", DeliciousDetails);
-globalThis.customElements.define("delicious-details-list", DeliciousDetailsList);
+}, 0);
 
 // src/focus-trap.ts
-var attribute = "formal-focus-trap";
-var store = /* @__PURE__ */ new WeakMap();
+var attribute2 = "formal-focus-trap";
+var store2 = /* @__PURE__ */ new WeakMap();
 function handle(event, focusTrap, element) {
   const elements = getFocusableElements(focusTrap);
   if (element === focusTrap) {
@@ -443,13 +289,13 @@ function handle(event, focusTrap, element) {
     target.focus();
   }, 0);
 }
-function observe(records) {
+function observe2(records) {
   for (const record of records) {
     if (record.type !== "attributes") {
       continue;
     }
     const element = record.target;
-    if (element.getAttribute(attribute) == null) {
+    if (element.getAttribute(attribute2) == null) {
       FocusTrap.destroy(element);
     } else {
       FocusTrap.create(element);
@@ -461,7 +307,7 @@ function onKeydown(event) {
     return;
   }
   const eventTarget = event.target;
-  const focusTrap = findParent(eventTarget, `[${attribute}]`);
+  const focusTrap = findParent(eventTarget, `[${attribute2}]`);
   if (focusTrap == null) {
     return;
   }
@@ -476,17 +322,17 @@ var FocusTrap = class {
     setAttribute(element, "tabindex", "-1");
   }
   static create(element) {
-    if (!store.has(element)) {
-      store.set(element, new FocusTrap(element));
+    if (!store2.has(element)) {
+      store2.set(element, new FocusTrap(element));
     }
   }
   static destroy(element) {
-    const focusTrap = store.get(element);
+    const focusTrap = store2.get(element);
     if (focusTrap == null) {
       return;
     }
     setAttribute(element, "tabindex", focusTrap.tabIndex);
-    store.delete(element);
+    store2.delete(element);
   }
 };
 (() => {
@@ -494,18 +340,18 @@ var FocusTrap = class {
     return;
   }
   globalThis._formalFocusTrap = null;
-  const observer2 = new MutationObserver(observe);
-  observer2.observe(document, {
-    attributeFilter: [attribute],
+  const observer3 = new MutationObserver(observe2);
+  observer3.observe(document, {
+    attributeFilter: [attribute2],
     attributeOldValue: true,
     attributes: true,
     childList: true,
     subtree: true
   });
   wait(() => {
-    const focusTraps = Array.from(document.querySelectorAll(`[${attribute}]`));
+    const focusTraps = Array.from(document.querySelectorAll(`[${attribute2}]`));
     for (const focusTrap of focusTraps) {
-      focusTrap.setAttribute(attribute, "");
+      focusTrap.setAttribute(attribute2, "");
     }
   }, 0);
   document.addEventListener("keydown", onKeydown, eventOptions.active);
@@ -670,7 +516,7 @@ function initialise(popover, button, content) {
   if (!(button instanceof HTMLButtonElement)) {
     setAttribute(button, "tabindex", "0");
   }
-  setAttribute(content, attribute, "");
+  setAttribute(content, attribute2, "");
   setAttribute(content, "role", "dialog");
   setAttribute(content, "aria-modal", "false");
   clickCallbacks.set(popover, onClick.bind(popover));
@@ -838,17 +684,17 @@ __publicField(SwankySwitch, "formAssociated", true);
 globalThis.customElements.define("swanky-switch", SwankySwitch);
 
 // src/tooltip.ts
-var attribute2 = "toasty-tooltip";
-var contentAttribute = `${attribute2}-content`;
-var positionAttribute = `${attribute2}-position`;
-var store2 = /* @__PURE__ */ new WeakMap();
-function observe2(records) {
+var attribute3 = "toasty-tooltip";
+var contentAttribute = `${attribute3}-content`;
+var positionAttribute = `${attribute3}-position`;
+var store3 = /* @__PURE__ */ new WeakMap();
+function observe3(records) {
   for (const record of records) {
     if (record.type !== "attributes") {
       continue;
     }
     const element = record.target;
-    if (element.getAttribute(attribute2) == null) {
+    if (element.getAttribute(attribute3) == null) {
       Tooltip.destroy(element);
     } else {
       Tooltip.create(element);
@@ -872,23 +718,23 @@ var Tooltip = class {
   focusable;
   timer;
   static create(anchor) {
-    if (!store2.has(anchor)) {
-      store2.set(anchor, new Tooltip(anchor));
+    if (!store3.has(anchor)) {
+      store3.set(anchor, new Tooltip(anchor));
     }
   }
   static destroy(element) {
-    const tooltip = store2.get(element);
+    const tooltip = store3.get(element);
     if (typeof tooltip === "undefined") {
       return;
     }
     tooltip.handleCallbacks(false);
-    store2.delete(element);
+    store3.delete(element);
   }
   static createFloater(anchor) {
     const id = anchor.getAttribute("aria-describedby") ?? anchor.getAttribute("aria-labelledby");
     const element = id == null ? null : document.getElementById(id);
     if (element == null) {
-      throw new Error(`A '${attribute2}'-attributed element must have a valid id reference in either the 'aria-describedby' or 'aria-labelledby'-attribute.`);
+      throw new Error(`A '${attribute3}'-attributed element must have a valid id reference in either the 'aria-describedby' or 'aria-labelledby'-attribute.`);
     }
     element.hidden = true;
     setAttribute(element, contentAttribute, "");
@@ -941,17 +787,17 @@ var Tooltip = class {
     }
   }
 };
-var observer = new MutationObserver(observe2);
-observer.observe(document, {
-  attributeFilter: [attribute2],
+var observer2 = new MutationObserver(observe3);
+observer2.observe(document, {
+  attributeFilter: [attribute3],
   attributeOldValue: true,
   attributes: true,
   childList: true,
   subtree: true
 });
 wait(() => {
-  const tooltips = Array.from(document.querySelectorAll(`[${attribute2}]`));
+  const tooltips = Array.from(document.querySelectorAll(`[${attribute3}]`));
   for (const tooltip of tooltips) {
-    tooltip.setAttribute(attribute2, "");
+    tooltip.setAttribute(attribute3, "");
   }
 }, 0);
