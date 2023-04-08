@@ -111,6 +111,9 @@ var Waited = class extends Timed {
     super(callback, time, 1);
   }
 };
+function repeat(callback, time, count) {
+  return new Repeated(callback, time, count).start();
+}
 function wait(callback, time) {
   return new Waited(callback, time).start();
 }
@@ -167,89 +170,85 @@ function setProperty(element, property, value) {
 
 // src/helpers/floated.ts
 var positions = ["above", "above-left", "above-right", "below", "below-left", "below-right", "horizontal", "left", "right", "vertical"];
-var Floated = class {
-  static update(elements, position) {
-    const { anchor, floater, parent } = elements;
-    function update() {
-      var _a;
-      if (floater.hidden) {
-        anchor.insertAdjacentElement("afterend", floater);
-        return;
-      }
-      const floatedPosition = Floated.getPosition((_a = (parent != null ? parent : anchor).getAttribute(position.attribute)) != null ? _a : "", position.value);
-      floater.setAttribute("position", floatedPosition);
-      const rectangles = {
-        anchor: anchor.getBoundingClientRect(),
-        floater: floater.getBoundingClientRect()
-      };
-      const top = Floated.getTop(rectangles, floatedPosition);
-      const left = Floated.getLeft(rectangles, floatedPosition);
-      const matrix = `matrix(1, 0, 0, 1, ${left}, ${top})`;
-      floater.style.position = "fixed";
-      floater.style.inset = "0 auto auto 0";
-      floater.style.transform = matrix;
-      wait(update, 0);
-    }
-    document.body.appendChild(floater);
-    floater.hidden = false;
-    wait(update, 0);
+function getLeft(rectangles, position) {
+  const { left, right } = rectangles.anchor;
+  const { width } = rectangles.floater;
+  switch (position) {
+    case "above":
+    case "below":
+    case "vertical":
+      return left + rectangles.anchor.width / 2 - width / 2;
+    case "above-left":
+    case "below-left":
+      return left;
+    case "above-right":
+    case "below-right":
+      return right - width;
+    case "horizontal":
+      return right + width > globalThis.innerWidth ? left - width < 0 ? right : left - width : right;
+    case "left":
+      return left - width;
+    case "right":
+      return right;
+    default:
+      return 0;
   }
-  static getLeft(rectangles, position) {
-    const { left, right } = rectangles.anchor;
-    const { width } = rectangles.floater;
-    switch (position) {
-      case "above":
-      case "below":
-      case "vertical":
-        return left + rectangles.anchor.width / 2 - width / 2;
-      case "above-left":
-      case "below-left":
-        return left;
-      case "above-right":
-      case "below-right":
-        return right - width;
-      case "horizontal":
-        return right + width > globalThis.innerWidth ? left - width < 0 ? right : left - width : right;
-      case "left":
-        return left - width;
-      case "right":
-        return right;
-      default:
-        return 0;
-    }
+}
+function getTop(rectangles, position) {
+  const { bottom, top } = rectangles.anchor;
+  const { height } = rectangles.floater;
+  switch (position) {
+    case "above":
+    case "above-left":
+    case "above-right":
+      return top - height;
+    case "below":
+    case "below-left":
+    case "below-right":
+      return bottom;
+    case "horizontal":
+    case "left":
+    case "right":
+      return top + rectangles.anchor.height / 2 - height / 2;
+    case "vertical":
+      return bottom + height > globalThis.innerHeight ? top - height < 0 ? bottom : top - height : bottom;
+    default:
+      return 0;
   }
-  static getTop(rectangles, position) {
-    const { bottom, top } = rectangles.anchor;
-    const { height } = rectangles.floater;
-    switch (position) {
-      case "above":
-      case "above-left":
-      case "above-right":
-        return top - height;
-      case "below":
-      case "below-left":
-      case "below-right":
-        return bottom;
-      case "horizontal":
-      case "left":
-      case "right":
-        return top + rectangles.anchor.height / 2 - height / 2;
-      case "vertical":
-        return bottom + height > globalThis.innerHeight ? top - height < 0 ? bottom : top - height : bottom;
-      default:
-        return 0;
-    }
+}
+function getPosition(currentPosition, defaultPosition) {
+  var _a;
+  if (currentPosition == null) {
+    return defaultPosition;
   }
-  static getPosition(currentPosition, defaultPosition) {
+  const normalized = currentPosition.trim().toLowerCase();
+  const index = positions.indexOf(normalized);
+  return index > -1 ? (_a = positions[index]) != null ? _a : defaultPosition : defaultPosition;
+}
+function updateFloated(elements, position) {
+  const { anchor, floater, parent } = elements;
+  document.body.appendChild(floater);
+  floater.hidden = false;
+  return repeat(() => {
     var _a;
-    if (currentPosition == null) {
-      return defaultPosition;
+    if (floater.hidden) {
+      anchor.insertAdjacentElement("afterend", floater);
+      return;
     }
-    const normalized = currentPosition.trim().toLowerCase();
-    const index = positions.indexOf(normalized);
-    return index > -1 ? (_a = positions[index]) != null ? _a : defaultPosition : defaultPosition;
-  }
-};
+    const floatedPosition = getPosition((_a = (parent != null ? parent : anchor).getAttribute(position.attribute)) != null ? _a : "", position.value);
+    floater.setAttribute("position", floatedPosition);
+    const rectangles = {
+      anchor: anchor.getBoundingClientRect(),
+      floater: floater.getBoundingClientRect()
+    };
+    const top = getTop(rectangles, floatedPosition);
+    const left = getLeft(rectangles, floatedPosition);
+    const matrix = `matrix(1, 0, 0, 1, ${left}, ${top})`;
+    floater.style.position = "fixed";
+    floater.style.inset = "0 auto auto 0";
+    floater.style.transform = matrix;
+  }, 0, Infinity);
+}
 
 // src/tooltip.ts
 var attribute = "toasty-tooltip";
@@ -280,6 +279,7 @@ var Tooltip = class {
     });
     __publicField(this, "floater");
     __publicField(this, "focusable");
+    __publicField(this, "timer");
     this.focusable = anchor.matches(focusableSelector);
     this.floater = Tooltip.createFloater(anchor);
     this.handleCallbacks(true);
@@ -327,16 +327,19 @@ var Tooltip = class {
     this.toggle(true);
   }
   toggle(show) {
+    var _a, _b;
     const method = show ? "addEventListener" : "removeEventListener";
     document[method]("click", this.callbacks.click, eventOptions.passive);
     document[method]("keydown", this.callbacks.keydown, eventOptions.passive);
     if (show) {
-      Floated.update(this, {
+      (_a = this.timer) == null ? void 0 : _a.stop();
+      this.timer = updateFloated(this, {
         attribute: positionAttribute,
         value: "above"
       });
     } else {
       this.floater.hidden = true;
+      (_b = this.timer) == null ? void 0 : _b.stop();
     }
   }
   handleCallbacks(add) {
@@ -366,4 +369,4 @@ wait(() => {
   for (const tooltip of tooltips) {
     tooltip.setAttribute(attribute, "");
   }
-}, 0);
+}, 125);

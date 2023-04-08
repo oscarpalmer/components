@@ -1,6 +1,6 @@
-import {wait} from '@oscarpalmer/timer';
+import {Repeated, wait} from '@oscarpalmer/timer';
 import {defineProperty, eventOptions, findParent, getFocusableElements, isNullOrWhitespace, setAttribute, setProperty} from './helpers';
-import {Floated} from './helpers/floated';
+import {updateFloated} from './helpers/floated';
 import {attribute} from './focus-trap';
 
 const clickCallbacks = new WeakMap<PolitePopover, (event: Event) => void>();
@@ -69,9 +69,13 @@ function handleToggle(popover: PolitePopover, expand?: boolean | Event): void {
 	if (expanded) {
 		popover.content.hidden = true;
 
+		popover.timer?.stop();
+
 		afterToggle(popover, false);
 	} else {
-		Floated.update({
+		popover.timer?.stop();
+
+		popover.timer = updateFloated({
 			anchor: popover.button,
 			floater: popover.content,
 			parent: popover,
@@ -82,7 +86,7 @@ function handleToggle(popover: PolitePopover, expand?: boolean | Event): void {
 
 		wait(() => {
 			afterToggle(popover, true);
-		}, 0);
+		}, 50);
 	}
 
 	popover.dispatchEvent(new Event('toggle'));
@@ -142,6 +146,7 @@ function toggle(this: PolitePopover, expand?: boolean | Event): void {
 class PolitePopover extends HTMLElement {
 	button!: HTMLElement;
 	content!: HTMLElement;
+	timer: Repeated | undefined;
 
 	get open(): boolean {
 		return this.button?.getAttribute('aria-expanded') === 'true';

@@ -1,6 +1,6 @@
-import {wait} from '@oscarpalmer/timer';
+import {Repeated, wait} from '@oscarpalmer/timer';
 import {eventOptions, findParent, focusableSelector, setAttribute, setProperty} from './helpers';
-import {Floated} from './helpers/floated';
+import {updateFloated} from './helpers/floated';
 
 type Callbacks = {
 	click: (event: Event) => void;
@@ -42,6 +42,7 @@ class Tooltip {
 
 	private readonly floater: HTMLElement;
 	private readonly focusable: boolean;
+	private timer: Repeated | undefined;
 
 	constructor(private readonly anchor: HTMLElement) {
 		this.focusable = anchor.matches(focusableSelector);
@@ -118,12 +119,16 @@ class Tooltip {
 		document[method]('keydown', this.callbacks.keydown, eventOptions.passive);
 
 		if (show) {
-			Floated.update(this as never, {
+			this.timer?.stop();
+
+			this.timer = updateFloated(this as never, {
 				attribute: positionAttribute,
 				value: 'above',
 			});
 		} else {
 			this.floater.hidden = true;
+
+			this.timer?.stop();
 		}
 	}
 
@@ -163,4 +168,4 @@ wait(() => {
 	for (const tooltip of tooltips) {
 		tooltip.setAttribute(attribute, '');
 	}
-}, 0);
+}, 125);
