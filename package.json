@@ -3,6 +3,9 @@
 		"name": "Oscar Palmér",
 		"url": "https://oscarpalmer.se"
 	},
+	"dependencies": {
+		"@oscarpalmer/timer": "^0.11"
+	},
 	"description": "A collection of web components.",
 	"devDependencies": {
 		"@tsconfig/recommended": "^1.0",
@@ -22,9 +25,44 @@
 			"import": "./dist/esm/index.js",
 			"require": "./dist/cjs/index.js",
 			"default": "./dist/iife/index.js"
+		},
+		"./details": {
+			"script": "./dist/iife/index.js",
+			"module": "./dist/esm/index.js",
+			"import": "./dist/esm/index.js",
+			"require": "./dist/cjs/index.js",
+			"default": "./dist/iife/index.js"
+		},
+		"./focus-trap": {
+			"script": "./dist/iife/focus-trap.js",
+			"module": "./dist/esm/focus-trap.js",
+			"import": "./dist/esm/focus-trap.js",
+			"require": "./dist/cjs/focus-trap.js",
+			"default": "./dist/iife/focus-trap.js"
+		},
+		"./popover": {
+			"script": "./dist/iife/popover.js",
+			"module": "./dist/esm/popover.js",
+			"import": "./dist/esm/popover.js",
+			"require": "./dist/cjs/popover.js",
+			"default": "./dist/iife/popover.js"
+		},
+		"./switch": {
+			"script": "./dist/iife/switch.js",
+			"module": "./dist/esm/switch.js",
+			"import": "./dist/esm/switch.js",
+			"require": "./dist/cjs/switch.js",
+			"default": "./dist/iife/switch.js"
+		},
+		"./tooltip": {
+			"script": "./dist/iife/tooltip.js",
+			"module": "./dist/esm/tooltip.js",
+			"import": "./dist/esm/tooltip.js",
+			"require": "./dist/cjs/tooltip.js",
+			"default": "./dist/iife/tooltip.js"
 		}
 	},
-	"files": ["dist", "src"],
+	"files": ["dist"],
 	"jsdelivr": "dist/iife/index.js",
 	"keywords": [
 		"component",
@@ -44,10 +82,10 @@
 	},
 	"scripts": {
 		"build": "npm run build:cjs; npm run build:esm; npm run build:iife",
-		"build:cjs": "zsh -c 'esbuild ./src/**/*.ts --bundle --minify --format=cjs --outdir=dist/cjs --target=es2017'",
-		"build:esm": "zsh -c 'esbuild ./src/**/*.ts --bundle --minify --format=esm --outdir=dist/esm --target=esnext'",
-		"build:iife": "zsh -c 'esbuild ./src/**/*.ts --bundle --minify --format=iife --outdir=dist/iife --target=es2017'",
-		"watch": "esbuild ./src/index.ts --bundle --sourcemap --watch --format=esm --outfile=dist/esm/index.js --target=esnext"
+		"build:cjs": "zsh -c 'esbuild ./src/**/*.ts --bundle --format=cjs --outdir=dist/cjs --platform=neutral --target=es2017'",
+		"build:esm": "zsh -c 'esbuild ./src/**/*.ts --bundle --format=esm --outdir=dist/esm --platform=neutral --target=esnext'",
+		"build:iife": "zsh -c 'esbuild ./src/**/*.ts --bundle --minify --format=iife --outdir=dist/iife --platform=neutral --target=es2017'",
+		"watch": "esbuild ./src/index.ts --bundle --sourcemap --watch --format=esm --outfile=dist/esm/index.js --platform=neutral --target=esnext"
 	},
 	"type": "module",
 	"unpkg": "dist/iife/index.js",

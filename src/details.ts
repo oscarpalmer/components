@@ -1,4 +1,5 @@
-import {delay, eventOptions, findParent, getAttribute, setAttribute} from './helpers';
+import {wait} from '@oscarpalmer/timer';
+import {eventOptions, findParent, getAttribute, setAttribute} from './helpers';
 
 class Manager {
 	static destroyList(component: DeliciousDetailsList): void {
@@ -158,15 +159,15 @@ class Manager {
 			}
 		}
 
-		delay(() => {
+		wait(() => {
 			open.set(component, sorted);
 
 			setAttribute(component, 'open', sorted.length === 0 ? null : sorted);
 
 			component.dispatchEvent(new Event('toggle'));
 
-			delay(() => observer.get(component)?.observe(component, Observer.options));
-		});
+			wait(() => observer.get(component)?.observe(component, Observer.options), 0);
+		}, 0);
 	}
 }
 

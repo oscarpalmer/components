@@ -31,12 +31,6 @@ export function defineProperty(obj: unknown, key: PropertyKey, value: unknown): 
 	});
 }
 
-export function delay(callback: (time: DOMHighResTimeStamp) => void): number {
-	return globalThis.requestAnimationFrame?.(callback) ?? globalThis.setTimeout?.(() => {
-		callback(Date.now());
-	}, 16);
-}
-
 export function findParent(element: HTMLElement, match: string | ((element: HTMLElement) => boolean)): HTMLElement | undefined {
 	const matchIsSelector = typeof match === 'string';
 

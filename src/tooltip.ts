@@ -1,4 +1,5 @@
-import {delay, eventOptions, findParent, focusableSelector, setAttribute, setProperty} from './helpers';
+import {wait} from '@oscarpalmer/timer';
+import {eventOptions, findParent, focusableSelector, setAttribute, setProperty} from './helpers';
 import {Floated} from './helpers/floated';
 
 type Callbacks = {
@@ -156,10 +157,10 @@ observer.observe(document, {
 	subtree: true,
 });
 
-delay(() => {
+wait(() => {
 	const tooltips = Array.from(document.querySelectorAll(`[${attribute}]`));
 
 	for (const tooltip of tooltips) {
 		tooltip.setAttribute(attribute, '');
 	}
-});
+}, 0);

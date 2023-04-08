@@ -1,4 +1,5 @@
-import {delay, eventOptions, findParent, getFocusableElements, setAttribute} from './helpers';
+import {wait} from '@oscarpalmer/timer';
+import {eventOptions, findParent, getFocusableElements, setAttribute} from './helpers';
 
 export const attribute = 'formal-focus-trap';
 
@@ -8,9 +9,9 @@ function handle(event: KeyboardEvent, focusTrap: HTMLElement, element: HTMLEleme
 	const elements = getFocusableElements(focusTrap);
 
 	if (element === focusTrap) {
-		delay(() => {
+		wait(() => {
 			(elements[event.shiftKey ? elements.length - 1 : 0] ?? focusTrap).focus();
-		});
+		}, 0);
 
 		return;
 	}
@@ -31,9 +32,9 @@ function handle(event: KeyboardEvent, focusTrap: HTMLElement, element: HTMLEleme
 		target = elements[position] ?? focusTrap;
 	}
 
-	delay(() => {
+	wait(() => {
 		target.focus();
-	});
+	}, 0);
 }
 
 function observe(records: MutationRecord[]) {
@@ -115,13 +116,13 @@ class FocusTrap {
 		subtree: true,
 	});
 
-	delay(() => {
+	wait(() => {
 		const focusTraps = Array.from(document.querySelectorAll(`[${attribute}]`));
 
 		for (const focusTrap of focusTraps) {
 			focusTrap.setAttribute(attribute, '');
 		}
-	});
+	}, 0);
 
 	document.addEventListener('keydown', onKeydown, eventOptions.active);
 })();

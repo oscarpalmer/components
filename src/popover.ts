@@ -1,4 +1,5 @@
-import {defineProperty, delay, eventOptions, findParent, getFocusableElements, isNullOrWhitespace, setAttribute, setProperty} from './helpers';
+import {wait} from '@oscarpalmer/timer';
+import {defineProperty, eventOptions, findParent, getFocusableElements, isNullOrWhitespace, setAttribute, setProperty} from './helpers';
 import {Floated} from './helpers/floated';
 import {attribute} from './focus-trap';
 
@@ -79,9 +80,9 @@ function handleToggle(popover: PolitePopover, expand?: boolean | Event): void {
 			value: 'below-left',
 		});
 
-		delay(() => {
+		wait(() => {
 			afterToggle(popover, true);
-		});
+		}, 0);
 	}
 
 	popover.dispatchEvent(new Event('toggle'));

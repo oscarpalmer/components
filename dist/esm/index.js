@@ -5,6 +5,114 @@ var __publicField = (obj, key, value) => {
   return value;
 };
 
+// node_modules/@oscarpalmer/timer/dist/timer.js
+var milliseconds = Math.round(1e3 / 60);
+var cancel = cancelAnimationFrame ?? function(id) {
+  clearTimeout?.(id);
+};
+var request = requestAnimationFrame ?? function(callback) {
+  return setTimeout?.(() => {
+    callback(Date.now());
+  }, milliseconds) ?? -1;
+};
+var Timed = class {
+  callback;
+  count;
+  frame;
+  running = false;
+  time;
+  /**
+   * Is the timer active?
+   */
+  get active() {
+    return this.running;
+  }
+  constructor(callback, time, count) {
+    const isRepeated = this instanceof Repeated;
+    const type = isRepeated ? "repeated" : "waited";
+    if (typeof callback !== "function") {
+      throw new Error(`A ${type} timer must have a callback function`);
+    }
+    if (typeof time !== "number" || time < 0) {
+      throw new Error(`A ${type} timer must have a non-negative number as its time`);
+    }
+    if (isRepeated && (typeof count !== "number" || count < 2)) {
+      throw new Error("A repeated timer must have a number above 1 as its repeat count");
+    }
+    this.callback = callback;
+    this.count = count;
+    this.time = time;
+  }
+  static run(timed) {
+    timed.running = true;
+    let count = 0;
+    let start;
+    function step(timestamp) {
+      if (!timed.running) {
+        return;
+      }
+      start ??= timestamp;
+      const elapsed = timestamp - start;
+      const elapsedMinimum = elapsed - milliseconds;
+      const elapsedMaximum = elapsed + milliseconds;
+      if (elapsedMinimum < timed.time && timed.time < elapsedMaximum) {
+        if (timed.running) {
+          timed.callback(timed instanceof Repeated ? count : void 0);
+        }
+        count += 1;
+        if (timed instanceof Repeated && count < timed.count) {
+          start = void 0;
+        } else {
+          timed.stop();
+          return;
+        }
+      }
+      timed.frame = request(step);
+    }
+    timed.frame = request(step);
+  }
+  /**
+   * Restart timer
+   */
+  restart() {
+    this.stop();
+    Timed.run(this);
+    return this;
+  }
+  /**
+   * Start timer
+   */
+  start() {
+    if (this.running) {
+      return this;
+    }
+    Timed.run(this);
+    return this;
+  }
+  /**
+   * Stop timer
+   */
+  stop() {
+    this.running = false;
+    if (typeof this.frame === "undefined") {
+      return this;
+    }
+    cancel(this.frame);
+    this.frame = void 0;
+    return this;
+  }
+};
+var Repeated = class extends Timed {
+};
+var Waited = class extends Timed {
+  constructor(callback, time) {
+    super(callback, time, 1);
+  }
+};
+function wait(callback, time) {
+  return new Waited(callback, time).start();
+}
+
 // src/helpers/index.ts
 var eventOptions = {
   active: { capture: false, passive: false },
@@ -32,11 +140,6 @@ function defineProperty(obj, key, value) {
     value,
     writable: false
   });
-}
-function delay(callback) {
-  return globalThis.requestAnimationFrame?.(callback) ?? globalThis.setTimeout?.(() => {
-    callback(Date.now());
-  }, 16);
 }
 function findParent(element, match) {
   const matchIsSelector = typeof match === "string";
@@ -188,12 +291,12 @@ var Manager = class {
         element.open = !element.open;
       }
     }
-    delay(() => {
+    wait(() => {
       open.set(component, sorted);
       setAttribute(component, "open", sorted.length === 0 ? null : sorted);
       component.dispatchEvent(new Event("toggle"));
-      delay(() => observer2.get(component)?.observe(component, Observer.options));
-    });
+      wait(() => observer2.get(component)?.observe(component, Observer.options), 0);
+    }, 0);
   }
 };
 var Observer = class {
@@ -317,9 +420,9 @@ var store = /* @__PURE__ */ new WeakMap();
 function handle(event, focusTrap, element) {
   const elements = getFocusableElements(focusTrap);
   if (element === focusTrap) {
-    delay(() => {
+    wait(() => {
       (elements[event.shiftKey ? elements.length - 1 : 0] ?? focusTrap).focus();
-    });
+    }, 0);
     return;
   }
   const index2 = elements.indexOf(element);
@@ -333,9 +436,9 @@ function handle(event, focusTrap, element) {
     }
     target = elements[position] ?? focusTrap;
   }
-  delay(() => {
+  wait(() => {
     target.focus();
-  });
+  }, 0);
 }
 function observe(records) {
   for (const record of records) {
@@ -396,12 +499,12 @@ var FocusTrap = class {
     childList: true,
     subtree: true
   });
-  delay(() => {
+  wait(() => {
     const focusTraps = Array.from(document.querySelectorAll(`[${attribute}]`));
     for (const focusTrap of focusTraps) {
       focusTrap.setAttribute(attribute, "");
     }
-  });
+  }, 0);
   document.addEventListener("keydown", onKeydown, eventOptions.active);
 })();
 
@@ -427,11 +530,11 @@ var Floated = class {
       floater.style.position = "fixed";
       floater.style.inset = "0 auto auto 0";
       floater.style.transform = matrix;
-      delay(update);
+      wait(update, 0);
     }
     document.body.appendChild(floater);
     floater.hidden = false;
-    delay(update);
+    wait(update, 0);
   }
   static getLeft(rectangles, position) {
     const { left, right } = rectangles.anchor;
@@ -543,9 +646,9 @@ function handleToggle(popover, expand) {
       attribute: "position",
       value: "below-left"
     });
-    delay(() => {
+    wait(() => {
       afterToggle(popover, true);
-    });
+    }, 0);
   }
   popover.dispatchEvent(new Event("toggle"));
 }
@@ -811,10 +914,9 @@ observer.observe(document, {
   childList: true,
   subtree: true
 });
-delay(() => {
+wait(() => {
   const tooltips = Array.from(document.querySelectorAll(`[${attribute2}]`));
   for (const tooltip of tooltips) {
     tooltip.setAttribute(attribute2, "");
   }
-});
-//# sourceMappingURL=index.js.map
+}, 0);

@@ -1,8 +1,115 @@
-"use strict";var o={active:{capture:!1,passive:!1},passive:{capture:!1,passive:!0}},w=['[contenteditable]:not([contenteditable="false"])',"[href]","[tabindex]:not(slot)","audio[controls]","button","details","details[open] > summary","input","select","textarea","video[controls]"],g=w.map(s=>`${s}:not([disabled]):not([hidden]):not([tabindex="-1"])`).join(",");function d(s,t,i){let e=s.getAttribute(t);return e==null||e.trim().length===0?i:e}function b(s,t){return s.replace(/\{\{(\w+)\}\}/g,(i,...e)=>{var a;return e==null||e.length===0?i:String((a=t==null?void 0:t[e[0]])!=null?a:i)})}function r(s,t,i){s.setAttribute(t,String(typeof i=="boolean"?i:!1))}var y=`<swanky-switch-label id="{{id}}">{{label}}</swanky-switch-label>
+"use strict";
+
+// src/helpers/index.ts
+var eventOptions = {
+  active: { capture: false, passive: false },
+  passive: { capture: false, passive: true }
+};
+var focusableSelectors = [
+  '[contenteditable]:not([contenteditable="false"])',
+  "[href]",
+  "[tabindex]:not(slot)",
+  "audio[controls]",
+  "button",
+  "details",
+  "details[open] > summary",
+  "embed",
+  "iframe",
+  "input",
+  "object",
+  "select",
+  "textarea",
+  "video[controls]"
+];
+var focusableSelector = focusableSelectors.map((selector) => `${selector}:not([disabled]):not([hidden]):not([tabindex="-1"])`).join(",");
+function getAttribute(element, attribute, defaultValue) {
+  const value = element.getAttribute(attribute);
+  return value == null || value.trim().length === 0 ? defaultValue : value;
+}
+function setProperty(element, property, value) {
+  element.setAttribute(property, String(typeof value === "boolean" ? value : false));
+}
+
+// src/switch.ts
+function initialise(component, label, input) {
+  var _a, _b, _c;
+  (_a = label.parentElement) == null ? void 0 : _a.removeChild(label);
+  (_b = input.parentElement) == null ? void 0 : _b.removeChild(input);
+  setProperty(component, "aria-checked", input.checked || component.checked);
+  setProperty(component, "aria-disabled", input.disabled || component.disabled);
+  setProperty(component, "aria-readonly", input.readOnly || component.readOnly);
+  component.setAttribute("aria-labelledby", `${input.id}_label`);
+  component.setAttribute("id", input.id);
+  component.setAttribute("name", (_c = input.name) != null ? _c : input.id);
+  component.setAttribute("role", "switch");
+  component.setAttribute("tabindex", "0");
+  component.setAttribute("value", input.value);
+  const off = getAttribute(component, "swanky-switch-off", "Off");
+  const on = getAttribute(component, "swanky-switch-on", "On");
+  component.insertAdjacentHTML("afterbegin", render(input.id, label, off, on));
+  component.addEventListener("click", onToggle.bind(component), eventOptions.passive);
+  component.addEventListener("keydown", onKey.bind(component), eventOptions.passive);
+}
+function onKey(event) {
+  if ((event.key === " " || event.key === "Enter") && this instanceof SwankySwitch) {
+    toggle(this);
+  }
+}
+function onToggle() {
+  if (this instanceof SwankySwitch) {
+    toggle(this);
+  }
+}
+function render(id, label, off, on) {
+  return `<swanky-switch-label id="${id}_label">${label.innerHTML}</swanky-switch-label>
 <swanky-switch-status aria-hidden="true">
 	<swanky-switch-status-indicator></swanky-switch-status-indicator>
 </swanky-switch-status>
 <swanky-switch-text aria-hidden="true">
-	<swanky-switch-text-off>{{off}}</swanky-switch-text-off>
-	<swanky-switch-text-on>{{on}}</swanky-switch-text-on>
-</swanky-switch-text>`,n=class{static addListeners(t){t.addEventListener("click",n.onToggle.bind(t),o.passive),t.addEventListener("keydown",n.onKey.bind(t),o.passive)}static initialize(t,i,e){var c,u,h;(c=i.parentElement)==null||c.removeChild(i),(u=e.parentElement)==null||u.removeChild(e),r(t,"aria-checked",e.checked||t.checked),r(t,"aria-disabled",e.disabled||t.disabled),r(t,"aria-readonly",e.readOnly||t.readOnly),t.setAttribute("aria-labelledby",`${e.id}_label`),t.setAttribute("id",e.id),t.setAttribute("name",(h=e.name)!=null?h:e.id),t.setAttribute("role","switch"),t.setAttribute("tabindex","0"),t.setAttribute("value",e.value);let a=d(t,"swanky-switch-off","Off"),f=d(t,"swanky-switch-on","On");t.insertAdjacentHTML("afterbegin",n.render(e.id,i,a,f)),n.addListeners(t)}static onKey(t){(t.key===" "||t.key==="Enter")&&this instanceof l&&n.toggle(this)}static onToggle(){this instanceof l&&n.toggle(this)}static render(t,i,e,a){return b(y,{off:e,on:a,id:`${t}_label`,label:i.innerHTML})}static toggle(t){t.disabled||t.readOnly||(t.checked=!t.checked,t.dispatchEvent(new Event("change")))}},l=class extends HTMLElement{get checked(){return this.getAttribute("aria-checked")==="true"}set checked(t){r(this,"aria-checked",t)}get disabled(){return this.getAttribute("aria-disabled")==="true"}set disabled(t){r(this,"aria-disabled",t)}get readOnly(){return this.getAttribute("aria-readonly")==="true"}set readOnly(t){r(this,"aria-readonly",t)}get value(){return this.checked?"on":"off"}constructor(){super();let t=this.querySelector("[swanky-switch-input]"),i=this.querySelector("[swanky-switch-label]");if(typeof t=="undefined"||!(t instanceof HTMLInputElement)||t.type!=="checkbox")throw new Error("<swanky-switch> must have an <input>-element with type 'checkbox' and the attribute 'swanky-switch-input'");if(typeof i=="undefined"||!(i instanceof HTMLElement))throw new Error("<swanky-switch> must have a <label>-element with the attribute 'swanky-switch-label'");n.initialize(this,i,t)}};globalThis.customElements.define("swanky-switch",l);
+	<swanky-switch-text-off>${off}</swanky-switch-text-off>
+	<swanky-switch-text-on>${on}</swanky-switch-text-on>
+</swanky-switch-text>`;
+}
+function toggle(component) {
+  if (component.disabled || component.readOnly) {
+    return;
+  }
+  component.checked = !component.checked;
+  component.dispatchEvent(new Event("change"));
+}
+var SwankySwitch = class extends HTMLElement {
+  get checked() {
+    return this.getAttribute("aria-checked") === "true";
+  }
+  set checked(checked) {
+    setProperty(this, "aria-checked", checked);
+  }
+  get disabled() {
+    return this.getAttribute("aria-disabled") === "true";
+  }
+  set disabled(disabled) {
+    setProperty(this, "aria-disabled", disabled);
+  }
+  get readOnly() {
+    return this.getAttribute("aria-readonly") === "true";
+  }
+  set readOnly(readonly) {
+    setProperty(this, "aria-readonly", readonly);
+  }
+  get value() {
+    return this.checked ? "on" : "off";
+  }
+  constructor() {
+    super();
+    const input = this.querySelector("[swanky-switch-input]");
+    const label = this.querySelector("[swanky-switch-label]");
+    if (typeof input === "undefined" || !(input instanceof HTMLInputElement) || input.type !== "checkbox") {
+      throw new Error("<swanky-switch> must have an <input>-element with type 'checkbox' and the attribute 'swanky-switch-input'");
+    }
+    if (typeof label === "undefined" || !(label instanceof HTMLElement)) {
+      throw new Error("<swanky-switch> must have a <label>-element with the attribute 'swanky-switch-label'");
+    }
+    initialise(this, label, input);
+  }
+};
+globalThis.customElements.define("swanky-switch", SwankySwitch);

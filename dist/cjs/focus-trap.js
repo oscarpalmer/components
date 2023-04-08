@@ -1,1 +1,294 @@
-"use strict";var c=Object.defineProperty;var h=Object.getOwnPropertyDescriptor;var x=Object.getOwnPropertyNames;var v=Object.prototype.hasOwnProperty;var L=(n,t,e)=>t in n?c(n,t,{enumerable:!0,configurable:!0,writable:!0,value:e}):n[t]=e;var M=(n,t)=>{for(var e in t)c(n,e,{get:t[e],enumerable:!0})},H=(n,t,e,o)=>{if(t&&typeof t=="object"||typeof t=="function")for(let r of x(t))!v.call(n,r)&&r!==e&&c(n,r,{get:()=>t[r],enumerable:!(o=h(t,r))||o.enumerable});return n};var A=n=>H(c({},"__esModule",{value:!0}),n);var m=(n,t,e)=>(L(n,typeof t!="symbol"?t+"":t,e),e);var O={};M(O,{attribute:()=>l});module.exports=A(O);var y={active:{capture:!1,passive:!1},passive:{capture:!1,passive:!0}},w=['[contenteditable]:not([contenteditable="false"])',"[href]","[tabindex]:not(slot)","audio[controls]","button","details","details[open] > summary","input","select","textarea","video[controls]"],S=w.map(n=>`${n}:not([disabled]):not([hidden]):not([tabindex="-1"])`).join(",");function d(n){var t,e,o;return(o=(t=globalThis.requestAnimationFrame)==null?void 0:t.call(globalThis,n))!=null?o:(e=globalThis.setTimeout)==null?void 0:e.call(globalThis,()=>{n(Date.now())},16)}function T(n,t){let e=typeof t=="string";if(e?n.matches(t):t(n))return n;let o=n==null?void 0:n.parentElement;for(;o!=null;){if(o===document.body)return;if(e?o.matches(t):t(o))break;o=o.parentElement}return o!=null?o:void 0}function E(n){var o;let t=[],e=Array.from(n.querySelectorAll(S));for(let r of e){let s=(o=globalThis.getComputedStyle)==null?void 0:o.call(globalThis,r);(s==null||s.display!=="none"&&s.visibility!=="hidden")&&t.push(r)}return t}function b(n,t,e){e==null?n.removeAttribute(t):n.setAttribute(t,String(e))}var l="formal-focus-trap",f=new WeakMap,u=class{static observer(t){for(let e of t){if(e.type!=="attributes")continue;let o=e.target;o.getAttribute(l)==null?a.destroy(o):a.create(o)}}static onKeydown(t){if(t.key!=="Tab")return;let e=t.target,o=T(e,`[${l}]`);o!=null&&(t.preventDefault(),t.stopImmediatePropagation(),u.handle(t,o,e))}static handle(t,e,o){var g;let r=E(e);if(o===e){d(()=>{var i;((i=r[t.shiftKey?r.length-1:0])!=null?i:e).focus()});return}let s=r.indexOf(o),p=e;if(s>-1){let i=s+(t.shiftKey?-1:1);i<0?i=r.length-1:i>=r.length&&(i=0),p=(g=r[i])!=null?g:e}d(()=>{p.focus()})}},a=class{constructor(t){m(this,"tabIndex");this.tabIndex=t.tabIndex,b(t,"tabindex","-1")}static create(t){f.has(t)||f.set(t,new a(t))}static destroy(t){let e=f.get(t);e!=null&&(b(t,"tabindex",e.tabIndex),f.delete(t))}};(()=>{if(typeof globalThis._formalFocusTrap!="undefined")return;globalThis._formalFocusTrap=null,new MutationObserver(u.observer).observe(document,{attributeFilter:[l],attributeOldValue:!0,attributes:!0,childList:!0,subtree:!0}),d(()=>{let t=Array.from(document.querySelectorAll(`[${l}]`));for(let e of t)e.setAttribute(l,"")}),document.addEventListener("keydown",u.onKeydown,y.active)})();
+"use strict";
+var __defProp = Object.defineProperty;
+var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
+var __getOwnPropNames = Object.getOwnPropertyNames;
+var __hasOwnProp = Object.prototype.hasOwnProperty;
+var __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { enumerable: true, configurable: true, writable: true, value }) : obj[key] = value;
+var __export = (target, all) => {
+  for (var name in all)
+    __defProp(target, name, { get: all[name], enumerable: true });
+};
+var __copyProps = (to, from, except, desc) => {
+  if (from && typeof from === "object" || typeof from === "function") {
+    for (let key of __getOwnPropNames(from))
+      if (!__hasOwnProp.call(to, key) && key !== except)
+        __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
+  }
+  return to;
+};
+var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
+var __publicField = (obj, key, value) => {
+  __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
+  return value;
+};
+
+// src/focus-trap.ts
+var focus_trap_exports = {};
+__export(focus_trap_exports, {
+  attribute: () => attribute
+});
+module.exports = __toCommonJS(focus_trap_exports);
+
+// node_modules/@oscarpalmer/timer/dist/timer.js
+var milliseconds = Math.round(1e3 / 60);
+var cancel = cancelAnimationFrame != null ? cancelAnimationFrame : function(id) {
+  clearTimeout == null ? void 0 : clearTimeout(id);
+};
+var request = requestAnimationFrame != null ? requestAnimationFrame : function(callback) {
+  var _a;
+  return (_a = setTimeout == null ? void 0 : setTimeout(() => {
+    callback(Date.now());
+  }, milliseconds)) != null ? _a : -1;
+};
+var Timed = class {
+  constructor(callback, time, count) {
+    __publicField(this, "callback");
+    __publicField(this, "count");
+    __publicField(this, "frame");
+    __publicField(this, "running", false);
+    __publicField(this, "time");
+    const isRepeated = this instanceof Repeated;
+    const type = isRepeated ? "repeated" : "waited";
+    if (typeof callback !== "function") {
+      throw new Error(`A ${type} timer must have a callback function`);
+    }
+    if (typeof time !== "number" || time < 0) {
+      throw new Error(`A ${type} timer must have a non-negative number as its time`);
+    }
+    if (isRepeated && (typeof count !== "number" || count < 2)) {
+      throw new Error("A repeated timer must have a number above 1 as its repeat count");
+    }
+    this.callback = callback;
+    this.count = count;
+    this.time = time;
+  }
+  /**
+   * Is the timer active?
+   */
+  get active() {
+    return this.running;
+  }
+  static run(timed) {
+    timed.running = true;
+    let count = 0;
+    let start;
+    function step(timestamp) {
+      if (!timed.running) {
+        return;
+      }
+      start != null ? start : start = timestamp;
+      const elapsed = timestamp - start;
+      const elapsedMinimum = elapsed - milliseconds;
+      const elapsedMaximum = elapsed + milliseconds;
+      if (elapsedMinimum < timed.time && timed.time < elapsedMaximum) {
+        if (timed.running) {
+          timed.callback(timed instanceof Repeated ? count : void 0);
+        }
+        count += 1;
+        if (timed instanceof Repeated && count < timed.count) {
+          start = void 0;
+        } else {
+          timed.stop();
+          return;
+        }
+      }
+      timed.frame = request(step);
+    }
+    timed.frame = request(step);
+  }
+  /**
+   * Restart timer
+   */
+  restart() {
+    this.stop();
+    Timed.run(this);
+    return this;
+  }
+  /**
+   * Start timer
+   */
+  start() {
+    if (this.running) {
+      return this;
+    }
+    Timed.run(this);
+    return this;
+  }
+  /**
+   * Stop timer
+   */
+  stop() {
+    this.running = false;
+    if (typeof this.frame === "undefined") {
+      return this;
+    }
+    cancel(this.frame);
+    this.frame = void 0;
+    return this;
+  }
+};
+var Repeated = class extends Timed {
+};
+var Waited = class extends Timed {
+  constructor(callback, time) {
+    super(callback, time, 1);
+  }
+};
+function wait(callback, time) {
+  return new Waited(callback, time).start();
+}
+
+// src/helpers/index.ts
+var eventOptions = {
+  active: { capture: false, passive: false },
+  passive: { capture: false, passive: true }
+};
+var focusableSelectors = [
+  '[contenteditable]:not([contenteditable="false"])',
+  "[href]",
+  "[tabindex]:not(slot)",
+  "audio[controls]",
+  "button",
+  "details",
+  "details[open] > summary",
+  "embed",
+  "iframe",
+  "input",
+  "object",
+  "select",
+  "textarea",
+  "video[controls]"
+];
+var focusableSelector = focusableSelectors.map((selector) => `${selector}:not([disabled]):not([hidden]):not([tabindex="-1"])`).join(",");
+function findParent(element, match) {
+  const matchIsSelector = typeof match === "string";
+  if (matchIsSelector ? element.matches(match) : match(element)) {
+    return element;
+  }
+  let parent = element == null ? void 0 : element.parentElement;
+  while (parent != null) {
+    if (parent === document.body) {
+      return;
+    }
+    if (matchIsSelector ? parent.matches(match) : match(parent)) {
+      break;
+    }
+    parent = parent.parentElement;
+  }
+  return parent != null ? parent : void 0;
+}
+function getFocusableElements(context) {
+  var _a;
+  const focusable = [];
+  const elements = Array.from(context.querySelectorAll(focusableSelector));
+  for (const element of elements) {
+    const style = (_a = globalThis.getComputedStyle) == null ? void 0 : _a.call(globalThis, element);
+    if (style == null || style.display !== "none" && style.visibility !== "hidden") {
+      focusable.push(element);
+    }
+  }
+  return focusable;
+}
+function setAttribute(element, attribute2, value) {
+  if (value == null) {
+    element.removeAttribute(attribute2);
+  } else {
+    element.setAttribute(attribute2, String(value));
+  }
+}
+
+// src/focus-trap.ts
+var attribute = "formal-focus-trap";
+var store = /* @__PURE__ */ new WeakMap();
+function handle(event, focusTrap, element) {
+  var _a;
+  const elements = getFocusableElements(focusTrap);
+  if (element === focusTrap) {
+    wait(() => {
+      var _a2;
+      ((_a2 = elements[event.shiftKey ? elements.length - 1 : 0]) != null ? _a2 : focusTrap).focus();
+    }, 0);
+    return;
+  }
+  const index = elements.indexOf(element);
+  let target = focusTrap;
+  if (index > -1) {
+    let position = index + (event.shiftKey ? -1 : 1);
+    if (position < 0) {
+      position = elements.length - 1;
+    } else if (position >= elements.length) {
+      position = 0;
+    }
+    target = (_a = elements[position]) != null ? _a : focusTrap;
+  }
+  wait(() => {
+    target.focus();
+  }, 0);
+}
+function observe(records) {
+  for (const record of records) {
+    if (record.type !== "attributes") {
+      continue;
+    }
+    const element = record.target;
+    if (element.getAttribute(attribute) == null) {
+      FocusTrap.destroy(element);
+    } else {
+      FocusTrap.create(element);
+    }
+  }
+}
+function onKeydown(event) {
+  if (event.key !== "Tab") {
+    return;
+  }
+  const eventTarget = event.target;
+  const focusTrap = findParent(eventTarget, `[${attribute}]`);
+  if (focusTrap == null) {
+    return;
+  }
+  event.preventDefault();
+  event.stopImmediatePropagation();
+  handle(event, focusTrap, eventTarget);
+}
+var FocusTrap = class {
+  constructor(element) {
+    __publicField(this, "tabIndex");
+    this.tabIndex = element.tabIndex;
+    setAttribute(element, "tabindex", "-1");
+  }
+  static create(element) {
+    if (!store.has(element)) {
+      store.set(element, new FocusTrap(element));
+    }
+  }
+  static destroy(element) {
+    const focusTrap = store.get(element);
+    if (focusTrap == null) {
+      return;
+    }
+    setAttribute(element, "tabindex", focusTrap.tabIndex);
+    store.delete(element);
+  }
+};
+(() => {
+  if (typeof globalThis._formalFocusTrap !== "undefined") {
+    return;
+  }
+  globalThis._formalFocusTrap = null;
+  const observer = new MutationObserver(observe);
+  observer.observe(document, {
+    attributeFilter: [attribute],
+    attributeOldValue: true,
+    attributes: true,
+    childList: true,
+    subtree: true
+  });
+  wait(() => {
+    const focusTraps = Array.from(document.querySelectorAll(`[${attribute}]`));
+    for (const focusTrap of focusTraps) {
+      focusTrap.setAttribute(attribute, "");
+    }
+  }, 0);
+  document.addEventListener("keydown", onKeydown, eventOptions.active);
+})();

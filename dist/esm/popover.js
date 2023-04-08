@@ -1,1 +1,488 @@
-var A=Object.defineProperty;var O=(i,e,t)=>e in i?A(i,e,{enumerable:!0,configurable:!0,writable:!0,value:t}):i[e]=t;var L=(i,e,t)=>(O(i,typeof e!="symbol"?e+"":e,t),t);var h={active:{capture:!1,passive:!1},passive:{capture:!1,passive:!0}},C=['[contenteditable]:not([contenteditable="false"])',"[href]","[tabindex]:not(slot)","audio[controls]","button","details","details[open] > summary","input","select","textarea","video[controls]"],R=C.map(i=>`${i}:not([disabled]):not([hidden]):not([tabindex="-1"])`).join(",");function d(i){return globalThis.requestAnimationFrame?.(i)??globalThis.setTimeout?.(()=>{i(Date.now())},16)}function E(i,e){let t=typeof e=="string";if(t?i.matches(e):e(i))return i;let o=i?.parentElement;for(;o!=null;){if(o===document.body)return;if(t?o.matches(e):e(o))break;o=o.parentElement}return o??void 0}function y(i){let e=[],t=Array.from(i.querySelectorAll(R));for(let o of t){let n=globalThis.getComputedStyle?.(o);(n==null||n.display!=="none"&&n.visibility!=="hidden")&&e.push(o)}return e}function T(i){return i==null?!0:i.trim().length===0}function s(i,e,t){t==null?i.removeAttribute(e):i.setAttribute(e,String(t))}function x(i,e,t){i.setAttribute(e,String(typeof t=="boolean"?t:!1))}var k=["above","above-left","above-right","below","below-left","below-right","horizontal","left","right","vertical"],f=class{static update(e,t){let{anchor:o,floater:n,parent:r}=e;function u(){if(n.hidden){o.insertAdjacentElement("afterend",n);return}let c=f.getPosition((r??o).getAttribute("position")??"",t),H={anchor:o.getBoundingClientRect(),floater:n.getBoundingClientRect()},P=f.getTop(H,c),M=`matrix(1, 0, 0, 1, ${f.getLeft(H,c)}, ${P})`;n.style.position="fixed",n.style.inset="0 auto auto 0",n.style.transform=M,d(u)}document.body.appendChild(n),n.hidden=!1,d(u)}static getLeft(e,t){let{left:o,right:n}=e.anchor,{width:r}=e.floater;switch(t){case"above":case"below":case"vertical":return o+e.anchor.width/2-r/2;case"above-left":case"below-left":return o;case"above-right":case"below-right":return n-r;case"horizontal":return n+r>globalThis.innerWidth?o-r<0?n:o-r:n;case"left":return o-r;case"right":return n;default:return 0}}static getTop(e,t){let{bottom:o,top:n}=e.anchor,{height:r}=e.floater;switch(t){case"above":case"above-left":case"above-right":return n-r;case"below":case"below-left":case"below-right":return o;case"horizontal":case"left":case"right":return n+e.anchor.height/2-r/2;case"vertical":return o+r>globalThis.innerHeight?n-r<0?o:n-r:o;default:return 0}}static getPosition(e,t){if(e==null)return t;let o=e.trim().toLowerCase(),n=k.indexOf(o);return n>-1?k[n]??t:t}};var b="formal-focus-trap",w=new WeakMap,v=class{static observer(e){for(let t of e){if(t.type!=="attributes")continue;let o=t.target;o.getAttribute(b)==null?g.destroy(o):g.create(o)}}static onKeydown(e){if(e.key!=="Tab")return;let t=e.target,o=E(t,`[${b}]`);o!=null&&(e.preventDefault(),e.stopImmediatePropagation(),v.handle(e,o,t))}static handle(e,t,o){let n=y(t);if(o===t){d(()=>{(n[e.shiftKey?n.length-1:0]??t).focus()});return}let r=n.indexOf(o),u=t;if(r>-1){let c=r+(e.shiftKey?-1:1);c<0?c=n.length-1:c>=n.length&&(c=0),u=n[c]??t}d(()=>{u.focus()})}},g=class{tabIndex;constructor(e){this.tabIndex=e.tabIndex,s(e,"tabindex","-1")}static create(e){w.has(e)||w.set(e,new g(e))}static destroy(e){let t=w.get(e);t!=null&&(s(e,"tabindex",t.tabIndex),w.delete(e))}};(()=>{if(typeof globalThis._formalFocusTrap<"u")return;globalThis._formalFocusTrap=null,new MutationObserver(v.observer).observe(document,{attributeFilter:[b],attributeOldValue:!0,attributes:!0,childList:!0,subtree:!0}),d(()=>{let e=Array.from(document.querySelectorAll(`[${b}]`));for(let t of e)t.setAttribute(b,"")}),document.addEventListener("keydown",v.onKeydown,h.active)})();var S=0,l=class{static initialize(e,t,o){o.hidden=!0,T(e.id)&&s(e,"id",`polite_popover_${S++}`),T(t.id)&&s(t,"id",`${e.id}_button`),T(o.id)&&s(o,"id",`${e.id}_content`),s(t,"aria-controls",o.id),x(t,"aria-expanded",!1),s(t,"aria-haspopup","dialog"),s(o,b,""),s(o,"role","dialog"),s(o,"aria-modal","false"),t.addEventListener("click",l.toggle.bind(e),h.passive)}static onClick(e){this instanceof m&&this.open&&l.handleGlobalEvent(e,this,e.target)}static onKeydown(e){this instanceof m&&this.open&&e instanceof KeyboardEvent&&e.key==="Escape"&&l.handleGlobalEvent(e,this,document.activeElement)}static toggle(e){let t=this instanceof m?a.elements.get(this):null;t!=null&&l.handleToggle(this,t,e)}static afterToggle(e,t,o){l.handleCallbacks(e,o),o?(y(t.floater)?.[0]??t.floater).focus():t.anchor.focus()}static handleCallbacks(e,t){let o=a.callbacks.get(e);if(o==null)return;let n=t?"addEventListener":"removeEventListener";document[n]("click",o.click,h.passive),document[n]("keydown",o.keydown,h.passive)}static handleGlobalEvent(e,t,o){let n=a.elements.get(t);if(n==null)return;let r=E(o,"[polite-popover-content]");if(r==null){this.handleToggle(t,n,!1);return}e.stopPropagation();let u=Array.from(document.body.children);u.indexOf(r)-u.indexOf(n.floater)<(e instanceof KeyboardEvent?1:0)&&l.handleToggle(t,n,!1)}static handleToggle(e,t,o){let n=typeof o=="boolean"?!o:e.open;x(t.anchor,"aria-expanded",!n),n?(t.floater.hidden=!0,l.afterToggle(e,t,!1)):(f.update({anchor:t.anchor,floater:t.floater,parent:e},"below-left"),d(()=>{l.afterToggle(e,t,!0)})),e.dispatchEvent(new Event("toggle"))}},p=class{static add(e){let t=e.querySelector(":scope > [polite-popover-button]"),o=e.querySelector(":scope > [polite-popover-content]");t==null||o==null||(p.callbacks.set(e,{click:l.onClick.bind(e),keydown:l.onKeydown.bind(e)}),p.elements.set(e,{anchor:t,floater:o}))}static remove(e){let t=p.elements.get(e);t?.floater instanceof HTMLElement&&(t.floater.hidden=!0,t.anchor?.insertAdjacentElement("afterend",t.floater)),p.callbacks.delete(e),p.elements.delete(e)}},a=p;L(a,"callbacks",new WeakMap),L(a,"elements",new WeakMap);var m=class extends HTMLElement{get button(){return a.elements.get(this)?.anchor}get content(){return a.elements.get(this)?.floater}get open(){return this.button?.getAttribute("aria-expanded")==="true"}set open(e){l.toggle.call(this,e)}constructor(){super();let e=this.querySelector(":scope > [polite-popover-button]"),t=this.querySelector(":scope > [polite-popover-content]");if(e==null||!(e instanceof HTMLButtonElement||e instanceof HTMLElement&&e.getAttribute("role")==="button"))throw new Error("<polite-popover> must have a <button>-element (or button-like element) with the attribute 'polite-popover-button'");if(t==null||!(t instanceof HTMLElement))throw new Error("<polite-popover> must have an element with the attribute 'polite-popover-content'");l.initialize(this,e,t)}connectedCallback(){a.add(this)}disconnectedCallback(){a.remove(this)}toggle(){l.toggle.call(this)}};globalThis.customElements.define("polite-popover",m);
+// node_modules/@oscarpalmer/timer/dist/timer.js
+var milliseconds = Math.round(1e3 / 60);
+var cancel = cancelAnimationFrame ?? function(id) {
+  clearTimeout?.(id);
+};
+var request = requestAnimationFrame ?? function(callback) {
+  return setTimeout?.(() => {
+    callback(Date.now());
+  }, milliseconds) ?? -1;
+};
+var Timed = class {
+  callback;
+  count;
+  frame;
+  running = false;
+  time;
+  /**
+   * Is the timer active?
+   */
+  get active() {
+    return this.running;
+  }
+  constructor(callback, time, count) {
+    const isRepeated = this instanceof Repeated;
+    const type = isRepeated ? "repeated" : "waited";
+    if (typeof callback !== "function") {
+      throw new Error(`A ${type} timer must have a callback function`);
+    }
+    if (typeof time !== "number" || time < 0) {
+      throw new Error(`A ${type} timer must have a non-negative number as its time`);
+    }
+    if (isRepeated && (typeof count !== "number" || count < 2)) {
+      throw new Error("A repeated timer must have a number above 1 as its repeat count");
+    }
+    this.callback = callback;
+    this.count = count;
+    this.time = time;
+  }
+  static run(timed) {
+    timed.running = true;
+    let count = 0;
+    let start;
+    function step(timestamp) {
+      if (!timed.running) {
+        return;
+      }
+      start ??= timestamp;
+      const elapsed = timestamp - start;
+      const elapsedMinimum = elapsed - milliseconds;
+      const elapsedMaximum = elapsed + milliseconds;
+      if (elapsedMinimum < timed.time && timed.time < elapsedMaximum) {
+        if (timed.running) {
+          timed.callback(timed instanceof Repeated ? count : void 0);
+        }
+        count += 1;
+        if (timed instanceof Repeated && count < timed.count) {
+          start = void 0;
+        } else {
+          timed.stop();
+          return;
+        }
+      }
+      timed.frame = request(step);
+    }
+    timed.frame = request(step);
+  }
+  /**
+   * Restart timer
+   */
+  restart() {
+    this.stop();
+    Timed.run(this);
+    return this;
+  }
+  /**
+   * Start timer
+   */
+  start() {
+    if (this.running) {
+      return this;
+    }
+    Timed.run(this);
+    return this;
+  }
+  /**
+   * Stop timer
+   */
+  stop() {
+    this.running = false;
+    if (typeof this.frame === "undefined") {
+      return this;
+    }
+    cancel(this.frame);
+    this.frame = void 0;
+    return this;
+  }
+};
+var Repeated = class extends Timed {
+};
+var Waited = class extends Timed {
+  constructor(callback, time) {
+    super(callback, time, 1);
+  }
+};
+function wait(callback, time) {
+  return new Waited(callback, time).start();
+}
+
+// src/helpers/index.ts
+var eventOptions = {
+  active: { capture: false, passive: false },
+  passive: { capture: false, passive: true }
+};
+var focusableSelectors = [
+  '[contenteditable]:not([contenteditable="false"])',
+  "[href]",
+  "[tabindex]:not(slot)",
+  "audio[controls]",
+  "button",
+  "details",
+  "details[open] > summary",
+  "embed",
+  "iframe",
+  "input",
+  "object",
+  "select",
+  "textarea",
+  "video[controls]"
+];
+var focusableSelector = focusableSelectors.map((selector) => `${selector}:not([disabled]):not([hidden]):not([tabindex="-1"])`).join(",");
+function defineProperty(obj, key, value) {
+  Object.defineProperty(obj, key, {
+    value,
+    writable: false
+  });
+}
+function findParent(element, match) {
+  const matchIsSelector = typeof match === "string";
+  if (matchIsSelector ? element.matches(match) : match(element)) {
+    return element;
+  }
+  let parent = element?.parentElement;
+  while (parent != null) {
+    if (parent === document.body) {
+      return;
+    }
+    if (matchIsSelector ? parent.matches(match) : match(parent)) {
+      break;
+    }
+    parent = parent.parentElement;
+  }
+  return parent ?? void 0;
+}
+function getFocusableElements(context) {
+  const focusable = [];
+  const elements = Array.from(context.querySelectorAll(focusableSelector));
+  for (const element of elements) {
+    const style = globalThis.getComputedStyle?.(element);
+    if (style == null || style.display !== "none" && style.visibility !== "hidden") {
+      focusable.push(element);
+    }
+  }
+  return focusable;
+}
+function isNullOrWhitespace(value) {
+  if (value == null) {
+    return true;
+  }
+  return value.trim().length === 0;
+}
+function setAttribute(element, attribute2, value) {
+  if (value == null) {
+    element.removeAttribute(attribute2);
+  } else {
+    element.setAttribute(attribute2, String(value));
+  }
+}
+function setProperty(element, property, value) {
+  element.setAttribute(property, String(typeof value === "boolean" ? value : false));
+}
+
+// src/helpers/floated.ts
+var positions = ["above", "above-left", "above-right", "below", "below-left", "below-right", "horizontal", "left", "right", "vertical"];
+var Floated = class {
+  static update(elements, position) {
+    const { anchor, floater, parent } = elements;
+    function update() {
+      if (floater.hidden) {
+        anchor.insertAdjacentElement("afterend", floater);
+        return;
+      }
+      const floatedPosition = Floated.getPosition((parent ?? anchor).getAttribute(position.attribute) ?? "", position.value);
+      floater.setAttribute("position", floatedPosition);
+      const rectangles = {
+        anchor: anchor.getBoundingClientRect(),
+        floater: floater.getBoundingClientRect()
+      };
+      const top = Floated.getTop(rectangles, floatedPosition);
+      const left = Floated.getLeft(rectangles, floatedPosition);
+      const matrix = `matrix(1, 0, 0, 1, ${left}, ${top})`;
+      floater.style.position = "fixed";
+      floater.style.inset = "0 auto auto 0";
+      floater.style.transform = matrix;
+      wait(update, 0);
+    }
+    document.body.appendChild(floater);
+    floater.hidden = false;
+    wait(update, 0);
+  }
+  static getLeft(rectangles, position) {
+    const { left, right } = rectangles.anchor;
+    const { width } = rectangles.floater;
+    switch (position) {
+      case "above":
+      case "below":
+      case "vertical":
+        return left + rectangles.anchor.width / 2 - width / 2;
+      case "above-left":
+      case "below-left":
+        return left;
+      case "above-right":
+      case "below-right":
+        return right - width;
+      case "horizontal":
+        return right + width > globalThis.innerWidth ? left - width < 0 ? right : left - width : right;
+      case "left":
+        return left - width;
+      case "right":
+        return right;
+      default:
+        return 0;
+    }
+  }
+  static getTop(rectangles, position) {
+    const { bottom, top } = rectangles.anchor;
+    const { height } = rectangles.floater;
+    switch (position) {
+      case "above":
+      case "above-left":
+      case "above-right":
+        return top - height;
+      case "below":
+      case "below-left":
+      case "below-right":
+        return bottom;
+      case "horizontal":
+      case "left":
+      case "right":
+        return top + rectangles.anchor.height / 2 - height / 2;
+      case "vertical":
+        return bottom + height > globalThis.innerHeight ? top - height < 0 ? bottom : top - height : bottom;
+      default:
+        return 0;
+    }
+  }
+  static getPosition(currentPosition, defaultPosition) {
+    if (currentPosition == null) {
+      return defaultPosition;
+    }
+    const normalized = currentPosition.trim().toLowerCase();
+    const index2 = positions.indexOf(normalized);
+    return index2 > -1 ? positions[index2] ?? defaultPosition : defaultPosition;
+  }
+};
+
+// src/focus-trap.ts
+var attribute = "formal-focus-trap";
+var store = /* @__PURE__ */ new WeakMap();
+function handle(event, focusTrap, element) {
+  const elements = getFocusableElements(focusTrap);
+  if (element === focusTrap) {
+    wait(() => {
+      (elements[event.shiftKey ? elements.length - 1 : 0] ?? focusTrap).focus();
+    }, 0);
+    return;
+  }
+  const index2 = elements.indexOf(element);
+  let target = focusTrap;
+  if (index2 > -1) {
+    let position = index2 + (event.shiftKey ? -1 : 1);
+    if (position < 0) {
+      position = elements.length - 1;
+    } else if (position >= elements.length) {
+      position = 0;
+    }
+    target = elements[position] ?? focusTrap;
+  }
+  wait(() => {
+    target.focus();
+  }, 0);
+}
+function observe(records) {
+  for (const record of records) {
+    if (record.type !== "attributes") {
+      continue;
+    }
+    const element = record.target;
+    if (element.getAttribute(attribute) == null) {
+      FocusTrap.destroy(element);
+    } else {
+      FocusTrap.create(element);
+    }
+  }
+}
+function onKeydown(event) {
+  if (event.key !== "Tab") {
+    return;
+  }
+  const eventTarget = event.target;
+  const focusTrap = findParent(eventTarget, `[${attribute}]`);
+  if (focusTrap == null) {
+    return;
+  }
+  event.preventDefault();
+  event.stopImmediatePropagation();
+  handle(event, focusTrap, eventTarget);
+}
+var FocusTrap = class {
+  tabIndex;
+  constructor(element) {
+    this.tabIndex = element.tabIndex;
+    setAttribute(element, "tabindex", "-1");
+  }
+  static create(element) {
+    if (!store.has(element)) {
+      store.set(element, new FocusTrap(element));
+    }
+  }
+  static destroy(element) {
+    const focusTrap = store.get(element);
+    if (focusTrap == null) {
+      return;
+    }
+    setAttribute(element, "tabindex", focusTrap.tabIndex);
+    store.delete(element);
+  }
+};
+(() => {
+  if (typeof globalThis._formalFocusTrap !== "undefined") {
+    return;
+  }
+  globalThis._formalFocusTrap = null;
+  const observer = new MutationObserver(observe);
+  observer.observe(document, {
+    attributeFilter: [attribute],
+    attributeOldValue: true,
+    attributes: true,
+    childList: true,
+    subtree: true
+  });
+  wait(() => {
+    const focusTraps = Array.from(document.querySelectorAll(`[${attribute}]`));
+    for (const focusTrap of focusTraps) {
+      focusTrap.setAttribute(attribute, "");
+    }
+  }, 0);
+  document.addEventListener("keydown", onKeydown, eventOptions.active);
+})();
+
+// src/popover.ts
+var clickCallbacks = /* @__PURE__ */ new WeakMap();
+var keydownCallbacks = /* @__PURE__ */ new WeakMap();
+var index = 0;
+function afterToggle(popover, active) {
+  handleCallbacks(popover, active);
+  if (active && popover.content) {
+    (getFocusableElements(popover.content)?.[0] ?? popover.content).focus();
+  } else {
+    popover.button?.focus();
+  }
+}
+function handleCallbacks(popover, add) {
+  const clickCallback = clickCallbacks.get(popover);
+  const keydownCallback = keydownCallbacks.get(popover);
+  if (clickCallback == null || keydownCallback == null) {
+    return;
+  }
+  const method = add ? "addEventListener" : "removeEventListener";
+  document[method]("click", clickCallback, eventOptions.passive);
+  document[method]("keydown", keydownCallback, eventOptions.passive);
+}
+function handleGlobalEvent(event, popover, target) {
+  const { button, content } = popover;
+  if (button == null || content == null) {
+    return;
+  }
+  const floater = findParent(target, "[polite-popover-content]");
+  if (floater == null) {
+    handleToggle(popover, false);
+    return;
+  }
+  event.stopPropagation();
+  const children = Array.from(document.body.children);
+  const difference = children.indexOf(floater) - children.indexOf(content);
+  if (difference < (event instanceof KeyboardEvent ? 1 : 0)) {
+    handleToggle(popover, false);
+  }
+}
+function handleToggle(popover, expand) {
+  const expanded = typeof expand === "boolean" ? !expand : popover.open;
+  setProperty(popover.button, "aria-expanded", !expanded);
+  if (expanded) {
+    popover.content.hidden = true;
+    afterToggle(popover, false);
+  } else {
+    Floated.update({
+      anchor: popover.button,
+      floater: popover.content,
+      parent: popover
+    }, {
+      attribute: "position",
+      value: "below-left"
+    });
+    wait(() => {
+      afterToggle(popover, true);
+    }, 0);
+  }
+  popover.dispatchEvent(new Event("toggle"));
+}
+function initialise(popover, button, content) {
+  content.hidden = true;
+  if (isNullOrWhitespace(popover.id)) {
+    setAttribute(popover, "id", `polite_popover_${++index}`);
+  }
+  if (isNullOrWhitespace(button.id)) {
+    setAttribute(button, "id", `${popover.id}_button`);
+  }
+  if (isNullOrWhitespace(content.id)) {
+    setAttribute(content, "id", `${popover.id}_content`);
+  }
+  setAttribute(button, "aria-controls", content.id);
+  setProperty(button, "aria-expanded", false);
+  setAttribute(button, "aria-haspopup", "dialog");
+  if (!(button instanceof HTMLButtonElement)) {
+    setAttribute(button, "tabindex", "0");
+  }
+  setAttribute(content, attribute, "");
+  setAttribute(content, "role", "dialog");
+  setAttribute(content, "aria-modal", "false");
+  clickCallbacks.set(popover, onClick.bind(popover));
+  keydownCallbacks.set(popover, onKeydown2.bind(popover));
+  button.addEventListener("click", toggle.bind(popover), eventOptions.passive);
+}
+function onClick(event) {
+  if (this instanceof PolitePopover && this.open) {
+    handleGlobalEvent(event, this, event.target);
+  }
+}
+function onKeydown2(event) {
+  if (this instanceof PolitePopover && this.open && event instanceof KeyboardEvent && event.key === "Escape") {
+    handleGlobalEvent(event, this, document.activeElement);
+  }
+}
+function toggle(expand) {
+  if (this instanceof PolitePopover) {
+    handleToggle(this, expand);
+  }
+}
+var PolitePopover = class extends HTMLElement {
+  button;
+  content;
+  get open() {
+    return this.button?.getAttribute("aria-expanded") === "true";
+  }
+  set open(open) {
+    toggle.call(this, open);
+  }
+  constructor() {
+    super();
+    const button = this.querySelector(":scope > [polite-popover-button]");
+    const content = this.querySelector(":scope > [polite-popover-content]");
+    if (button == null || !(button instanceof HTMLButtonElement || button instanceof HTMLElement && button.getAttribute("role") === "button")) {
+      throw new Error("<polite-popover> must have a <button>-element (or button-like element) with the attribute 'polite-popover-button'");
+    }
+    if (content == null || !(content instanceof HTMLElement)) {
+      throw new Error("<polite-popover> must have an element with the attribute 'polite-popover-content'");
+    }
+    defineProperty(this, "button", button);
+    defineProperty(this, "content", content);
+    initialise(this, button, content);
+  }
+  toggle() {
+    if (this.button && this.content) {
+      toggle.call(this);
+    }
+  }
+};
+globalThis.customElements.define("polite-popover", PolitePopover);

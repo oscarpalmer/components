@@ -1,1 +1,357 @@
-var s={active:{capture:!1,passive:!1},passive:{capture:!1,passive:!0}},L=['[contenteditable]:not([contenteditable="false"])',"[href]","[tabindex]:not(slot)","audio[controls]","button","details","details[open] > summary","input","select","textarea","video[controls]"],g=L.map(r=>`${r}:not([disabled]):not([hidden]):not([tabindex="-1"])`).join(",");function d(r){return globalThis.requestAnimationFrame?.(r)??globalThis.setTimeout?.(()=>{r(Date.now())},16)}function m(r,e){let n=typeof e=="string";if(n?r.matches(e):e(r))return r;let t=r?.parentElement;for(;t!=null;){if(t===document.body)return;if(n?t.matches(e):e(t))break;t=t.parentElement}return t??void 0}function f(r,e,n){n==null?r.removeAttribute(e):r.setAttribute(e,String(n))}function y(r,e,n){r.setAttribute(e,String(typeof n=="boolean"?n:!1))}var E=["above","above-left","above-right","below","below-left","below-right","horizontal","left","right","vertical"],l=class{static update(e,n){let{anchor:t,floater:o,parent:i}=e;function c(){if(o.hidden){t.insertAdjacentElement("afterend",o);return}let v=l.getPosition((i??t).getAttribute("position")??"",n),p={anchor:t.getBoundingClientRect(),floater:o.getBoundingClientRect()},w=l.getTop(p,v),k=`matrix(1, 0, 0, 1, ${l.getLeft(p,v)}, ${w})`;o.style.position="fixed",o.style.inset="0 auto auto 0",o.style.transform=k,d(c)}document.body.appendChild(o),o.hidden=!1,d(c)}static getLeft(e,n){let{left:t,right:o}=e.anchor,{width:i}=e.floater;switch(n){case"above":case"below":case"vertical":return t+e.anchor.width/2-i/2;case"above-left":case"below-left":return t;case"above-right":case"below-right":return o-i;case"horizontal":return o+i>globalThis.innerWidth?t-i<0?o:t-i:o;case"left":return t-i;case"right":return o;default:return 0}}static getTop(e,n){let{bottom:t,top:o}=e.anchor,{height:i}=e.floater;switch(n){case"above":case"above-left":case"above-right":return o-i;case"below":case"below-left":case"below-right":return t;case"horizontal":case"left":case"right":return o+e.anchor.height/2-i/2;case"vertical":return t+i>globalThis.innerHeight?o-i<0?t:o-i:t;default:return 0}}static getPosition(e,n){if(e==null)return n;let t=e.trim().toLowerCase(),o=E.indexOf(t);return o>-1?E[o]??n:n}};var u="toasty-tooltip",T=`${u}-content`,b=new WeakMap,h=class{static observer(e){for(let n of e){if(n.type!=="attributes")continue;let t=n.target;t.getAttribute(u)==null?a.destroy(t):a.create(t)}}},a=class{constructor(e){this.anchor=e;this.focusable=e.matches(g),this.floater=a.createFloater(e),this.handleCallbacks(!0)}callbacks={click:this.onClick.bind(this),hide:this.onHide.bind(this),keydown:this.onKeyDown.bind(this),show:this.onShow.bind(this)};floater;focusable;static create(e){b.has(e)||b.set(e,new a(e))}static destroy(e){let n=b.get(e);typeof n>"u"||(n.handleCallbacks(!1),b.delete(e))}static createFloater(e){let n=e.getAttribute("aria-describedby")??e.getAttribute("aria-labelledby"),t=n==null?null:document.getElementById(n);if(t==null)throw new Error(`A '${u}'-attributed element must have a valid id reference in either the 'aria-describedby' or 'aria-labelledby'-attribute.`);return t.hidden=!0,f(t,T,""),f(t,"role","tooltip"),y(t,"aria-hidden",!0),t}onClick(e){m(e.target,n=>[this.anchor,this.floater].includes(n))==null&&this.toggle(!1)}onHide(){this.toggle(!1)}onKeyDown(e){e instanceof KeyboardEvent&&e.key==="Escape"&&this.toggle(!1)}onShow(){this.toggle(!0)}toggle(e){let n=e?"addEventListener":"removeEventListener";document[n]("click",this.callbacks.click,s.passive),document[n]("keydown",this.callbacks.keydown,s.passive),e?l.update(this,"above"):this.floater.hidden=!0}handleCallbacks(e){let{anchor:n,floater:t,focusable:o}=this,i=e?"addEventListener":"removeEventListener";for(let c of[n,t])c[i]("mouseenter",this.callbacks.show,s.passive),c[i]("mouseleave",this.callbacks.hide,s.passive),c[i]("touchstart",this.callbacks.show,s.passive);o&&(n[i]("blur",this.callbacks.hide,s.passive),n[i]("focus",this.callbacks.show,s.passive))}},M=new MutationObserver(h.observer);M.observe(document,{attributeFilter:[u],attributeOldValue:!0,attributes:!0,childList:!0,subtree:!0});d(()=>{let r=Array.from(document.querySelectorAll(`[${u}]`));for(let e of r)e.setAttribute(u,"")});
+// node_modules/@oscarpalmer/timer/dist/timer.js
+var milliseconds = Math.round(1e3 / 60);
+var cancel = cancelAnimationFrame ?? function(id) {
+  clearTimeout?.(id);
+};
+var request = requestAnimationFrame ?? function(callback) {
+  return setTimeout?.(() => {
+    callback(Date.now());
+  }, milliseconds) ?? -1;
+};
+var Timed = class {
+  callback;
+  count;
+  frame;
+  running = false;
+  time;
+  /**
+   * Is the timer active?
+   */
+  get active() {
+    return this.running;
+  }
+  constructor(callback, time, count) {
+    const isRepeated = this instanceof Repeated;
+    const type = isRepeated ? "repeated" : "waited";
+    if (typeof callback !== "function") {
+      throw new Error(`A ${type} timer must have a callback function`);
+    }
+    if (typeof time !== "number" || time < 0) {
+      throw new Error(`A ${type} timer must have a non-negative number as its time`);
+    }
+    if (isRepeated && (typeof count !== "number" || count < 2)) {
+      throw new Error("A repeated timer must have a number above 1 as its repeat count");
+    }
+    this.callback = callback;
+    this.count = count;
+    this.time = time;
+  }
+  static run(timed) {
+    timed.running = true;
+    let count = 0;
+    let start;
+    function step(timestamp) {
+      if (!timed.running) {
+        return;
+      }
+      start ??= timestamp;
+      const elapsed = timestamp - start;
+      const elapsedMinimum = elapsed - milliseconds;
+      const elapsedMaximum = elapsed + milliseconds;
+      if (elapsedMinimum < timed.time && timed.time < elapsedMaximum) {
+        if (timed.running) {
+          timed.callback(timed instanceof Repeated ? count : void 0);
+        }
+        count += 1;
+        if (timed instanceof Repeated && count < timed.count) {
+          start = void 0;
+        } else {
+          timed.stop();
+          return;
+        }
+      }
+      timed.frame = request(step);
+    }
+    timed.frame = request(step);
+  }
+  /**
+   * Restart timer
+   */
+  restart() {
+    this.stop();
+    Timed.run(this);
+    return this;
+  }
+  /**
+   * Start timer
+   */
+  start() {
+    if (this.running) {
+      return this;
+    }
+    Timed.run(this);
+    return this;
+  }
+  /**
+   * Stop timer
+   */
+  stop() {
+    this.running = false;
+    if (typeof this.frame === "undefined") {
+      return this;
+    }
+    cancel(this.frame);
+    this.frame = void 0;
+    return this;
+  }
+};
+var Repeated = class extends Timed {
+};
+var Waited = class extends Timed {
+  constructor(callback, time) {
+    super(callback, time, 1);
+  }
+};
+function wait(callback, time) {
+  return new Waited(callback, time).start();
+}
+
+// src/helpers/index.ts
+var eventOptions = {
+  active: { capture: false, passive: false },
+  passive: { capture: false, passive: true }
+};
+var focusableSelectors = [
+  '[contenteditable]:not([contenteditable="false"])',
+  "[href]",
+  "[tabindex]:not(slot)",
+  "audio[controls]",
+  "button",
+  "details",
+  "details[open] > summary",
+  "embed",
+  "iframe",
+  "input",
+  "object",
+  "select",
+  "textarea",
+  "video[controls]"
+];
+var focusableSelector = focusableSelectors.map((selector) => `${selector}:not([disabled]):not([hidden]):not([tabindex="-1"])`).join(",");
+function findParent(element, match) {
+  const matchIsSelector = typeof match === "string";
+  if (matchIsSelector ? element.matches(match) : match(element)) {
+    return element;
+  }
+  let parent = element?.parentElement;
+  while (parent != null) {
+    if (parent === document.body) {
+      return;
+    }
+    if (matchIsSelector ? parent.matches(match) : match(parent)) {
+      break;
+    }
+    parent = parent.parentElement;
+  }
+  return parent ?? void 0;
+}
+function setAttribute(element, attribute2, value) {
+  if (value == null) {
+    element.removeAttribute(attribute2);
+  } else {
+    element.setAttribute(attribute2, String(value));
+  }
+}
+function setProperty(element, property, value) {
+  element.setAttribute(property, String(typeof value === "boolean" ? value : false));
+}
+
+// src/helpers/floated.ts
+var positions = ["above", "above-left", "above-right", "below", "below-left", "below-right", "horizontal", "left", "right", "vertical"];
+var Floated = class {
+  static update(elements, position) {
+    const { anchor, floater, parent } = elements;
+    function update() {
+      if (floater.hidden) {
+        anchor.insertAdjacentElement("afterend", floater);
+        return;
+      }
+      const floatedPosition = Floated.getPosition((parent ?? anchor).getAttribute(position.attribute) ?? "", position.value);
+      floater.setAttribute("position", floatedPosition);
+      const rectangles = {
+        anchor: anchor.getBoundingClientRect(),
+        floater: floater.getBoundingClientRect()
+      };
+      const top = Floated.getTop(rectangles, floatedPosition);
+      const left = Floated.getLeft(rectangles, floatedPosition);
+      const matrix = `matrix(1, 0, 0, 1, ${left}, ${top})`;
+      floater.style.position = "fixed";
+      floater.style.inset = "0 auto auto 0";
+      floater.style.transform = matrix;
+      wait(update, 0);
+    }
+    document.body.appendChild(floater);
+    floater.hidden = false;
+    wait(update, 0);
+  }
+  static getLeft(rectangles, position) {
+    const { left, right } = rectangles.anchor;
+    const { width } = rectangles.floater;
+    switch (position) {
+      case "above":
+      case "below":
+      case "vertical":
+        return left + rectangles.anchor.width / 2 - width / 2;
+      case "above-left":
+      case "below-left":
+        return left;
+      case "above-right":
+      case "below-right":
+        return right - width;
+      case "horizontal":
+        return right + width > globalThis.innerWidth ? left - width < 0 ? right : left - width : right;
+      case "left":
+        return left - width;
+      case "right":
+        return right;
+      default:
+        return 0;
+    }
+  }
+  static getTop(rectangles, position) {
+    const { bottom, top } = rectangles.anchor;
+    const { height } = rectangles.floater;
+    switch (position) {
+      case "above":
+      case "above-left":
+      case "above-right":
+        return top - height;
+      case "below":
+      case "below-left":
+      case "below-right":
+        return bottom;
+      case "horizontal":
+      case "left":
+      case "right":
+        return top + rectangles.anchor.height / 2 - height / 2;
+      case "vertical":
+        return bottom + height > globalThis.innerHeight ? top - height < 0 ? bottom : top - height : bottom;
+      default:
+        return 0;
+    }
+  }
+  static getPosition(currentPosition, defaultPosition) {
+    if (currentPosition == null) {
+      return defaultPosition;
+    }
+    const normalized = currentPosition.trim().toLowerCase();
+    const index = positions.indexOf(normalized);
+    return index > -1 ? positions[index] ?? defaultPosition : defaultPosition;
+  }
+};
+
+// src/tooltip.ts
+var attribute = "toasty-tooltip";
+var contentAttribute = `${attribute}-content`;
+var positionAttribute = `${attribute}-position`;
+var store = /* @__PURE__ */ new WeakMap();
+function observe(records) {
+  for (const record of records) {
+    if (record.type !== "attributes") {
+      continue;
+    }
+    const element = record.target;
+    if (element.getAttribute(attribute) == null) {
+      Tooltip.destroy(element);
+    } else {
+      Tooltip.create(element);
+    }
+  }
+}
+var Tooltip = class {
+  constructor(anchor) {
+    this.anchor = anchor;
+    this.focusable = anchor.matches(focusableSelector);
+    this.floater = Tooltip.createFloater(anchor);
+    this.handleCallbacks(true);
+  }
+  callbacks = {
+    click: this.onClick.bind(this),
+    hide: this.onHide.bind(this),
+    keydown: this.onKeyDown.bind(this),
+    show: this.onShow.bind(this)
+  };
+  floater;
+  focusable;
+  static create(anchor) {
+    if (!store.has(anchor)) {
+      store.set(anchor, new Tooltip(anchor));
+    }
+  }
+  static destroy(element) {
+    const tooltip = store.get(element);
+    if (typeof tooltip === "undefined") {
+      return;
+    }
+    tooltip.handleCallbacks(false);
+    store.delete(element);
+  }
+  static createFloater(anchor) {
+    const id = anchor.getAttribute("aria-describedby") ?? anchor.getAttribute("aria-labelledby");
+    const element = id == null ? null : document.getElementById(id);
+    if (element == null) {
+      throw new Error(`A '${attribute}'-attributed element must have a valid id reference in either the 'aria-describedby' or 'aria-labelledby'-attribute.`);
+    }
+    element.hidden = true;
+    setAttribute(element, contentAttribute, "");
+    setAttribute(element, "role", "tooltip");
+    setProperty(element, "aria-hidden", true);
+    return element;
+  }
+  onClick(event) {
+    if (findParent(event.target, (element) => [this.anchor, this.floater].includes(element)) == null) {
+      this.toggle(false);
+    }
+  }
+  onHide() {
+    this.toggle(false);
+  }
+  onKeyDown(event) {
+    if (event instanceof KeyboardEvent && event.key === "Escape") {
+      this.toggle(false);
+    }
+  }
+  onShow() {
+    this.toggle(true);
+  }
+  toggle(show) {
+    const method = show ? "addEventListener" : "removeEventListener";
+    document[method]("click", this.callbacks.click, eventOptions.passive);
+    document[method]("keydown", this.callbacks.keydown, eventOptions.passive);
+    if (show) {
+      Floated.update(this, {
+        attribute: positionAttribute,
+        value: "above"
+      });
+    } else {
+      this.floater.hidden = true;
+    }
+  }
+  handleCallbacks(add) {
+    const { anchor, floater, focusable } = this;
+    const method = add ? "addEventListener" : "removeEventListener";
+    for (const element of [anchor, floater]) {
+      element[method]("mouseenter", this.callbacks.show, eventOptions.passive);
+      element[method]("mouseleave", this.callbacks.hide, eventOptions.passive);
+      element[method]("touchstart", this.callbacks.show, eventOptions.passive);
+    }
+    if (focusable) {
+      anchor[method]("blur", this.callbacks.hide, eventOptions.passive);
+      anchor[method]("focus", this.callbacks.show, eventOptions.passive);
+    }
+  }
+};
+var observer = new MutationObserver(observe);
+observer.observe(document, {
+  attributeFilter: [attribute],
+  attributeOldValue: true,
+  attributes: true,
+  childList: true,
+  subtree: true
+});
+wait(() => {
+  const tooltips = Array.from(document.querySelectorAll(`[${attribute}]`));
+  for (const tooltip of tooltips) {
+    tooltip.setAttribute(attribute, "");
+  }
+}, 0);

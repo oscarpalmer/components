@@ -1,4 +1,4 @@
-import {delay} from '.';
+import {wait} from '@oscarpalmer/timer';
 
 type Elements = {
 	anchor: HTMLElement;
@@ -44,14 +44,14 @@ export class Floated {
 			floater.style.inset = '0 auto auto 0';
 			floater.style.transform = matrix;
 
-			delay(update);
+			wait(update, 0);
 		}
 
 		document.body.appendChild(floater);
 
 		floater.hidden = false;
 
-		delay(update);
+		wait(update, 0);
 	}
 
 	private static getLeft(rectangles: Rectangles, position: Position): number {
