@@ -1,4 +1,4 @@
-import {eventOptions, getAttribute, setProperty} from './helpers';
+import {eventOptions, getAttribute, setAttribute, setProperty} from './helpers';
 
 function initialise(component: SwankySwitch, label: HTMLElement, input: HTMLInputElement): void {
 	label.parentElement?.removeChild(label);
@@ -6,7 +6,7 @@ function initialise(component: SwankySwitch, label: HTMLElement, input: HTMLInpu
 
 	setProperty(component, 'aria-checked', input.checked || component.checked);
 	setProperty(component, 'aria-disabled', input.disabled || component.disabled);
-	setProperty(component, 'aria-readonly', input.readOnly || component.readOnly);
+	setProperty(component, 'aria-readonly', input.readOnly || component.readonly);
 
 	component.setAttribute('aria-labelledby', `${input.id}_label`);
 
@@ -49,7 +49,7 @@ function render(id: string, label: HTMLElement, off: string, on: string): string
 }
 
 function toggle(component: SwankySwitch): void {
-	if (component.disabled || component.readOnly) {
+	if (component.disabled || component.readonly) {
 		return;
 	}
 
@@ -59,6 +59,10 @@ function toggle(component: SwankySwitch): void {
 }
 
 class SwankySwitch extends HTMLElement {
+	static formAssociated = true;
+
+	private internals: ElementInternals | undefined;
+
 	get checked(): boolean {
 		return this.getAttribute('aria-checked') === 'true';
 	}
@@ -75,20 +79,50 @@ class SwankySwitch extends HTMLElement {
 		setProperty(this, 'aria-disabled', disabled);
 	}
 
-	get readOnly(): boolean {
+	get form(): HTMLFormElement | undefined {
+		return this.internals?.form ?? undefined;
+	}
+
+	get labels(): NodeList | undefined {
+		return this.internals?.labels;
+	}
+
+	get name(): string {
+		return this.getAttribute('name') ?? '';
+	}
+
+	set name(name: string) {
+		setAttribute(this, 'name', name);
+	}
+
+	get readonly(): boolean {
 		return this.getAttribute('aria-readonly') === 'true';
 	}
 
-	set readOnly(readonly: boolean) {
+	set readonly(readonly: boolean) {
 		setProperty(this, 'aria-readonly', readonly);
 	}
 
+	get validationMessage(): string {
+		return this.internals?.validationMessage ?? '';
+	}
+
+	get validity(): ValidityState | undefined {
+		return this.internals?.validity;
+	}
+
 	get value(): string {
-		return this.checked ? 'on' : 'off';
+		return this.getAttribute('value') ?? this.checked ? 'on' : 'off';
+	}
+
+	get willValidate(): boolean {
+		return this.internals?.willValidate ?? true;
 	}
 
 	constructor() {
 		super();
+
+		this.internals = this.attachInternals?.();
 
 		const input = this.querySelector('[swanky-switch-input]');
 		const label = this.querySelector('[swanky-switch-label]');
@@ -102,6 +136,14 @@ class SwankySwitch extends HTMLElement {
 		}
 
 		initialise(this, label, input);
+	}
+
+	checkValidity(): boolean {
+		return this.internals?.checkValidity() ?? true;
+	}
+
+	reportValidity(): boolean {
+		return this.internals?.reportValidity() ?? true;
 	}
 }
 

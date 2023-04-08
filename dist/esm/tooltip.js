@@ -356,4 +356,4 @@ wait(() => {
   for (const tooltip of tooltips) {
     tooltip.setAttribute(attribute, "");
   }
-}, 125);
+}, 0);

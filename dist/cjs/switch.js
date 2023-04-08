@@ -1,4 +1,10 @@
 "use strict";
+var __defProp = Object.defineProperty;
+var __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { enumerable: true, configurable: true, writable: true, value }) : obj[key] = value;
+var __publicField = (obj, key, value) => {
+  __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
+  return value;
+};
 
 // src/helpers/index.ts
 var eventOptions = {
@@ -26,6 +32,13 @@ function getAttribute(element, attribute, defaultValue) {
   const value = element.getAttribute(attribute);
   return value == null || value.trim().length === 0 ? defaultValue : value;
 }
+function setAttribute(element, attribute, value) {
+  if (value == null) {
+    element.removeAttribute(attribute);
+  } else {
+    element.setAttribute(attribute, String(value));
+  }
+}
 function setProperty(element, property, value) {
   element.setAttribute(property, String(typeof value === "boolean" ? value : false));
 }
@@ -37,7 +50,7 @@ function initialise(component, label, input) {
   (_b = input.parentElement) == null ? void 0 : _b.removeChild(input);
   setProperty(component, "aria-checked", input.checked || component.checked);
   setProperty(component, "aria-disabled", input.disabled || component.disabled);
-  setProperty(component, "aria-readonly", input.readOnly || component.readOnly);
+  setProperty(component, "aria-readonly", input.readOnly || component.readonly);
   component.setAttribute("aria-labelledby", `${input.id}_label`);
   component.setAttribute("id", input.id);
   component.setAttribute("name", (_c = input.name) != null ? _c : input.id);
@@ -71,13 +84,28 @@ function render(id, label, off, on) {
 </swanky-switch-text>`;
 }
 function toggle(component) {
-  if (component.disabled || component.readOnly) {
+  if (component.disabled || component.readonly) {
     return;
   }
   component.checked = !component.checked;
   component.dispatchEvent(new Event("change"));
 }
 var SwankySwitch = class extends HTMLElement {
+  constructor() {
+    var _a;
+    super();
+    __publicField(this, "internals");
+    this.internals = (_a = this.attachInternals) == null ? void 0 : _a.call(this);
+    const input = this.querySelector("[swanky-switch-input]");
+    const label = this.querySelector("[swanky-switch-label]");
+    if (typeof input === "undefined" || !(input instanceof HTMLInputElement) || input.type !== "checkbox") {
+      throw new Error("<swanky-switch> must have an <input>-element with type 'checkbox' and the attribute 'swanky-switch-input'");
+    }
+    if (typeof label === "undefined" || !(label instanceof HTMLElement)) {
+      throw new Error("<swanky-switch> must have a <label>-element with the attribute 'swanky-switch-label'");
+    }
+    initialise(this, label, input);
+  }
   get checked() {
     return this.getAttribute("aria-checked") === "true";
   }
@@ -90,26 +118,51 @@ var SwankySwitch = class extends HTMLElement {
   set disabled(disabled) {
     setProperty(this, "aria-disabled", disabled);
   }
-  get readOnly() {
+  get form() {
+    var _a, _b;
+    return (_b = (_a = this.internals) == null ? void 0 : _a.form) != null ? _b : void 0;
+  }
+  get labels() {
+    var _a;
+    return (_a = this.internals) == null ? void 0 : _a.labels;
+  }
+  get name() {
+    var _a;
+    return (_a = this.getAttribute("name")) != null ? _a : "";
+  }
+  set name(name) {
+    setAttribute(this, "name", name);
+  }
+  get readonly() {
     return this.getAttribute("aria-readonly") === "true";
   }
-  set readOnly(readonly) {
+  set readonly(readonly) {
     setProperty(this, "aria-readonly", readonly);
   }
-  get value() {
-    return this.checked ? "on" : "off";
+  get validationMessage() {
+    var _a, _b;
+    return (_b = (_a = this.internals) == null ? void 0 : _a.validationMessage) != null ? _b : "";
   }
-  constructor() {
-    super();
-    const input = this.querySelector("[swanky-switch-input]");
-    const label = this.querySelector("[swanky-switch-label]");
-    if (typeof input === "undefined" || !(input instanceof HTMLInputElement) || input.type !== "checkbox") {
-      throw new Error("<swanky-switch> must have an <input>-element with type 'checkbox' and the attribute 'swanky-switch-input'");
-    }
-    if (typeof label === "undefined" || !(label instanceof HTMLElement)) {
-      throw new Error("<swanky-switch> must have a <label>-element with the attribute 'swanky-switch-label'");
-    }
-    initialise(this, label, input);
+  get validity() {
+    var _a;
+    return (_a = this.internals) == null ? void 0 : _a.validity;
+  }
+  get value() {
+    var _a;
+    return ((_a = this.getAttribute("value")) != null ? _a : this.checked) ? "on" : "off";
+  }
+  get willValidate() {
+    var _a, _b;
+    return (_b = (_a = this.internals) == null ? void 0 : _a.willValidate) != null ? _b : true;
+  }
+  checkValidity() {
+    var _a, _b;
+    return (_b = (_a = this.internals) == null ? void 0 : _a.checkValidity()) != null ? _b : true;
+  }
+  reportValidity() {
+    var _a, _b;
+    return (_b = (_a = this.internals) == null ? void 0 : _a.reportValidity()) != null ? _b : true;
   }
 };
+__publicField(SwankySwitch, "formAssociated", true);
 globalThis.customElements.define("swanky-switch", SwankySwitch);
