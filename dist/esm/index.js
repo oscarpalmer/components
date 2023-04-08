@@ -1,8 +1,820 @@
-var N=Object.defineProperty;var j=(n,e,t)=>e in n?N(n,e,{enumerable:!0,configurable:!0,writable:!0,value:t}):n[e]=t;var L=(n,e,t)=>(j(n,typeof e!="symbol"?e+"":e,t),t);var r={active:{capture:!1,passive:!1},passive:{capture:!1,passive:!0}},U=['[contenteditable]:not([contenteditable="false"])',"[href]","[tabindex]:not(slot)","audio[controls]","button","details","details[open] > summary","input","select","textarea","video[controls]"],I=U.map(n=>`${n}:not([disabled]):not([hidden]):not([tabindex="-1"])`).join(",");function f(n){return globalThis.requestAnimationFrame?.(n)??globalThis.setTimeout?.(()=>{n(Date.now())},16)}function w(n,e){let t=typeof e=="string";if(t?n.matches(e):e(n))return n;let i=n?.parentElement;for(;i!=null;){if(i===document.body)return;if(t?i.matches(e):e(i))break;i=i.parentElement}return i??void 0}function x(n,e,t){let i=n.getAttribute(e);return i==null||i.trim().length===0?t:i}function q(n){let e=[],t=Array.from(n.querySelectorAll(I));for(let i of t){let s=globalThis.getComputedStyle?.(i);(s==null||s.display!=="none"&&s.visibility!=="hidden")&&e.push(i)}return e}function $(n){return n==null?!0:n.trim().length===0}function B(n,e){return n.replace(/\{\{(\w+)\}\}/g,(t,...i)=>i==null||i.length===0?t:String(e?.[i[0]]??t))}function c(n,e,t){t==null?n.removeAttribute(e):n.setAttribute(e,String(t))}function v(n,e,t){n.setAttribute(e,String(typeof t=="boolean"?t:!1))}var a=class{static destroyList(e){let{children:t,observer:i,open:s}=h.list;t.delete(e),s.delete(e),i.get(e)?.disconnect(),i.delete(e)}static getChildren(e){return Array.from(e.querySelectorAll(":scope > delicious-details > details, :scope > details"))}static initializeList(e){let{children:t,observer:i,open:s}=h.list;t.set(e,a.getChildren(e)),s.set(e,[]),i.set(e,new MutationObserver(o=>{A.callback(e,o)})),i.get(e)?.observe(e,A.options),a.open(e,x(e,"open",""))}static onGlobalKeydown(e){if(e.key!=="Escape")return;let{containers:t}=h.details,i=w(document.activeElement,s=>t.has(s)&&(t.get(s)?.open??!0));i instanceof K&&a.onToggle.call(i,!1)}static onLocalKeydown(e){if(e.isComposing||e.key!=="ArrowDown"&&e.key!=="ArrowUp"||!(this instanceof R))return;let{target:t}=e;if(!(t instanceof HTMLElement))return;let i=h.list.children.get(this)??[],s=t.parentElement,o=i.indexOf(s);if(o===-1)return;let l=o+(e.key==="ArrowDown"?1:-1);l<0?l=i.length-1:l>=i.length&&(l=0),i[l]?.querySelector(":scope > summary")?.focus()}static onToggle(e){if(!(this instanceof K))return;let{buttons:t,containers:i}=h.details,s=i.get(this);s!=null&&(s.open=e??!s.open,s.open||t.get(this)?.focus())}static open(e,t){if(t==null){a.update(e,[]);return}if(t.length>0&&!/^[\s\d,]+$/.test(t))throw new Error("The 'selected'-attribute of a 'delicious-details-list'-element must be a comma-separated string of numbers, e.g. '', '0' or '0,1,2'");let i=t.length>0?t.split(",").filter(s=>s.trim().length>0).map(s=>Number.parseInt(s,10)):[];a.update(e,i)}static update(e,t){if(typeof t>"u")return;let{children:i,observer:s,open:o}=h.list,l=t.filter((u,g,k)=>k.indexOf(u)===g).sort((u,g)=>u-g);e.multiple||(l=l.length>0&&l[0]!=null?l.length>1?[l[0]]:l:[]);let d=e.open;if(l.length===d.length&&l.every((u,g)=>d[g]===u))return;s.get(e)?.disconnect();let E=i.get(e)??[];for(let u of E)l.includes(E.indexOf(u))!==u.open&&(u.open=!u.open);f(()=>{o.set(e,l),c(e,"open",l.length===0?null:l),e.dispatchEvent(new Event("toggle")),f(()=>s.get(e)?.observe(e,A.options))})}},A=class{static callback(e,t){if(t.length===0)return;let{children:i}=h.list,s=t[0],o=Array.from(s?.addedNodes??[]),l=Array.from(s?.removedNodes??[]);if(o.concat(l).some(k=>k.parentElement===e)){i.set(e,a.getChildren(e));return}if(s?.type!=="attributes"||!(s?.target instanceof HTMLDetailsElement))return;let d=s.target,u=(i.get(e)??[]).indexOf(d);if(u===-1)return;let g=[];e.multiple?g=d.open?e.open.concat([u]):e.open.filter(k=>k!==u):g=d.open?[u]:[],a.update(e,g)}};L(A,"options",{attributeFilter:["open"],attributes:!0,childList:!0,subtree:!0});var h=class{};L(h,"details",{buttons:new WeakMap,containers:new WeakMap}),L(h,"list",{children:new WeakMap,observer:new WeakMap,open:new WeakMap});var K=class extends HTMLElement{get open(){return h.details.containers.get(this)?.open??!1}set open(e){a.onToggle.call(this,e)}connectedCallback(){let e=this.querySelector(":scope > details"),t=e?.querySelector(":scope > summary");h.details.buttons.set(this,t),h.details.containers.set(this,e)}disconnectedCallback(){h.details.buttons.delete(this),h.details.containers.delete(this)}toggle(){a.onToggle.call(this)}},R=class extends HTMLElement{static get observedAttributes(){return["multiple","open"]}get multiple(){return this.getAttribute("multiple")!=null}set multiple(e){c(this,"multiple",e?"":null)}get open(){return h.list.open.get(this)??[]}set open(e){a.update(this,e)}constructor(){super(),this.addEventListener("keydown",a.onLocalKeydown.bind(this),r.passive)}attributeChangedCallback(e,t,i){if(t!==i)switch(e){case"multiple":a.open(this,x(this,"open",""));break;case"open":a.open(this,i);break;default:break}}connectedCallback(){a.initializeList(this)}disconnectedCallback(){a.destroyList(this)}};globalThis.addEventListener("keydown",a.onGlobalKeydown,r.passive);globalThis.customElements.define("delicious-details",K);globalThis.customElements.define("delicious-details-list",R);var T="formal-focus-trap",W=new WeakMap,D=class{static observer(e){for(let t of e){if(t.type!=="attributes")continue;let i=t.target;i.getAttribute(T)==null?P.destroy(i):P.create(i)}}static onKeydown(e){if(e.key!=="Tab")return;let t=e.target,i=w(t,`[${T}]`);i!=null&&(e.preventDefault(),e.stopImmediatePropagation(),D.handle(e,i,t))}static handle(e,t,i){let s=q(t);if(i===t){f(()=>{(s[e.shiftKey?s.length-1:0]??t).focus()});return}let o=s.indexOf(i),l=t;if(o>-1){let d=o+(e.shiftKey?-1:1);d<0?d=s.length-1:d>=s.length&&(d=0),l=s[d]??t}f(()=>{l.focus()})}},P=class{tabIndex;constructor(e){this.tabIndex=e.tabIndex,c(e,"tabindex","-1")}static create(e){W.has(e)||W.set(e,new P(e))}static destroy(e){let t=W.get(e);t!=null&&(c(e,"tabindex",t.tabIndex),W.delete(e))}};(()=>{if(typeof globalThis._formalFocusTrap<"u")return;globalThis._formalFocusTrap=null,new MutationObserver(D.observer).observe(document,{attributeFilter:[T],attributeOldValue:!0,attributes:!0,childList:!0,subtree:!0}),f(()=>{let e=Array.from(document.querySelectorAll(`[${T}]`));for(let t of e)t.setAttribute(T,"")}),document.addEventListener("keydown",D.onKeydown,r.active)})();var G=["above","above-left","above-right","below","below-left","below-right","horizontal","left","right","vertical"],y=class{static update(e,t){let{anchor:i,floater:s,parent:o}=e;function l(){if(s.hidden){i.insertAdjacentElement("afterend",s);return}let d=y.getPosition((o??i).getAttribute("position")??"",t),E={anchor:i.getBoundingClientRect(),floater:s.getBoundingClientRect()},u=y.getTop(E,d),k=`matrix(1, 0, 0, 1, ${y.getLeft(E,d)}, ${u})`;s.style.position="fixed",s.style.inset="0 auto auto 0",s.style.transform=k,f(l)}document.body.appendChild(s),s.hidden=!1,f(l)}static getLeft(e,t){let{left:i,right:s}=e.anchor,{width:o}=e.floater;switch(t){case"above":case"below":case"vertical":return i+e.anchor.width/2-o/2;case"above-left":case"below-left":return i;case"above-right":case"below-right":return s-o;case"horizontal":return s+o>globalThis.innerWidth?i-o<0?s:i-o:s;case"left":return i-o;case"right":return s;default:return 0}}static getTop(e,t){let{bottom:i,top:s}=e.anchor,{height:o}=e.floater;switch(t){case"above":case"above-left":case"above-right":return s-o;case"below":case"below-left":case"below-right":return i;case"horizontal":case"left":case"right":return s+e.anchor.height/2-o/2;case"vertical":return i+o>globalThis.innerHeight?s-o<0?i:s-o:i;default:return 0}}static getPosition(e,t){if(e==null)return t;let i=e.trim().toLowerCase(),s=G.indexOf(i);return s>-1?G[s]??t:t}};var V=0,b=class{static initialize(e,t,i){i.hidden=!0,$(e.id)&&c(e,"id",`polite_popover_${V++}`),$(t.id)&&c(t,"id",`${e.id}_button`),$(i.id)&&c(i,"id",`${e.id}_content`),c(t,"aria-controls",i.id),v(t,"aria-expanded",!1),c(t,"aria-haspopup","dialog"),c(i,T,""),c(i,"role","dialog"),c(i,"aria-modal","false"),t.addEventListener("click",b.toggle.bind(e),r.passive)}static onClick(e){this instanceof C&&this.open&&b.handleGlobalEvent(e,this,e.target)}static onKeydown(e){this instanceof C&&this.open&&e instanceof KeyboardEvent&&e.key==="Escape"&&b.handleGlobalEvent(e,this,document.activeElement)}static toggle(e){let t=this instanceof C?p.elements.get(this):null;t!=null&&b.handleToggle(this,t,e)}static afterToggle(e,t,i){b.handleCallbacks(e,i),i?(q(t.floater)?.[0]??t.floater).focus():t.anchor.focus()}static handleCallbacks(e,t){let i=p.callbacks.get(e);if(i==null)return;let s=t?"addEventListener":"removeEventListener";document[s]("click",i.click,r.passive),document[s]("keydown",i.keydown,r.passive)}static handleGlobalEvent(e,t,i){let s=p.elements.get(t);if(s==null)return;let o=w(i,"[polite-popover-content]");if(o==null){this.handleToggle(t,s,!1);return}e.stopPropagation();let l=Array.from(document.body.children);l.indexOf(o)-l.indexOf(s.floater)<(e instanceof KeyboardEvent?1:0)&&b.handleToggle(t,s,!1)}static handleToggle(e,t,i){let s=typeof i=="boolean"?!i:e.open;v(t.anchor,"aria-expanded",!s),s?(t.floater.hidden=!0,b.afterToggle(e,t,!1)):(y.update({anchor:t.anchor,floater:t.floater,parent:e},"below-left"),f(()=>{b.afterToggle(e,t,!0)})),e.dispatchEvent(new Event("toggle"))}},H=class{static add(e){let t=e.querySelector(":scope > [polite-popover-button]"),i=e.querySelector(":scope > [polite-popover-content]");t==null||i==null||(H.callbacks.set(e,{click:b.onClick.bind(e),keydown:b.onKeydown.bind(e)}),H.elements.set(e,{anchor:t,floater:i}))}static remove(e){let t=H.elements.get(e);t?.floater instanceof HTMLElement&&(t.floater.hidden=!0,t.anchor?.insertAdjacentElement("afterend",t.floater)),H.callbacks.delete(e),H.elements.delete(e)}},p=H;L(p,"callbacks",new WeakMap),L(p,"elements",new WeakMap);var C=class extends HTMLElement{get button(){return p.elements.get(this)?.anchor}get content(){return p.elements.get(this)?.floater}get open(){return this.button?.getAttribute("aria-expanded")==="true"}set open(e){b.toggle.call(this,e)}constructor(){super();let e=this.querySelector(":scope > [polite-popover-button]"),t=this.querySelector(":scope > [polite-popover-content]");if(e==null||!(e instanceof HTMLButtonElement||e instanceof HTMLElement&&e.getAttribute("role")==="button"))throw new Error("<polite-popover> must have a <button>-element (or button-like element) with the attribute 'polite-popover-button'");if(t==null||!(t instanceof HTMLElement))throw new Error("<polite-popover> must have an element with the attribute 'polite-popover-content'");b.initialize(this,e,t)}connectedCallback(){p.add(this)}disconnectedCallback(){p.remove(this)}toggle(){b.toggle.call(this)}};globalThis.customElements.define("polite-popover",C);var J=`<swanky-switch-label id="{{id}}">{{label}}</swanky-switch-label>
+var __defProp = Object.defineProperty;
+var __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { enumerable: true, configurable: true, writable: true, value }) : obj[key] = value;
+var __publicField = (obj, key, value) => {
+  __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
+  return value;
+};
+
+// src/helpers/index.ts
+var eventOptions = {
+  active: { capture: false, passive: false },
+  passive: { capture: false, passive: true }
+};
+var focusableSelectors = [
+  '[contenteditable]:not([contenteditable="false"])',
+  "[href]",
+  "[tabindex]:not(slot)",
+  "audio[controls]",
+  "button",
+  "details",
+  "details[open] > summary",
+  "embed",
+  "iframe",
+  "input",
+  "object",
+  "select",
+  "textarea",
+  "video[controls]"
+];
+var focusableSelector = focusableSelectors.map((selector) => `${selector}:not([disabled]):not([hidden]):not([tabindex="-1"])`).join(",");
+function defineProperty(obj, key, value) {
+  Object.defineProperty(obj, key, {
+    value,
+    writable: false
+  });
+}
+function delay(callback) {
+  return globalThis.requestAnimationFrame?.(callback) ?? globalThis.setTimeout?.(() => {
+    callback(Date.now());
+  }, 16);
+}
+function findParent(element, match) {
+  const matchIsSelector = typeof match === "string";
+  if (matchIsSelector ? element.matches(match) : match(element)) {
+    return element;
+  }
+  let parent = element?.parentElement;
+  while (parent != null) {
+    if (parent === document.body) {
+      return;
+    }
+    if (matchIsSelector ? parent.matches(match) : match(parent)) {
+      break;
+    }
+    parent = parent.parentElement;
+  }
+  return parent ?? void 0;
+}
+function getAttribute(element, attribute3, defaultValue) {
+  const value = element.getAttribute(attribute3);
+  return value == null || value.trim().length === 0 ? defaultValue : value;
+}
+function getFocusableElements(context) {
+  const focusable = [];
+  const elements = Array.from(context.querySelectorAll(focusableSelector));
+  for (const element of elements) {
+    const style = globalThis.getComputedStyle?.(element);
+    if (style == null || style.display !== "none" && style.visibility !== "hidden") {
+      focusable.push(element);
+    }
+  }
+  return focusable;
+}
+function isNullOrWhitespace(value) {
+  if (value == null) {
+    return true;
+  }
+  return value.trim().length === 0;
+}
+function setAttribute(element, attribute3, value) {
+  if (value == null) {
+    element.removeAttribute(attribute3);
+  } else {
+    element.setAttribute(attribute3, String(value));
+  }
+}
+function setProperty(element, property, value) {
+  element.setAttribute(property, String(typeof value === "boolean" ? value : false));
+}
+
+// src/details.ts
+var Manager = class {
+  static destroyList(component) {
+    const { children, observer: observer2, open } = Store.list;
+    children.delete(component);
+    open.delete(component);
+    observer2.get(component)?.disconnect();
+    observer2.delete(component);
+  }
+  static getChildren(component) {
+    return Array.from(component.querySelectorAll(":scope > delicious-details > details, :scope > details"));
+  }
+  static initializeList(component) {
+    const { children, observer: observer2, open } = Store.list;
+    children.set(component, Manager.getChildren(component));
+    open.set(component, []);
+    observer2.set(component, new MutationObserver((records) => {
+      Observer.callback(component, records);
+    }));
+    observer2.get(component)?.observe(component, Observer.options);
+    Manager.open(component, getAttribute(component, "open", ""));
+  }
+  static onGlobalKeydown(event) {
+    if (event.key !== "Escape") {
+      return;
+    }
+    const { containers } = Store.details;
+    const parent = findParent(document.activeElement, (element) => containers.has(element) && (containers.get(element)?.open ?? true));
+    if (parent instanceof DeliciousDetails) {
+      Manager.onToggle.call(parent, false);
+    }
+  }
+  static onLocalKeydown(event) {
+    if (event.isComposing || event.key !== "ArrowDown" && event.key !== "ArrowUp" || !(this instanceof DeliciousDetailsList)) {
+      return;
+    }
+    const { target } = event;
+    if (!(target instanceof HTMLElement)) {
+      return;
+    }
+    const children = Store.list.children.get(this) ?? [];
+    const parent = target.parentElement;
+    const index2 = children.indexOf(parent);
+    if (index2 === -1) {
+      return;
+    }
+    let position = index2 + (event.key === "ArrowDown" ? 1 : -1);
+    if (position < 0) {
+      position = children.length - 1;
+    } else if (position >= children.length) {
+      position = 0;
+    }
+    const details = children[position];
+    const summary = details?.querySelector(":scope > summary");
+    summary?.focus();
+  }
+  static onToggle(open) {
+    if (!(this instanceof DeliciousDetails)) {
+      return;
+    }
+    const { buttons, containers } = Store.details;
+    const container = containers.get(this);
+    if (container == null) {
+      return;
+    }
+    container.open = open ?? !container.open;
+    if (!container.open) {
+      buttons.get(this)?.focus();
+    }
+  }
+  static open(component, value) {
+    if (value == null) {
+      Manager.update(component, []);
+      return;
+    }
+    if (value.length > 0 && !/^[\s\d,]+$/.test(value)) {
+      throw new Error("The 'selected'-attribute of a 'delicious-details-list'-element must be a comma-separated string of numbers, e.g. '', '0' or '0,1,2'");
+    }
+    const parts = value.length > 0 ? value.split(",").filter((index2) => index2.trim().length > 0).map((index2) => Number.parseInt(index2, 10)) : [];
+    Manager.update(component, parts);
+  }
+  static update(component, selection) {
+    if (typeof selection === "undefined") {
+      return;
+    }
+    const { children, observer: observer2, open } = Store.list;
+    let sorted = selection.filter((value, index2, array) => array.indexOf(value) === index2).sort((first, second) => first - second);
+    if (!component.multiple) {
+      sorted = sorted.length > 0 && sorted[0] != null ? sorted.length > 1 ? [sorted[0]] : sorted : [];
+    }
+    const current = component.open;
+    if (sorted.length === current.length && sorted.every((value, index2) => current[index2] === value)) {
+      return;
+    }
+    observer2.get(component)?.disconnect();
+    const elements = children.get(component) ?? [];
+    for (const element of elements) {
+      if (sorted.includes(elements.indexOf(element)) !== element.open) {
+        element.open = !element.open;
+      }
+    }
+    delay(() => {
+      open.set(component, sorted);
+      setAttribute(component, "open", sorted.length === 0 ? null : sorted);
+      component.dispatchEvent(new Event("toggle"));
+      delay(() => observer2.get(component)?.observe(component, Observer.options));
+    });
+  }
+};
+var Observer = class {
+  static callback(component, records) {
+    if (records.length === 0) {
+      return;
+    }
+    const { children } = Store.list;
+    const record = records[0];
+    const added = Array.from(record?.addedNodes ?? []);
+    const removed = Array.from(record?.removedNodes ?? []);
+    if (added.concat(removed).some((element2) => element2.parentElement === component)) {
+      children.set(component, Manager.getChildren(component));
+      return;
+    }
+    if (record?.type !== "attributes" || !(record?.target instanceof HTMLDetailsElement)) {
+      return;
+    }
+    const element = record.target;
+    const elements = children.get(component) ?? [];
+    const index2 = elements.indexOf(element);
+    if (index2 === -1) {
+      return;
+    }
+    let selection = [];
+    if (component.multiple) {
+      selection = element.open ? component.open.concat([index2]) : component.open.filter((v) => v !== index2);
+    } else {
+      selection = element.open ? [index2] : [];
+    }
+    Manager.update(component, selection);
+  }
+};
+__publicField(Observer, "options", {
+  attributeFilter: ["open"],
+  attributes: true,
+  childList: true,
+  subtree: true
+});
+var Store = class {
+};
+__publicField(Store, "details", {
+  buttons: /* @__PURE__ */ new WeakMap(),
+  containers: /* @__PURE__ */ new WeakMap()
+});
+__publicField(Store, "list", {
+  children: /* @__PURE__ */ new WeakMap(),
+  observer: /* @__PURE__ */ new WeakMap(),
+  open: /* @__PURE__ */ new WeakMap()
+});
+var DeliciousDetails = class extends HTMLElement {
+  get open() {
+    return Store.details.containers.get(this)?.open ?? false;
+  }
+  set open(open) {
+    Manager.onToggle.call(this, open);
+  }
+  connectedCallback() {
+    const details = this.querySelector(":scope > details");
+    const summary = details?.querySelector(":scope > summary");
+    Store.details.buttons.set(this, summary);
+    Store.details.containers.set(this, details);
+  }
+  disconnectedCallback() {
+    Store.details.buttons.delete(this);
+    Store.details.containers.delete(this);
+  }
+  toggle() {
+    Manager.onToggle.call(this);
+  }
+};
+var DeliciousDetailsList = class extends HTMLElement {
+  static get observedAttributes() {
+    return ["multiple", "open"];
+  }
+  get multiple() {
+    return this.getAttribute("multiple") != null;
+  }
+  set multiple(multiple) {
+    setAttribute(this, "multiple", multiple ? "" : null);
+  }
+  get open() {
+    return Store.list.open.get(this) ?? [];
+  }
+  set open(indices) {
+    Manager.update(this, indices);
+  }
+  constructor() {
+    super();
+    this.addEventListener("keydown", Manager.onLocalKeydown.bind(this), eventOptions.passive);
+  }
+  attributeChangedCallback(name, oldValue, newValue) {
+    if (oldValue === newValue) {
+      return;
+    }
+    switch (name) {
+      case "multiple":
+        Manager.open(this, getAttribute(this, "open", ""));
+        break;
+      case "open":
+        Manager.open(this, newValue);
+        break;
+      default:
+        break;
+    }
+  }
+  connectedCallback() {
+    Manager.initializeList(this);
+  }
+  disconnectedCallback() {
+    Manager.destroyList(this);
+  }
+};
+globalThis.addEventListener("keydown", Manager.onGlobalKeydown, eventOptions.passive);
+globalThis.customElements.define("delicious-details", DeliciousDetails);
+globalThis.customElements.define("delicious-details-list", DeliciousDetailsList);
+
+// src/focus-trap.ts
+var attribute = "formal-focus-trap";
+var store = /* @__PURE__ */ new WeakMap();
+function handle(event, focusTrap, element) {
+  const elements = getFocusableElements(focusTrap);
+  if (element === focusTrap) {
+    delay(() => {
+      (elements[event.shiftKey ? elements.length - 1 : 0] ?? focusTrap).focus();
+    });
+    return;
+  }
+  const index2 = elements.indexOf(element);
+  let target = focusTrap;
+  if (index2 > -1) {
+    let position = index2 + (event.shiftKey ? -1 : 1);
+    if (position < 0) {
+      position = elements.length - 1;
+    } else if (position >= elements.length) {
+      position = 0;
+    }
+    target = elements[position] ?? focusTrap;
+  }
+  delay(() => {
+    target.focus();
+  });
+}
+function observe(records) {
+  for (const record of records) {
+    if (record.type !== "attributes") {
+      continue;
+    }
+    const element = record.target;
+    if (element.getAttribute(attribute) == null) {
+      FocusTrap.destroy(element);
+    } else {
+      FocusTrap.create(element);
+    }
+  }
+}
+function onKeydown(event) {
+  if (event.key !== "Tab") {
+    return;
+  }
+  const eventTarget = event.target;
+  const focusTrap = findParent(eventTarget, `[${attribute}]`);
+  if (focusTrap == null) {
+    return;
+  }
+  event.preventDefault();
+  event.stopImmediatePropagation();
+  handle(event, focusTrap, eventTarget);
+}
+var FocusTrap = class {
+  tabIndex;
+  constructor(element) {
+    this.tabIndex = element.tabIndex;
+    setAttribute(element, "tabindex", "-1");
+  }
+  static create(element) {
+    if (!store.has(element)) {
+      store.set(element, new FocusTrap(element));
+    }
+  }
+  static destroy(element) {
+    const focusTrap = store.get(element);
+    if (focusTrap == null) {
+      return;
+    }
+    setAttribute(element, "tabindex", focusTrap.tabIndex);
+    store.delete(element);
+  }
+};
+(() => {
+  if (typeof globalThis._formalFocusTrap !== "undefined") {
+    return;
+  }
+  globalThis._formalFocusTrap = null;
+  const observer2 = new MutationObserver(observe);
+  observer2.observe(document, {
+    attributeFilter: [attribute],
+    attributeOldValue: true,
+    attributes: true,
+    childList: true,
+    subtree: true
+  });
+  delay(() => {
+    const focusTraps = Array.from(document.querySelectorAll(`[${attribute}]`));
+    for (const focusTrap of focusTraps) {
+      focusTrap.setAttribute(attribute, "");
+    }
+  });
+  document.addEventListener("keydown", onKeydown, eventOptions.active);
+})();
+
+// src/helpers/floated.ts
+var positions = ["above", "above-left", "above-right", "below", "below-left", "below-right", "horizontal", "left", "right", "vertical"];
+var Floated = class {
+  static update(elements, position) {
+    const { anchor, floater, parent } = elements;
+    function update() {
+      if (floater.hidden) {
+        anchor.insertAdjacentElement("afterend", floater);
+        return;
+      }
+      const floatedPosition = Floated.getPosition((parent ?? anchor).getAttribute(position.attribute) ?? "", position.value);
+      floater.setAttribute("position", floatedPosition);
+      const rectangles = {
+        anchor: anchor.getBoundingClientRect(),
+        floater: floater.getBoundingClientRect()
+      };
+      const top = Floated.getTop(rectangles, floatedPosition);
+      const left = Floated.getLeft(rectangles, floatedPosition);
+      const matrix = `matrix(1, 0, 0, 1, ${left}, ${top})`;
+      floater.style.position = "fixed";
+      floater.style.inset = "0 auto auto 0";
+      floater.style.transform = matrix;
+      delay(update);
+    }
+    document.body.appendChild(floater);
+    floater.hidden = false;
+    delay(update);
+  }
+  static getLeft(rectangles, position) {
+    const { left, right } = rectangles.anchor;
+    const { width } = rectangles.floater;
+    switch (position) {
+      case "above":
+      case "below":
+      case "vertical":
+        return left + rectangles.anchor.width / 2 - width / 2;
+      case "above-left":
+      case "below-left":
+        return left;
+      case "above-right":
+      case "below-right":
+        return right - width;
+      case "horizontal":
+        return right + width > globalThis.innerWidth ? left - width < 0 ? right : left - width : right;
+      case "left":
+        return left - width;
+      case "right":
+        return right;
+      default:
+        return 0;
+    }
+  }
+  static getTop(rectangles, position) {
+    const { bottom, top } = rectangles.anchor;
+    const { height } = rectangles.floater;
+    switch (position) {
+      case "above":
+      case "above-left":
+      case "above-right":
+        return top - height;
+      case "below":
+      case "below-left":
+      case "below-right":
+        return bottom;
+      case "horizontal":
+      case "left":
+      case "right":
+        return top + rectangles.anchor.height / 2 - height / 2;
+      case "vertical":
+        return bottom + height > globalThis.innerHeight ? top - height < 0 ? bottom : top - height : bottom;
+      default:
+        return 0;
+    }
+  }
+  static getPosition(currentPosition, defaultPosition) {
+    if (currentPosition == null) {
+      return defaultPosition;
+    }
+    const normalized = currentPosition.trim().toLowerCase();
+    const index2 = positions.indexOf(normalized);
+    return index2 > -1 ? positions[index2] ?? defaultPosition : defaultPosition;
+  }
+};
+
+// src/popover.ts
+var clickCallbacks = /* @__PURE__ */ new WeakMap();
+var keydownCallbacks = /* @__PURE__ */ new WeakMap();
+var index = 0;
+function afterToggle(popover, active) {
+  handleCallbacks(popover, active);
+  if (active && popover.content) {
+    (getFocusableElements(popover.content)?.[0] ?? popover.content).focus();
+  } else {
+    popover.button?.focus();
+  }
+}
+function handleCallbacks(popover, add) {
+  const clickCallback = clickCallbacks.get(popover);
+  const keydownCallback = keydownCallbacks.get(popover);
+  if (clickCallback == null || keydownCallback == null) {
+    return;
+  }
+  const method = add ? "addEventListener" : "removeEventListener";
+  document[method]("click", clickCallback, eventOptions.passive);
+  document[method]("keydown", keydownCallback, eventOptions.passive);
+}
+function handleGlobalEvent(event, popover, target) {
+  const { button, content } = popover;
+  if (button == null || content == null) {
+    return;
+  }
+  const floater = findParent(target, "[polite-popover-content]");
+  if (floater == null) {
+    handleToggle(popover, false);
+    return;
+  }
+  event.stopPropagation();
+  const children = Array.from(document.body.children);
+  const difference = children.indexOf(floater) - children.indexOf(content);
+  if (difference < (event instanceof KeyboardEvent ? 1 : 0)) {
+    handleToggle(popover, false);
+  }
+}
+function handleToggle(popover, expand) {
+  const expanded = typeof expand === "boolean" ? !expand : popover.open;
+  setProperty(popover.button, "aria-expanded", !expanded);
+  if (expanded) {
+    popover.content.hidden = true;
+    afterToggle(popover, false);
+  } else {
+    Floated.update({
+      anchor: popover.button,
+      floater: popover.content,
+      parent: popover
+    }, {
+      attribute: "position",
+      value: "below-left"
+    });
+    delay(() => {
+      afterToggle(popover, true);
+    });
+  }
+  popover.dispatchEvent(new Event("toggle"));
+}
+function initialise(popover, button, content) {
+  content.hidden = true;
+  if (isNullOrWhitespace(popover.id)) {
+    setAttribute(popover, "id", `polite_popover_${++index}`);
+  }
+  if (isNullOrWhitespace(button.id)) {
+    setAttribute(button, "id", `${popover.id}_button`);
+  }
+  if (isNullOrWhitespace(content.id)) {
+    setAttribute(content, "id", `${popover.id}_content`);
+  }
+  setAttribute(button, "aria-controls", content.id);
+  setProperty(button, "aria-expanded", false);
+  setAttribute(button, "aria-haspopup", "dialog");
+  if (!(button instanceof HTMLButtonElement)) {
+    setAttribute(button, "tabindex", "0");
+  }
+  setAttribute(content, attribute, "");
+  setAttribute(content, "role", "dialog");
+  setAttribute(content, "aria-modal", "false");
+  clickCallbacks.set(popover, onClick.bind(popover));
+  keydownCallbacks.set(popover, onKeydown2.bind(popover));
+  button.addEventListener("click", toggle.bind(popover), eventOptions.passive);
+}
+function onClick(event) {
+  if (this instanceof PolitePopover && this.open) {
+    handleGlobalEvent(event, this, event.target);
+  }
+}
+function onKeydown2(event) {
+  if (this instanceof PolitePopover && this.open && event instanceof KeyboardEvent && event.key === "Escape") {
+    handleGlobalEvent(event, this, document.activeElement);
+  }
+}
+function toggle(expand) {
+  if (this instanceof PolitePopover) {
+    handleToggle(this, expand);
+  }
+}
+var PolitePopover = class extends HTMLElement {
+  button;
+  content;
+  get open() {
+    return this.button?.getAttribute("aria-expanded") === "true";
+  }
+  set open(open) {
+    toggle.call(this, open);
+  }
+  constructor() {
+    super();
+    const button = this.querySelector(":scope > [polite-popover-button]");
+    const content = this.querySelector(":scope > [polite-popover-content]");
+    if (button == null || !(button instanceof HTMLButtonElement || button instanceof HTMLElement && button.getAttribute("role") === "button")) {
+      throw new Error("<polite-popover> must have a <button>-element (or button-like element) with the attribute 'polite-popover-button'");
+    }
+    if (content == null || !(content instanceof HTMLElement)) {
+      throw new Error("<polite-popover> must have an element with the attribute 'polite-popover-content'");
+    }
+    defineProperty(this, "button", button);
+    defineProperty(this, "content", content);
+    initialise(this, button, content);
+  }
+  toggle() {
+    if (this.button && this.content) {
+      toggle.call(this);
+    }
+  }
+};
+globalThis.customElements.define("polite-popover", PolitePopover);
+
+// src/switch.ts
+function initialise2(component, label, input) {
+  label.parentElement?.removeChild(label);
+  input.parentElement?.removeChild(input);
+  setProperty(component, "aria-checked", input.checked || component.checked);
+  setProperty(component, "aria-disabled", input.disabled || component.disabled);
+  setProperty(component, "aria-readonly", input.readOnly || component.readOnly);
+  component.setAttribute("aria-labelledby", `${input.id}_label`);
+  component.setAttribute("id", input.id);
+  component.setAttribute("name", input.name ?? input.id);
+  component.setAttribute("role", "switch");
+  component.setAttribute("tabindex", "0");
+  component.setAttribute("value", input.value);
+  const off = getAttribute(component, "swanky-switch-off", "Off");
+  const on = getAttribute(component, "swanky-switch-on", "On");
+  component.insertAdjacentHTML("afterbegin", render(input.id, label, off, on));
+  component.addEventListener("click", onToggle.bind(component), eventOptions.passive);
+  component.addEventListener("keydown", onKey.bind(component), eventOptions.passive);
+}
+function onKey(event) {
+  if ((event.key === " " || event.key === "Enter") && this instanceof SwankySwitch) {
+    toggle2(this);
+  }
+}
+function onToggle() {
+  if (this instanceof SwankySwitch) {
+    toggle2(this);
+  }
+}
+function render(id, label, off, on) {
+  return `<swanky-switch-label id="${id}_label">${label.innerHTML}</swanky-switch-label>
 <swanky-switch-status aria-hidden="true">
 	<swanky-switch-status-indicator></swanky-switch-status-indicator>
 </swanky-switch-status>
 <swanky-switch-text aria-hidden="true">
-	<swanky-switch-text-off>{{off}}</swanky-switch-text-off>
-	<swanky-switch-text-on>{{on}}</swanky-switch-text-on>
-</swanky-switch-text>`,m=class{static addListeners(e){e.addEventListener("click",m.onToggle.bind(e),r.passive),e.addEventListener("keydown",m.onKey.bind(e),r.passive)}static initialize(e,t,i){t.parentElement?.removeChild(t),i.parentElement?.removeChild(i),v(e,"aria-checked",i.checked||e.checked),v(e,"aria-disabled",i.disabled||e.disabled),v(e,"aria-readonly",i.readOnly||e.readOnly),e.setAttribute("aria-labelledby",`${i.id}_label`),e.setAttribute("id",i.id),e.setAttribute("name",i.name??i.id),e.setAttribute("role","switch"),e.setAttribute("tabindex","0"),e.setAttribute("value",i.value);let s=x(e,"swanky-switch-off","Off"),o=x(e,"swanky-switch-on","On");e.insertAdjacentHTML("afterbegin",m.render(i.id,t,s,o)),m.addListeners(e)}static onKey(e){(e.key===" "||e.key==="Enter")&&this instanceof S&&m.toggle(this)}static onToggle(){this instanceof S&&m.toggle(this)}static render(e,t,i,s){return B(J,{off:i,on:s,id:`${e}_label`,label:t.innerHTML})}static toggle(e){e.disabled||e.readOnly||(e.checked=!e.checked,e.dispatchEvent(new Event("change")))}},S=class extends HTMLElement{get checked(){return this.getAttribute("aria-checked")==="true"}set checked(e){v(this,"aria-checked",e)}get disabled(){return this.getAttribute("aria-disabled")==="true"}set disabled(e){v(this,"aria-disabled",e)}get readOnly(){return this.getAttribute("aria-readonly")==="true"}set readOnly(e){v(this,"aria-readonly",e)}get value(){return this.checked?"on":"off"}constructor(){super();let e=this.querySelector("[swanky-switch-input]"),t=this.querySelector("[swanky-switch-label]");if(typeof e>"u"||!(e instanceof HTMLInputElement)||e.type!=="checkbox")throw new Error("<swanky-switch> must have an <input>-element with type 'checkbox' and the attribute 'swanky-switch-input'");if(typeof t>"u"||!(t instanceof HTMLElement))throw new Error("<swanky-switch> must have a <label>-element with the attribute 'swanky-switch-label'");m.initialize(this,t,e)}};globalThis.customElements.define("swanky-switch",S);var O="toasty-tooltip",Q=`${O}-content`,z=new WeakMap,F=class{static observer(e){for(let t of e){if(t.type!=="attributes")continue;let i=t.target;i.getAttribute(O)==null?M.destroy(i):M.create(i)}}},M=class{constructor(e){this.anchor=e;this.focusable=e.matches(I),this.floater=M.createFloater(e),this.handleCallbacks(!0)}callbacks={click:this.onClick.bind(this),hide:this.onHide.bind(this),keydown:this.onKeyDown.bind(this),show:this.onShow.bind(this)};floater;focusable;static create(e){z.has(e)||z.set(e,new M(e))}static destroy(e){let t=z.get(e);typeof t>"u"||(t.handleCallbacks(!1),z.delete(e))}static createFloater(e){let t=e.getAttribute("aria-describedby")??e.getAttribute("aria-labelledby"),i=t==null?null:document.getElementById(t);if(i==null)throw new Error(`A '${O}'-attributed element must have a valid id reference in either the 'aria-describedby' or 'aria-labelledby'-attribute.`);return i.hidden=!0,c(i,Q,""),c(i,"role","tooltip"),v(i,"aria-hidden",!0),i}onClick(e){w(e.target,t=>[this.anchor,this.floater].includes(t))==null&&this.toggle(!1)}onHide(){this.toggle(!1)}onKeyDown(e){e instanceof KeyboardEvent&&e.key==="Escape"&&this.toggle(!1)}onShow(){this.toggle(!0)}toggle(e){let t=e?"addEventListener":"removeEventListener";document[t]("click",this.callbacks.click,r.passive),document[t]("keydown",this.callbacks.keydown,r.passive),e?y.update(this,"above"):this.floater.hidden=!0}handleCallbacks(e){let{anchor:t,floater:i,focusable:s}=this,o=e?"addEventListener":"removeEventListener";for(let l of[t,i])l[o]("mouseenter",this.callbacks.show,r.passive),l[o]("mouseleave",this.callbacks.hide,r.passive),l[o]("touchstart",this.callbacks.show,r.passive);s&&(t[o]("blur",this.callbacks.hide,r.passive),t[o]("focus",this.callbacks.show,r.passive))}},X=new MutationObserver(F.observer);X.observe(document,{attributeFilter:[O],attributeOldValue:!0,attributes:!0,childList:!0,subtree:!0});f(()=>{let n=Array.from(document.querySelectorAll(`[${O}]`));for(let e of n)e.setAttribute(O,"")});
+	<swanky-switch-text-off>${off}</swanky-switch-text-off>
+	<swanky-switch-text-on>${on}</swanky-switch-text-on>
+</swanky-switch-text>`;
+}
+function toggle2(component) {
+  if (component.disabled || component.readOnly) {
+    return;
+  }
+  component.checked = !component.checked;
+  component.dispatchEvent(new Event("change"));
+}
+var SwankySwitch = class extends HTMLElement {
+  get checked() {
+    return this.getAttribute("aria-checked") === "true";
+  }
+  set checked(checked) {
+    setProperty(this, "aria-checked", checked);
+  }
+  get disabled() {
+    return this.getAttribute("aria-disabled") === "true";
+  }
+  set disabled(disabled) {
+    setProperty(this, "aria-disabled", disabled);
+  }
+  get readOnly() {
+    return this.getAttribute("aria-readonly") === "true";
+  }
+  set readOnly(readonly) {
+    setProperty(this, "aria-readonly", readonly);
+  }
+  get value() {
+    return this.checked ? "on" : "off";
+  }
+  constructor() {
+    super();
+    const input = this.querySelector("[swanky-switch-input]");
+    const label = this.querySelector("[swanky-switch-label]");
+    if (typeof input === "undefined" || !(input instanceof HTMLInputElement) || input.type !== "checkbox") {
+      throw new Error("<swanky-switch> must have an <input>-element with type 'checkbox' and the attribute 'swanky-switch-input'");
+    }
+    if (typeof label === "undefined" || !(label instanceof HTMLElement)) {
+      throw new Error("<swanky-switch> must have a <label>-element with the attribute 'swanky-switch-label'");
+    }
+    initialise2(this, label, input);
+  }
+};
+globalThis.customElements.define("swanky-switch", SwankySwitch);
+
+// src/tooltip.ts
+var attribute2 = "toasty-tooltip";
+var contentAttribute = `${attribute2}-content`;
+var positionAttribute = `${attribute2}-position`;
+var store2 = /* @__PURE__ */ new WeakMap();
+function observe2(records) {
+  for (const record of records) {
+    if (record.type !== "attributes") {
+      continue;
+    }
+    const element = record.target;
+    if (element.getAttribute(attribute2) == null) {
+      Tooltip.destroy(element);
+    } else {
+      Tooltip.create(element);
+    }
+  }
+}
+var Tooltip = class {
+  constructor(anchor) {
+    this.anchor = anchor;
+    this.focusable = anchor.matches(focusableSelector);
+    this.floater = Tooltip.createFloater(anchor);
+    this.handleCallbacks(true);
+  }
+  callbacks = {
+    click: this.onClick.bind(this),
+    hide: this.onHide.bind(this),
+    keydown: this.onKeyDown.bind(this),
+    show: this.onShow.bind(this)
+  };
+  floater;
+  focusable;
+  static create(anchor) {
+    if (!store2.has(anchor)) {
+      store2.set(anchor, new Tooltip(anchor));
+    }
+  }
+  static destroy(element) {
+    const tooltip = store2.get(element);
+    if (typeof tooltip === "undefined") {
+      return;
+    }
+    tooltip.handleCallbacks(false);
+    store2.delete(element);
+  }
+  static createFloater(anchor) {
+    const id = anchor.getAttribute("aria-describedby") ?? anchor.getAttribute("aria-labelledby");
+    const element = id == null ? null : document.getElementById(id);
+    if (element == null) {
+      throw new Error(`A '${attribute2}'-attributed element must have a valid id reference in either the 'aria-describedby' or 'aria-labelledby'-attribute.`);
+    }
+    element.hidden = true;
+    setAttribute(element, contentAttribute, "");
+    setAttribute(element, "role", "tooltip");
+    setProperty(element, "aria-hidden", true);
+    return element;
+  }
+  onClick(event) {
+    if (findParent(event.target, (element) => [this.anchor, this.floater].includes(element)) == null) {
+      this.toggle(false);
+    }
+  }
+  onHide() {
+    this.toggle(false);
+  }
+  onKeyDown(event) {
+    if (event instanceof KeyboardEvent && event.key === "Escape") {
+      this.toggle(false);
+    }
+  }
+  onShow() {
+    this.toggle(true);
+  }
+  toggle(show) {
+    const method = show ? "addEventListener" : "removeEventListener";
+    document[method]("click", this.callbacks.click, eventOptions.passive);
+    document[method]("keydown", this.callbacks.keydown, eventOptions.passive);
+    if (show) {
+      Floated.update(this, {
+        attribute: positionAttribute,
+        value: "above"
+      });
+    } else {
+      this.floater.hidden = true;
+    }
+  }
+  handleCallbacks(add) {
+    const { anchor, floater, focusable } = this;
+    const method = add ? "addEventListener" : "removeEventListener";
+    for (const element of [anchor, floater]) {
+      element[method]("mouseenter", this.callbacks.show, eventOptions.passive);
+      element[method]("mouseleave", this.callbacks.hide, eventOptions.passive);
+      element[method]("touchstart", this.callbacks.show, eventOptions.passive);
+    }
+    if (focusable) {
+      anchor[method]("blur", this.callbacks.hide, eventOptions.passive);
+      anchor[method]("focus", this.callbacks.show, eventOptions.passive);
+    }
+  }
+};
+var observer = new MutationObserver(observe2);
+observer.observe(document, {
+  attributeFilter: [attribute2],
+  attributeOldValue: true,
+  attributes: true,
+  childList: true,
+  subtree: true
+});
+delay(() => {
+  const tooltips = Array.from(document.querySelectorAll(`[${attribute2}]`));
+  for (const tooltip of tooltips) {
+    tooltip.setAttribute(attribute2, "");
+  }
+});
+//# sourceMappingURL=index.js.map

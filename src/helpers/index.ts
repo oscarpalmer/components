@@ -11,7 +11,10 @@ const focusableSelectors = [
 	'button',
 	'details',
 	'details[open] > summary',
+	'embed',
+	'iframe',
 	'input',
+	'object',
 	'select',
 	'textarea',
 	'video[controls]',
@@ -20,6 +23,13 @@ const focusableSelectors = [
 export const focusableSelector = focusableSelectors
 	.map(selector => `${selector}:not([disabled]):not([hidden]):not([tabindex="-1"])`)
 	.join(',');
+
+export function defineProperty(obj: unknown, key: PropertyKey, value: unknown): void {
+	Object.defineProperty(obj, key, {
+		value,
+		writable: false,
+	});
+}
 
 export function delay(callback: (time: DOMHighResTimeStamp) => void): number {
 	return globalThis.requestAnimationFrame?.(callback) ?? globalThis.setTimeout?.(() => {
@@ -81,16 +91,6 @@ export function isNullOrWhitespace(value: string): boolean {
 	}
 
 	return value.trim().length === 0;
-}
-
-export function render(template: string, variables: Record<string, unknown>): string {
-	return template.replace(/\{\{(\w+)\}\}/g, (match: string, ...parts: any[]): string => {
-		if (parts == null || parts.length === 0) {
-			return match;
-		}
-
-		return String(variables?.[parts[0]] ?? match);
-	});
 }
 
 export function setAttribute(element: HTMLElement, attribute: string, value: unknown): void {

@@ -1,74 +1,73 @@
 import {delay, eventOptions, findParent, getFocusableElements, setAttribute} from './helpers';
 
 export const attribute = 'formal-focus-trap';
+
 const store = new WeakMap<HTMLElement, FocusTrap>();
 
-class Manager {
-	static observer(records: MutationRecord[]) {
-		for (const record of records) {
-			if (record.type !== 'attributes') {
-				continue;
-			}
+function handle(event: KeyboardEvent, focusTrap: HTMLElement, element: HTMLElement): void {
+	const elements = getFocusableElements(focusTrap);
 
-			const element = record.target as HTMLElement;
-
-			if (element.getAttribute(attribute) == null) {
-				FocusTrap.destroy(element);
-			} else {
-				FocusTrap.create(element);
-			}
-		}
-	}
-
-	static onKeydown(event: KeyboardEvent): void {
-		if (event.key !== 'Tab') {
-			return;
-		}
-
-		const eventTarget = event.target as HTMLElement;
-		const focusTrap = findParent(eventTarget, `[${attribute}]`);
-
-		if (focusTrap == null) {
-			return;
-		}
-
-		event.preventDefault();
-		event.stopImmediatePropagation();
-
-		Manager.handle(event, focusTrap, eventTarget);
-	}
-
-	private static handle(event: KeyboardEvent, focusTrap: HTMLElement, element: HTMLElement): void {
-		const elements = getFocusableElements(focusTrap);
-
-		if (element === focusTrap) {
-			delay(() => {
-				(elements[event.shiftKey ? elements.length - 1 : 0] ?? focusTrap).focus();
-			});
-
-			return;
-		}
-
-		const index = elements.indexOf(element);
-
-		let target = focusTrap;
-
-		if (index > -1) {
-			let position = index + (event.shiftKey ? -1 : 1);
-
-			if (position < 0) {
-				position = elements.length - 1;
-			} else if (position >= elements.length) {
-				position = 0;
-			}
-
-			target = elements[position] ?? focusTrap;
-		}
-
+	if (element === focusTrap) {
 		delay(() => {
-			target.focus();
+			(elements[event.shiftKey ? elements.length - 1 : 0] ?? focusTrap).focus();
 		});
+
+		return;
 	}
+
+	const index = elements.indexOf(element);
+
+	let target = focusTrap;
+
+	if (index > -1) {
+		let position = index + (event.shiftKey ? -1 : 1);
+
+		if (position < 0) {
+			position = elements.length - 1;
+		} else if (position >= elements.length) {
+			position = 0;
+		}
+
+		target = elements[position] ?? focusTrap;
+	}
+
+	delay(() => {
+		target.focus();
+	});
+}
+
+function observe(records: MutationRecord[]) {
+	for (const record of records) {
+		if (record.type !== 'attributes') {
+			continue;
+		}
+
+		const element = record.target as HTMLElement;
+
+		if (element.getAttribute(attribute) == null) {
+			FocusTrap.destroy(element);
+		} else {
+			FocusTrap.create(element);
+		}
+	}
+}
+
+function onKeydown(event: KeyboardEvent): void {
+	if (event.key !== 'Tab') {
+		return;
+	}
+
+	const eventTarget = event.target as HTMLElement;
+	const focusTrap = findParent(eventTarget, `[${attribute}]`);
+
+	if (focusTrap == null) {
+		return;
+	}
+
+	event.preventDefault();
+	event.stopImmediatePropagation();
+
+	handle(event, focusTrap, eventTarget);
 }
 
 class FocusTrap {
@@ -106,7 +105,7 @@ class FocusTrap {
 
 	(globalThis as any)._formalFocusTrap = null;
 
-	const observer = new MutationObserver(Manager.observer);
+	const observer = new MutationObserver(observe);
 
 	observer.observe(document, {
 		attributeFilter: [attribute],
@@ -124,5 +123,5 @@ class FocusTrap {
 		}
 	});
 
-	document.addEventListener('keydown', Manager.onKeydown, eventOptions.active);
+	document.addEventListener('keydown', onKeydown, eventOptions.active);
 })();

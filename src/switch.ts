@@ -1,75 +1,61 @@
-import {eventOptions, getAttribute, render, setProperty} from './helpers';
+import {eventOptions, getAttribute, setProperty} from './helpers';
 
-const template
-= `<swanky-switch-label id="{{id}}">{{label}}</swanky-switch-label>
+function initialise(component: SwankySwitch, label: HTMLElement, input: HTMLInputElement): void {
+	label.parentElement?.removeChild(label);
+	input.parentElement?.removeChild(input);
+
+	setProperty(component, 'aria-checked', input.checked || component.checked);
+	setProperty(component, 'aria-disabled', input.disabled || component.disabled);
+	setProperty(component, 'aria-readonly', input.readOnly || component.readOnly);
+
+	component.setAttribute('aria-labelledby', `${input.id}_label`);
+
+	component.setAttribute('id', input.id);
+	component.setAttribute('name', input.name ?? input.id);
+	component.setAttribute('role', 'switch');
+	component.setAttribute('tabindex', '0');
+	component.setAttribute('value', input.value);
+
+	const off = getAttribute(component, 'swanky-switch-off', 'Off');
+	const on = getAttribute(component, 'swanky-switch-on', 'On');
+
+	component.insertAdjacentHTML('afterbegin', render(input.id, label, off, on));
+
+	component.addEventListener('click', onToggle.bind(component), eventOptions.passive);
+	component.addEventListener('keydown', onKey.bind(component), eventOptions.passive);
+}
+
+function onKey(this: SwankySwitch, event: KeyboardEvent): void {
+	if ((event.key === ' ' || event.key === 'Enter') && (this instanceof SwankySwitch)) {
+		toggle(this);
+	}
+}
+
+function onToggle(this: SwankySwitch): void {
+	if (this instanceof SwankySwitch) {
+		toggle(this);
+	}
+}
+
+function render(id: string, label: HTMLElement, off: string, on: string): string {
+	return `<swanky-switch-label id="${id}_label">${label.innerHTML}</swanky-switch-label>
 <swanky-switch-status aria-hidden="true">
 	<swanky-switch-status-indicator></swanky-switch-status-indicator>
 </swanky-switch-status>
 <swanky-switch-text aria-hidden="true">
-	<swanky-switch-text-off>{{off}}</swanky-switch-text-off>
-	<swanky-switch-text-on>{{on}}</swanky-switch-text-on>
+	<swanky-switch-text-off>${off}</swanky-switch-text-off>
+	<swanky-switch-text-on>${on}</swanky-switch-text-on>
 </swanky-switch-text>`;
+}
 
-class Manager {
-	static addListeners(component: SwankySwitch): void {
-		component.addEventListener('click', Manager.onToggle.bind(component), eventOptions.passive);
-		component.addEventListener('keydown', Manager.onKey.bind(component), eventOptions.passive);
+function toggle(component: SwankySwitch): void {
+	if (component.disabled || component.readOnly) {
+		return;
 	}
 
-	static initialize(component: SwankySwitch, label: HTMLElement, input: HTMLInputElement): void {
-		label.parentElement?.removeChild(label);
-		input.parentElement?.removeChild(input);
+	component.checked = !component.checked;
 
-		setProperty(component, 'aria-checked', input.checked || component.checked);
-		setProperty(component, 'aria-disabled', input.disabled || component.disabled);
-		setProperty(component, 'aria-readonly', input.readOnly || component.readOnly);
-
-		component.setAttribute('aria-labelledby', `${input.id}_label`);
-
-		component.setAttribute('id', input.id);
-		component.setAttribute('name', input.name ?? input.id);
-		component.setAttribute('role', 'switch');
-		component.setAttribute('tabindex', '0');
-		component.setAttribute('value', input.value);
-
-		const off = getAttribute(component, 'swanky-switch-off', 'Off');
-		const on = getAttribute(component, 'swanky-switch-on', 'On');
-
-		component.insertAdjacentHTML('afterbegin', Manager.render(input.id, label, off, on));
-
-		Manager.addListeners(component);
-	}
-
-	static onKey(event: KeyboardEvent): void {
-		if ((event.key === ' ' || event.key === 'Enter') && (this instanceof SwankySwitch)) {
-			Manager.toggle(this);
-		}
-	}
-
-	static onToggle(): void {
-		if (this instanceof SwankySwitch) {
-			Manager.toggle(this);
-		}
-	}
-
-	static render(id: string, label: HTMLElement, off: string, on: string): string {
-		return render(template, {
-			off,
-			on,
-			id: `${id}_label`,
-			label: label.innerHTML,
-		});
-	}
-
-	private static toggle(component: SwankySwitch): void {
-		if (component.disabled || component.readOnly) {
-			return;
-		}
-
-		component.checked = !component.checked;
-
-		component.dispatchEvent(new Event('change'));
-	}
+	component.dispatchEvent(new Event('change'));
 }
 
 class SwankySwitch extends HTMLElement {
@@ -115,7 +101,7 @@ class SwankySwitch extends HTMLElement {
 			throw new Error('<swanky-switch> must have a <label>-element with the attribute \'swanky-switch-label\'');
 		}
 
-		Manager.initialize(this, label, input);
+		initialise(this, label, input);
 	}
 }
 

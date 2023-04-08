@@ -16,7 +16,7 @@ type Rectangles = {
 const positions: Position[] = ['above', 'above-left', 'above-right', 'below', 'below-left', 'below-right', 'horizontal', 'left', 'right', 'vertical'];
 
 export class Floated {
-	static update(elements: Elements, position: Position): void {
+	static update(elements: Elements, position: {attribute: string, value: Position}): void {
 		const {anchor, floater, parent} = elements;
 
 		function update(): any {
@@ -26,7 +26,9 @@ export class Floated {
 				return;
 			}
 
-			const floatedPosition = Floated.getPosition((parent ?? anchor).getAttribute('position') ?? '', position);
+			const floatedPosition = Floated.getPosition((parent ?? anchor).getAttribute(position.attribute) ?? '', position.value);
+
+			floater.setAttribute('position', floatedPosition);
 
 			const rectangles: Rectangles = {
 				anchor: anchor.getBoundingClientRect(),

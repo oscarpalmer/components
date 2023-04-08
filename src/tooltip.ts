@@ -9,23 +9,24 @@ type Callbacks = {
 };
 
 const attribute = 'toasty-tooltip';
+
 const contentAttribute = `${attribute}-content`;
+const positionAttribute = `${attribute}-position`;
+
 const store = new WeakMap<HTMLElement, Tooltip>();
 
-class Manager {
-	static observer(records: MutationRecord[]): void {
-		for (const record of records) {
-			if (record.type !== 'attributes') {
-				continue;
-			}
+function observe(records: MutationRecord[]): void {
+	for (const record of records) {
+		if (record.type !== 'attributes') {
+			continue;
+		}
 
-			const element = record.target as HTMLElement;
+		const element = record.target as HTMLElement;
 
-			if (element.getAttribute(attribute) == null) {
-				Tooltip.destroy(element);
-			} else {
-				Tooltip.create(element);
-			}
+		if (element.getAttribute(attribute) == null) {
+			Tooltip.destroy(element);
+		} else {
+			Tooltip.create(element);
 		}
 	}
 }
@@ -116,7 +117,10 @@ class Tooltip {
 		document[method]('keydown', this.callbacks.keydown, eventOptions.passive);
 
 		if (show) {
-			Floated.update(this as never, 'above');
+			Floated.update(this as never, {
+				attribute: positionAttribute,
+				value: 'above',
+			});
 		} else {
 			this.floater.hidden = true;
 		}
@@ -142,7 +146,7 @@ class Tooltip {
 	}
 }
 
-const observer = new MutationObserver(Manager.observer);
+const observer = new MutationObserver(observe);
 
 observer.observe(document, {
 	attributeFilter: [attribute],
