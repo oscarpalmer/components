@@ -90,17 +90,11 @@ function getPosition(currentPosition: string, defaultPosition: Position): Positi
 export function updateFloated(elements: Elements, position: {attribute: string, value: Position}): Repeated {
 	const {anchor, floater, parent} = elements;
 
-	document.body.appendChild(floater);
+	function afterRepeat() {
+		anchor.insertAdjacentElement('afterend', floater);
+	}
 
-	floater.hidden = false;
-
-	return repeat(() => {
-		if (floater.hidden) {
-			anchor.insertAdjacentElement('afterend', floater);
-
-			return;
-		}
-
+	function onRepeat() {
 		const floatedPosition = getPosition((parent ?? anchor).getAttribute(position.attribute) ?? '', position.value);
 
 		floater.setAttribute('position', floatedPosition);
@@ -118,5 +112,11 @@ export function updateFloated(elements: Elements, position: {attribute: string, 
 		floater.style.position = 'fixed';
 		floater.style.inset = '0 auto auto 0';
 		floater.style.transform = matrix;
-	}, 0, Infinity);
+	}
+
+	document.body.appendChild(floater);
+
+	floater.hidden = false;
+
+	return repeat(onRepeat, 0, Infinity, afterRepeat);
 }

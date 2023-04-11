@@ -6,118 +6,6 @@ var __publicField = (obj, key, value) => {
   return value;
 };
 
-// node_modules/@oscarpalmer/timer/dist/timer.js
-var milliseconds = Math.round(1e3 / 60);
-var cancel = cancelAnimationFrame != null ? cancelAnimationFrame : function(id) {
-  clearTimeout == null ? void 0 : clearTimeout(id);
-};
-var request = requestAnimationFrame != null ? requestAnimationFrame : function(callback) {
-  var _a;
-  return (_a = setTimeout == null ? void 0 : setTimeout(() => {
-    callback(Date.now());
-  }, milliseconds)) != null ? _a : -1;
-};
-var Timed = class {
-  constructor(callback, time, count) {
-    __publicField(this, "callback");
-    __publicField(this, "count");
-    __publicField(this, "frame");
-    __publicField(this, "running", false);
-    __publicField(this, "time");
-    const isRepeated = this instanceof Repeated;
-    const type = isRepeated ? "repeated" : "waited";
-    if (typeof callback !== "function") {
-      throw new Error(`A ${type} timer must have a callback function`);
-    }
-    if (typeof time !== "number" || time < 0) {
-      throw new Error(`A ${type} timer must have a non-negative number as its time`);
-    }
-    if (isRepeated && (typeof count !== "number" || count < 2)) {
-      throw new Error("A repeated timer must have a number above 1 as its repeat count");
-    }
-    this.callback = callback;
-    this.count = count;
-    this.time = time;
-  }
-  /**
-   * Is the timer active?
-   */
-  get active() {
-    return this.running;
-  }
-  static run(timed) {
-    timed.running = true;
-    let count = 0;
-    let start;
-    function step(timestamp) {
-      if (!timed.running) {
-        return;
-      }
-      start != null ? start : start = timestamp;
-      const elapsed = timestamp - start;
-      const elapsedMinimum = elapsed - milliseconds;
-      const elapsedMaximum = elapsed + milliseconds;
-      if (elapsedMinimum < timed.time && timed.time < elapsedMaximum) {
-        if (timed.running) {
-          timed.callback(timed instanceof Repeated ? count : void 0);
-        }
-        count += 1;
-        if (timed instanceof Repeated && count < timed.count) {
-          start = void 0;
-        } else {
-          timed.stop();
-          return;
-        }
-      }
-      timed.frame = request(step);
-    }
-    timed.frame = request(step);
-  }
-  /**
-   * Restart timer
-   */
-  restart() {
-    this.stop();
-    Timed.run(this);
-    return this;
-  }
-  /**
-   * Start timer
-   */
-  start() {
-    if (this.running) {
-      return this;
-    }
-    Timed.run(this);
-    return this;
-  }
-  /**
-   * Stop timer
-   */
-  stop() {
-    this.running = false;
-    if (typeof this.frame === "undefined") {
-      return this;
-    }
-    cancel(this.frame);
-    this.frame = void 0;
-    return this;
-  }
-};
-var Repeated = class extends Timed {
-};
-var Waited = class extends Timed {
-  constructor(callback, time) {
-    super(callback, time, 1);
-  }
-};
-function repeat(callback, time, count) {
-  return new Repeated(callback, time, count).start();
-}
-function wait(callback, time) {
-  return new Waited(callback, time).start();
-}
-
 // src/helpers/index.ts
 var eventOptions = {
   active: { capture: false, passive: false },
@@ -194,6 +82,197 @@ function setAttribute(element, attribute4, value) {
 }
 function setProperty(element, property, value) {
   element.setAttribute(property, String(typeof value === "boolean" ? value : false));
+}
+
+// src/accordion.ts
+var keys = ["ArrowDown", "ArrowLeft", "ArrowRight", "ArrowUp", "End", "Home"];
+function onKeydown(component, event) {
+  var _a, _b, _c;
+  if (((_a = document.activeElement) == null ? void 0 : _a.tagName) !== "SUMMARY" || !keys.includes(event.key) || component.details.length === 0) {
+    return;
+  }
+  const current = component.details.indexOf(document.activeElement.parentElement);
+  if (current === -1) {
+    return;
+  }
+  let destination = -1;
+  switch (event.key) {
+    case "ArrowDown":
+    case "ArrowRight":
+      destination = current + 1;
+      break;
+    case "ArrowLeft":
+    case "ArrowUp":
+      destination = current - 1;
+      break;
+    case "End":
+      destination = component.details.length - 1;
+      break;
+    case "Home":
+      destination = 0;
+      break;
+  }
+  if (destination < 0) {
+    destination = component.details.length - 1;
+  } else if (destination >= component.details.length) {
+    destination = 0;
+  }
+  if (destination === current) {
+    return;
+  }
+  const summary = (_b = component.details[destination]) == null ? void 0 : _b.querySelector(":scope > summary");
+  if (summary != null) {
+    (_c = summary.focus) == null ? void 0 : _c.call(summary);
+  }
+}
+function updateChildren(component) {
+  component.details.splice(0);
+  component.details.push(...component.querySelectorAll(":scope > details"));
+}
+var AccurateAccordion = class extends HTMLElement {
+  constructor() {
+    super();
+    __publicField(this, "observer");
+    __publicField(this, "details", []);
+    updateChildren(this);
+    this.observer = new MutationObserver((_) => updateChildren(this));
+    this.addEventListener("keydown", (event) => onKeydown(this, event), eventOptions.passive);
+  }
+  connectedCallback() {
+    this.observer.observe(this, {
+      childList: true,
+      subtree: true
+    });
+  }
+  disconnectedCallback() {
+    this.observer.disconnect();
+  }
+};
+globalThis.customElements.define("accurate-accordion", AccurateAccordion);
+
+// node_modules/@oscarpalmer/timer/dist/timer.js
+var milliseconds = Math.round(1e3 / 60);
+var request = requestAnimationFrame != null ? requestAnimationFrame : function(callback) {
+  var _a;
+  return (_a = setTimeout == null ? void 0 : setTimeout(() => {
+    callback(Date.now());
+  }, milliseconds)) != null ? _a : -1;
+};
+var Timed = class {
+  constructor(callback, time, count, afterCallback) {
+    __publicField(this, "callbacks");
+    __publicField(this, "configuration");
+    __publicField(this, "state", {
+      active: false,
+      finished: false
+    });
+    const isRepeated = this instanceof Repeated;
+    const type = isRepeated ? "repeated" : "waited";
+    if (typeof callback !== "function") {
+      throw new Error(`A ${type} timer must have a callback function`);
+    }
+    if (typeof time !== "number" || time < 0) {
+      throw new Error(`A ${type} timer must have a non-negative number as its time`);
+    }
+    if (isRepeated && (typeof count !== "number" || count < 2)) {
+      throw new Error("A repeated timer must have a number above 1 as its repeat count");
+    }
+    if (isRepeated && afterCallback != null && typeof afterCallback !== "function") {
+      throw new Error("A repeated timer's after-callback must be a function");
+    }
+    this.configuration = { count, time };
+    this.callbacks = {
+      after: afterCallback,
+      default: callback
+    };
+  }
+  /**
+   * Is the timer active?
+   */
+  get active() {
+    return this.state.active;
+  }
+  /**
+   * Has the timer finished?
+   */
+  get finished() {
+    return !this.state.active && this.state.finished;
+  }
+  static run(timed) {
+    timed.state.active = true;
+    timed.state.finished = false;
+    const isRepeated = timed instanceof Repeated;
+    let count = 0;
+    let start;
+    function step(timestamp) {
+      if (!timed.state.active) {
+        return;
+      }
+      start != null ? start : start = timestamp;
+      const elapsed = timestamp - start;
+      const elapsedMinimum = elapsed - milliseconds;
+      const elapsedMaximum = elapsed + milliseconds;
+      if (elapsedMinimum < timed.configuration.time && timed.configuration.time < elapsedMaximum) {
+        if (timed.state.active) {
+          timed.callbacks.default(isRepeated ? count : void 0);
+        }
+        count += 1;
+        if (isRepeated && count < timed.configuration.count) {
+          start = void 0;
+        } else {
+          timed.state.finished = true;
+          timed.stop();
+          return;
+        }
+      }
+      timed.state.frame = request(step);
+    }
+    timed.state.frame = request(step);
+  }
+  /**
+   * Restart timer
+   */
+  restart() {
+    this.stop();
+    Timed.run(this);
+    return this;
+  }
+  /**
+   * Start timer
+   */
+  start() {
+    if (!this.state.active) {
+      Timed.run(this);
+    }
+    return this;
+  }
+  /**
+   * Stop timer
+   */
+  stop() {
+    var _a, _b, _c;
+    this.state.active = false;
+    if (typeof this.state.frame === "undefined") {
+      return this;
+    }
+    (_a = cancelAnimationFrame != null ? cancelAnimationFrame : clearTimeout) == null ? void 0 : _a(this.state.frame);
+    (_c = (_b = this.callbacks).after) == null ? void 0 : _c.call(_b, this.finished);
+    this.state.frame = void 0;
+    return this;
+  }
+};
+var Repeated = class extends Timed {
+};
+var Waited = class extends Timed {
+  constructor(callback, time) {
+    super(callback, time, 1);
+  }
+};
+function repeat(callback, time, count, afterCallback) {
+  return new Repeated(callback, time, count, afterCallback).start();
+}
+function wait(callback, time) {
+  return new Waited(callback, time).start();
 }
 
 // src/details.ts
@@ -312,7 +391,7 @@ function observe2(records) {
     }
   }
 }
-function onKeydown(event) {
+function onKeydown2(event) {
   if (event.key !== "Tab") {
     return;
   }
@@ -364,7 +443,7 @@ var FocusTrap = class {
       focusTrap.setAttribute(attribute2, "");
     }
   }, 0);
-  document.addEventListener("keydown", onKeydown, eventOptions.active);
+  document.addEventListener("keydown", onKeydown2, eventOptions.active);
 })();
 
 // src/helpers/floated.ts
@@ -426,14 +505,11 @@ function getPosition(currentPosition, defaultPosition) {
 }
 function updateFloated(elements, position) {
   const { anchor, floater, parent } = elements;
-  document.body.appendChild(floater);
-  floater.hidden = false;
-  return repeat(() => {
+  function afterRepeat() {
+    anchor.insertAdjacentElement("afterend", floater);
+  }
+  function onRepeat() {
     var _a;
-    if (floater.hidden) {
-      anchor.insertAdjacentElement("afterend", floater);
-      return;
-    }
     const floatedPosition = getPosition((_a = (parent != null ? parent : anchor).getAttribute(position.attribute)) != null ? _a : "", position.value);
     floater.setAttribute("position", floatedPosition);
     const rectangles = {
@@ -446,7 +522,10 @@ function updateFloated(elements, position) {
     floater.style.position = "fixed";
     floater.style.inset = "0 auto auto 0";
     floater.style.transform = matrix;
-  }, 0, Infinity);
+  }
+  document.body.appendChild(floater);
+  floater.hidden = false;
+  return repeat(onRepeat, 0, Infinity, afterRepeat);
 }
 
 // src/popover.ts
@@ -534,7 +613,7 @@ function initialise(popover, button, content) {
   setAttribute(content, "role", "dialog");
   setAttribute(content, "aria-modal", "false");
   clickCallbacks.set(popover, onClick.bind(popover));
-  keydownCallbacks.set(popover, onKeydown2.bind(popover));
+  keydownCallbacks.set(popover, onKeydown3.bind(popover));
   button.addEventListener("click", toggle.bind(popover), eventOptions.passive);
 }
 function onClick(event) {
@@ -542,7 +621,7 @@ function onClick(event) {
     handleGlobalEvent(event, this, event.target);
   }
 }
-function onKeydown2(event) {
+function onKeydown3(event) {
   if (this instanceof PolitePopover && this.open && event instanceof KeyboardEvent && event.key === "Escape") {
     handleGlobalEvent(event, this, document.activeElement);
   }

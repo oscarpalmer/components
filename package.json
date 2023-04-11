@@ -4,7 +4,7 @@
 		"url": "https://oscarpalmer.se"
 	},
 	"dependencies": {
-		"@oscarpalmer/timer": "^0.11"
+		"@oscarpalmer/timer": "^0.12"
 	},
 	"description": "A collection of web components.",
 	"devDependencies": {
@@ -25,6 +25,13 @@
 			"import": "./dist/esm/index.js",
 			"require": "./dist/cjs/index.js",
 			"default": "./dist/iife/index.js"
+		},
+		"./accordion": {
+			"script": "./dist/iife/accordion.js",
+			"module": "./dist/esm/accordion.js",
+			"import": "./dist/esm/accordion.js",
+			"require": "./dist/cjs/accordion.js",
+			"default": "./dist/iife/accordion.js"
 		},
 		"./details": {
 			"script": "./dist/iife/index.js",
@@ -89,5 +96,5 @@
 	},
 	"type": "module",
 	"unpkg": "dist/iife/index.js",
-	"version": "0.14.0"
+	"version": "0.15.0"
 }

@@ -8,9 +8,6 @@ var __publicField = (obj, key, value) => {
 
 // node_modules/@oscarpalmer/timer/dist/timer.js
 var milliseconds = Math.round(1e3 / 60);
-var cancel = cancelAnimationFrame != null ? cancelAnimationFrame : function(id) {
-  clearTimeout == null ? void 0 : clearTimeout(id);
-};
 var request = requestAnimationFrame != null ? requestAnimationFrame : function(callback) {
   var _a;
   return (_a = setTimeout == null ? void 0 : setTimeout(() => {
@@ -18,12 +15,13 @@ var request = requestAnimationFrame != null ? requestAnimationFrame : function(c
   }, milliseconds)) != null ? _a : -1;
 };
 var Timed = class {
-  constructor(callback, time, count) {
-    __publicField(this, "callback");
-    __publicField(this, "count");
-    __publicField(this, "frame");
-    __publicField(this, "running", false);
-    __publicField(this, "time");
+  constructor(callback, time, count, afterCallback) {
+    __publicField(this, "callbacks");
+    __publicField(this, "configuration");
+    __publicField(this, "state", {
+      active: false,
+      finished: false
+    });
     const isRepeated = this instanceof Repeated;
     const type = isRepeated ? "repeated" : "waited";
     if (typeof callback !== "function") {
@@ -35,43 +33,57 @@ var Timed = class {
     if (isRepeated && (typeof count !== "number" || count < 2)) {
       throw new Error("A repeated timer must have a number above 1 as its repeat count");
     }
-    this.callback = callback;
-    this.count = count;
-    this.time = time;
+    if (isRepeated && afterCallback != null && typeof afterCallback !== "function") {
+      throw new Error("A repeated timer's after-callback must be a function");
+    }
+    this.configuration = { count, time };
+    this.callbacks = {
+      after: afterCallback,
+      default: callback
+    };
   }
   /**
    * Is the timer active?
    */
   get active() {
-    return this.running;
+    return this.state.active;
+  }
+  /**
+   * Has the timer finished?
+   */
+  get finished() {
+    return !this.state.active && this.state.finished;
   }
   static run(timed) {
-    timed.running = true;
+    timed.state.active = true;
+    timed.state.finished = false;
+    const isRepeated = timed instanceof Repeated;
     let count = 0;
     let start;
     function step(timestamp) {
-      if (!timed.running) {
+      if (!timed.state.active) {
         return;
       }
       start != null ? start : start = timestamp;
       const elapsed = timestamp - start;
       const elapsedMinimum = elapsed - milliseconds;
       const elapsedMaximum = elapsed + milliseconds;
-      if (elapsedMinimum < timed.time && timed.time < elapsedMaximum) {
-        if (timed.running) {
-          timed.callback(timed instanceof Repeated ? count : void 0);
+      if (elapsedMinimum < timed.configuration.time && timed.configuration.time < elapsedMaximum) {
+        if (timed.state.active) {
+          timed.callbacks.default(isRepeated ? count : void 0);
         }
         count += 1;
-        if (timed instanceof Repeated && count < timed.count) {
+        if (isRepeated && count < timed.configuration.count) {
           start = void 0;
         } else {
+          timed.state.finished = true;
           timed.stop();
           return;
         }
       }
-      timed.frame = request(step);
+      timed.state.frame = request(step);
     }
-    timed.frame = request(step);
+    timed.state.frame = request(step);
   }
   /**
    * Restart timer
@@ -85,22 +97,23 @@ var Timed = class {
    * Start timer
    */
   start() {
-    if (this.running) {
-      return this;
+    if (!this.state.active) {
+      Timed.run(this);
     }
-    Timed.run(this);
     return this;
   }
   /**
    * Stop timer
    */
   stop() {
-    this.running = false;
-    if (typeof this.frame === "undefined") {
+    var _a, _b, _c;
+    this.state.active = false;
+    if (typeof this.state.frame === "undefined") {
       return this;
     }
-    cancel(this.frame);
-    this.frame = void 0;
+    (_a = cancelAnimationFrame != null ? cancelAnimationFrame : clearTimeout) == null ? void 0 : _a(this.state.frame);
+    (_c = (_b = this.callbacks).after) == null ? void 0 : _c.call(_b, this.finished);
+    this.state.frame = void 0;
     return this;
   }
 };
@@ -111,8 +124,8 @@ var Waited = class extends Timed {
     super(callback, time, 1);
   }
 };
-function repeat(callback, time, count) {
-  return new Repeated(callback, time, count).start();
+function repeat(callback, time, count, afterCallback) {
+  return new Repeated(callback, time, count, afterCallback).start();
 }
 function wait(callback, time) {
   return new Waited(callback, time).start();
@@ -251,14 +264,11 @@ function getPosition(currentPosition, defaultPosition) {
 }
 function updateFloated(elements, position) {
   const { anchor, floater, parent } = elements;
-  document.body.appendChild(floater);
-  floater.hidden = false;
-  return repeat(() => {
+  function afterRepeat() {
+    anchor.insertAdjacentElement("afterend", floater);
+  }
+  function onRepeat() {
     var _a;
-    if (floater.hidden) {
-      anchor.insertAdjacentElement("afterend", floater);
-      return;
-    }
     const floatedPosition = getPosition((_a = (parent != null ? parent : anchor).getAttribute(position.attribute)) != null ? _a : "", position.value);
     floater.setAttribute("position", floatedPosition);
     const rectangles = {
@@ -271,7 +281,10 @@ function updateFloated(elements, position) {
     floater.style.position = "fixed";
     floater.style.inset = "0 auto auto 0";
     floater.style.transform = matrix;
-  }, 0, Infinity);
+  }
+  document.body.appendChild(floater);
+  floater.hidden = false;
+  return repeat(onRepeat, 0, Infinity, afterRepeat);
 }
 
 // src/focus-trap.ts

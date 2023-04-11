@@ -1,3 +1,4 @@
+import './accordion';
 import './details';
 import './focus-trap';
 import './popover';
