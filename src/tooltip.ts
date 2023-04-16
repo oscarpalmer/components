@@ -1,5 +1,5 @@
 import {Repeated, wait} from '@oscarpalmer/timer';
-import {eventOptions, findParent, focusableSelector, setAttribute, setProperty} from './helpers';
+import {eventOptions, findParent, focusableSelector, setAttribute} from './helpers';
 import {updateFloated} from './helpers/floated';
 
 type Callbacks = {
@@ -84,8 +84,9 @@ class Tooltip {
 		element.hidden = true;
 
 		setAttribute(element, contentAttribute, '');
-		setAttribute(element, 'role', 'tooltip');
-		setProperty(element, 'aria-hidden', true);
+
+		element.ariaHidden = 'true';
+		element.role = 'tooltip';
 
 		return element;
 	}
@@ -166,6 +167,6 @@ wait(() => {
 	const tooltips = Array.from(document.querySelectorAll(`[${attribute}]`));
 
 	for (const tooltip of tooltips) {
-		tooltip.setAttribute(attribute, '');
+		setAttribute(tooltip as never, attribute, '');
 	}
 }, 0);

@@ -167,9 +167,6 @@ function setAttribute(element, attribute2, value) {
     element.setAttribute(attribute2, String(value));
   }
 }
-function setProperty(element, property, value) {
-  element.setAttribute(property, String(typeof value === "boolean" ? value : false));
-}
 
 // src/helpers/floated.ts
 var positions = ["above", "above-left", "above-right", "below", "below-left", "below-right", "horizontal", "left", "right", "vertical"];
@@ -234,7 +231,7 @@ function updateFloated(elements, position) {
   }
   function onRepeat() {
     const floatedPosition = getPosition((parent ?? anchor).getAttribute(position.attribute) ?? "", position.value);
-    floater.setAttribute("position", floatedPosition);
+    setAttribute(floater, "position", floatedPosition);
     const rectangles = {
       anchor: anchor.getBoundingClientRect(),
       floater: floater.getBoundingClientRect()
@@ -306,8 +303,8 @@ var Tooltip = class {
     }
     element.hidden = true;
     setAttribute(element, contentAttribute, "");
-    setAttribute(element, "role", "tooltip");
-    setProperty(element, "aria-hidden", true);
+    element.ariaHidden = "true";
+    element.role = "tooltip";
     return element;
   }
   onClick(event) {
@@ -366,6 +363,6 @@ observer.observe(document, {
 wait(() => {
   const tooltips = Array.from(document.querySelectorAll(`[${attribute}]`));
   for (const tooltip of tooltips) {
-    tooltip.setAttribute(attribute, "");
+    setAttribute(tooltip, attribute, "");
   }
 }, 0);

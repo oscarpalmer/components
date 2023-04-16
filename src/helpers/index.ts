@@ -79,12 +79,14 @@ export function getFocusableElements(context: Element): HTMLElement[] {
 	return focusable;
 }
 
-export function isNullOrWhitespace(value: string): boolean {
-	if (value == null) {
-		return true;
-	}
+export function getNumber(value: any): number {
+	return typeof value === 'number'
+		? value
+		: Number.parseInt(typeof value === 'string' ? value : String(value), 10);
+}
 
-	return value.trim().length === 0;
+export function isNullOrWhitespace(value: string): boolean {
+	return (value ?? '').trim().length === 0;
 }
 
 export function setAttribute(element: HTMLElement, attribute: string, value: unknown): void {
@@ -93,8 +95,4 @@ export function setAttribute(element: HTMLElement, attribute: string, value: unk
 	} else {
 		element.setAttribute(attribute, String(value));
 	}
-}
-
-export function setProperty(element: HTMLElement, property: string, value: unknown): void {
-	element.setAttribute(property, String(typeof value === 'boolean' ? value : false));
 }

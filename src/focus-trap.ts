@@ -77,7 +77,7 @@ class FocusTrap {
 	constructor(element: HTMLElement) {
 		this.tabIndex = element.tabIndex;
 
-		setAttribute(element, 'tabindex', '-1');
+		element.tabIndex = -1;
 	}
 
 	static create(element: HTMLElement): void {
@@ -93,7 +93,7 @@ class FocusTrap {
 			return;
 		}
 
-		setAttribute(element, 'tabindex', focusTrap.tabIndex);
+		element.tabIndex = focusTrap.tabIndex;
 
 		store.delete(element);
 	}
@@ -120,7 +120,7 @@ class FocusTrap {
 		const focusTraps = Array.from(document.querySelectorAll(`[${attribute}]`));
 
 		for (const focusTrap of focusTraps) {
-			focusTrap.setAttribute(attribute, '');
+			setAttribute(focusTrap as never, attribute, '');
 		}
 	}, 0);
 

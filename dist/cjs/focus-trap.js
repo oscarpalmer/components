@@ -268,7 +268,7 @@ var FocusTrap = class {
   constructor(element) {
     __publicField(this, "tabIndex");
     this.tabIndex = element.tabIndex;
-    setAttribute(element, "tabindex", "-1");
+    element.tabIndex = -1;
   }
   static create(element) {
     if (!store.has(element)) {
@@ -280,7 +280,7 @@ var FocusTrap = class {
     if (focusTrap == null) {
       return;
     }
-    setAttribute(element, "tabindex", focusTrap.tabIndex);
+    element.tabIndex = focusTrap.tabIndex;
     store.delete(element);
   }
 };
@@ -300,7 +300,7 @@ var FocusTrap = class {
   wait(() => {
     const focusTraps = Array.from(document.querySelectorAll(`[${attribute}]`));
     for (const focusTrap of focusTraps) {
-      focusTrap.setAttribute(attribute, "");
+      setAttribute(focusTrap, attribute, "");
     }
   }, 0);
   document.addEventListener("keydown", onKeydown, eventOptions.active);

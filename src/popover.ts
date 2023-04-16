@@ -1,5 +1,5 @@
 import {Repeated, wait} from '@oscarpalmer/timer';
-import {defineProperty, eventOptions, findParent, getFocusableElements, isNullOrWhitespace, setAttribute, setProperty} from './helpers';
+import {defineProperty, eventOptions, findParent, getFocusableElements, isNullOrWhitespace, setAttribute} from './helpers';
 import {updateFloated} from './helpers/floated';
 import {attribute} from './focus-trap';
 
@@ -64,7 +64,7 @@ function handleToggle(popover: PolitePopover, expand?: boolean | Event): void {
 		? !expand
 		: popover.open;
 
-	setProperty(popover.button, 'aria-expanded', !expanded);
+	setAttribute(popover.button, 'aria-expanded', !expanded);
 
 	if (expanded) {
 		popover.content.hidden = true;
@@ -96,28 +96,30 @@ function initialise(popover: PolitePopover, button: HTMLButtonElement, content: 
 	content.hidden = true;
 
 	if (isNullOrWhitespace(popover.id)) {
-		setAttribute(popover, 'id', `polite_popover_${++index}`);
+		popover.id = `polite_popover_${++index}`;
 	}
 
 	if (isNullOrWhitespace(button.id)) {
-		setAttribute(button, 'id', `${popover.id}_button`);
+		button.id = `${popover.id}_button`;
 	}
 
 	if (isNullOrWhitespace(content.id)) {
-		setAttribute(content, 'id', `${popover.id}_content`);
+		content.id = `${popover.id}_content`;
 	}
 
 	setAttribute(button, 'aria-controls', content.id);
-	setProperty(button, 'aria-expanded', false);
-	setAttribute(button, 'aria-haspopup', 'dialog');
+
+	button.ariaExpanded = 'false';
+	button.ariaHasPopup = 'dialog';
 
 	if (!(button instanceof HTMLButtonElement)) {
-		setAttribute(button, 'tabindex', '0');
+		(button as HTMLElement).tabIndex = 0;
 	}
 
 	setAttribute(content, attribute, '');
-	setAttribute(content, 'role', 'dialog');
-	setAttribute(content, 'aria-modal', 'false');
+
+	content.role = 'dialog';
+	content.ariaModal = 'false';
 
 	clickCallbacks.set(popover, onClick.bind(popover));
 	keydownCallbacks.set(popover, onKeydown.bind(popover));

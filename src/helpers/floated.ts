@@ -1,4 +1,5 @@
 import {Repeated, repeat} from '@oscarpalmer/timer';
+import {setAttribute} from '../helpers';
 
 type Elements = {
 	anchor: HTMLElement;
@@ -97,7 +98,7 @@ export function updateFloated(elements: Elements, position: {attribute: string, 
 	function onRepeat() {
 		const floatedPosition = getPosition((parent ?? anchor).getAttribute(position.attribute) ?? '', position.value);
 
-		floater.setAttribute('position', floatedPosition);
+		setAttribute(floater, 'position', floatedPosition);
 
 		const rectangles: Rectangles = {
 			anchor: anchor.getBoundingClientRect(),

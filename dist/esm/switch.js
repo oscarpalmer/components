@@ -38,23 +38,20 @@ function setAttribute(element, attribute, value) {
     element.setAttribute(attribute, String(value));
   }
 }
-function setProperty(element, property, value) {
-  element.setAttribute(property, String(typeof value === "boolean" ? value : false));
-}
 
 // src/switch.ts
 function initialise(component, label, input) {
   label.parentElement?.removeChild(label);
   input.parentElement?.removeChild(input);
-  setProperty(component, "aria-checked", input.checked || component.checked);
-  setProperty(component, "aria-disabled", input.disabled || component.disabled);
-  setProperty(component, "aria-readonly", input.readOnly || component.readonly);
-  component.setAttribute("aria-labelledby", `${input.id}_label`);
-  component.setAttribute("id", input.id);
-  component.setAttribute("name", input.name ?? input.id);
-  component.setAttribute("role", "switch");
-  component.setAttribute("tabindex", "0");
-  component.setAttribute("value", input.value);
+  setAttribute(component, "aria-checked", input.checked || component.checked);
+  setAttribute(component, "aria-disabled", input.disabled || component.disabled);
+  setAttribute(component, "aria-labelledby", `${input.id}_label`);
+  setAttribute(component, "aria-readonly", input.readOnly || component.readonly);
+  setAttribute(component, "value", input.value);
+  component.id = input.id;
+  component.name = input.name ?? input.id;
+  component.role = "switch";
+  component.tabIndex = 0;
   const off = getAttribute(component, "swanky-switch-off", "Off");
   const on = getAttribute(component, "swanky-switch-on", "On");
   component.insertAdjacentHTML("afterbegin", render(input.id, label, off, on));
@@ -94,13 +91,13 @@ var SwankySwitch = class extends HTMLElement {
     return this.getAttribute("aria-checked") === "true";
   }
   set checked(checked) {
-    setProperty(this, "aria-checked", checked);
+    setAttribute(this, "aria-checked", checked);
   }
   get disabled() {
     return this.getAttribute("aria-disabled") === "true";
   }
   set disabled(disabled) {
-    setProperty(this, "aria-disabled", disabled);
+    setAttribute(this, "aria-disabled", disabled);
   }
   get form() {
     return this.internals?.form ?? void 0;
@@ -118,7 +115,7 @@ var SwankySwitch = class extends HTMLElement {
     return this.getAttribute("aria-readonly") === "true";
   }
   set readonly(readonly) {
-    setProperty(this, "aria-readonly", readonly);
+    setAttribute(this, "aria-readonly", readonly);
   }
   get validationMessage() {
     return this.internals?.validationMessage ?? "";

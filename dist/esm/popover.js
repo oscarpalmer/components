@@ -178,10 +178,7 @@ function getFocusableElements(context) {
   return focusable;
 }
 function isNullOrWhitespace(value) {
-  if (value == null) {
-    return true;
-  }
-  return value.trim().length === 0;
+  return (value ?? "").trim().length === 0;
 }
 function setAttribute(element, attribute2, value) {
   if (value == null) {
@@ -189,9 +186,6 @@ function setAttribute(element, attribute2, value) {
   } else {
     element.setAttribute(attribute2, String(value));
   }
-}
-function setProperty(element, property, value) {
-  element.setAttribute(property, String(typeof value === "boolean" ? value : false));
 }
 
 // src/helpers/floated.ts
@@ -257,7 +251,7 @@ function updateFloated(elements, position) {
   }
   function onRepeat() {
     const floatedPosition = getPosition((parent ?? anchor).getAttribute(position.attribute) ?? "", position.value);
-    floater.setAttribute("position", floatedPosition);
+    setAttribute(floater, "position", floatedPosition);
     const rectangles = {
       anchor: anchor.getBoundingClientRect(),
       floater: floater.getBoundingClientRect()
@@ -330,7 +324,7 @@ var FocusTrap = class {
   tabIndex;
   constructor(element) {
     this.tabIndex = element.tabIndex;
-    setAttribute(element, "tabindex", "-1");
+    element.tabIndex = -1;
   }
   static create(element) {
     if (!store.has(element)) {
@@ -342,7 +336,7 @@ var FocusTrap = class {
     if (focusTrap == null) {
       return;
     }
-    setAttribute(element, "tabindex", focusTrap.tabIndex);
+    element.tabIndex = focusTrap.tabIndex;
     store.delete(element);
   }
 };
@@ -362,7 +356,7 @@ var FocusTrap = class {
   wait(() => {
     const focusTraps = Array.from(document.querySelectorAll(`[${attribute}]`));
     for (const focusTrap of focusTraps) {
-      focusTrap.setAttribute(attribute, "");
+      setAttribute(focusTrap, attribute, "");
     }
   }, 0);
   document.addEventListener("keydown", onKeydown, eventOptions.active);
@@ -409,7 +403,7 @@ function handleGlobalEvent(event, popover, target) {
 }
 function handleToggle(popover, expand) {
   const expanded = typeof expand === "boolean" ? !expand : popover.open;
-  setProperty(popover.button, "aria-expanded", !expanded);
+  setAttribute(popover.button, "aria-expanded", !expanded);
   if (expanded) {
     popover.content.hidden = true;
     popover.timer?.stop();
@@ -433,23 +427,23 @@ function handleToggle(popover, expand) {
 function initialise(popover, button, content) {
   content.hidden = true;
   if (isNullOrWhitespace(popover.id)) {
-    setAttribute(popover, "id", `polite_popover_${++index}`);
+    popover.id = `polite_popover_${++index}`;
   }
   if (isNullOrWhitespace(button.id)) {
-    setAttribute(button, "id", `${popover.id}_button`);
+    button.id = `${popover.id}_button`;
   }
   if (isNullOrWhitespace(content.id)) {
-    setAttribute(content, "id", `${popover.id}_content`);
+    content.id = `${popover.id}_content`;
   }
   setAttribute(button, "aria-controls", content.id);
-  setProperty(button, "aria-expanded", false);
-  setAttribute(button, "aria-haspopup", "dialog");
+  button.ariaExpanded = "false";
+  button.ariaHasPopup = "dialog";
   if (!(button instanceof HTMLButtonElement)) {
-    setAttribute(button, "tabindex", "0");
+    button.tabIndex = 0;
   }
   setAttribute(content, attribute, "");
-  setAttribute(content, "role", "dialog");
-  setAttribute(content, "aria-modal", "false");
+  content.role = "dialog";
+  content.ariaModal = "false";
   clickCallbacks.set(popover, onClick.bind(popover));
   keydownCallbacks.set(popover, onKeydown2.bind(popover));
   button.addEventListener("click", toggle.bind(popover), eventOptions.passive);

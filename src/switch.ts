@@ -1,20 +1,19 @@
-import {eventOptions, getAttribute, setAttribute, setProperty} from './helpers';
+import {eventOptions, getAttribute, setAttribute} from './helpers';
 
 function initialise(component: SwankySwitch, label: HTMLElement, input: HTMLInputElement): void {
 	label.parentElement?.removeChild(label);
 	input.parentElement?.removeChild(input);
 
-	setProperty(component, 'aria-checked', input.checked || component.checked);
-	setProperty(component, 'aria-disabled', input.disabled || component.disabled);
-	setProperty(component, 'aria-readonly', input.readOnly || component.readonly);
+	setAttribute(component, 'aria-checked', input.checked || component.checked);
+	setAttribute(component, 'aria-disabled', input.disabled || component.disabled);
+	setAttribute(component, 'aria-labelledby', `${input.id}_label`);
+	setAttribute(component, 'aria-readonly', input.readOnly || component.readonly);
+	setAttribute(component, 'value', input.value);
 
-	component.setAttribute('aria-labelledby', `${input.id}_label`);
-
-	component.setAttribute('id', input.id);
-	component.setAttribute('name', input.name ?? input.id);
-	component.setAttribute('role', 'switch');
-	component.setAttribute('tabindex', '0');
-	component.setAttribute('value', input.value);
+	component.id = input.id;
+	component.name = input.name ?? input.id;
+	component.role = 'switch';
+	component.tabIndex = 0;
 
 	const off = getAttribute(component, 'swanky-switch-off', 'Off');
 	const on = getAttribute(component, 'swanky-switch-on', 'On');
@@ -68,7 +67,7 @@ class SwankySwitch extends HTMLElement {
 	}
 
 	set checked(checked: boolean) {
-		setProperty(this, 'aria-checked', checked);
+		setAttribute(this, 'aria-checked', checked);
 	}
 
 	get disabled(): boolean {
@@ -76,7 +75,7 @@ class SwankySwitch extends HTMLElement {
 	}
 
 	set disabled(disabled: boolean) {
-		setProperty(this, 'aria-disabled', disabled);
+		setAttribute(this, 'aria-disabled', disabled);
 	}
 
 	get form(): HTMLFormElement | undefined {
@@ -100,7 +99,7 @@ class SwankySwitch extends HTMLElement {
 	}
 
 	set readonly(readonly: boolean) {
-		setProperty(this, 'aria-readonly', readonly);
+		setAttribute(this, 'aria-readonly', readonly);
 	}
 
 	get validationMessage(): string {

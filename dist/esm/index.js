@@ -65,11 +65,11 @@ function getFocusableElements(context) {
   }
   return focusable;
 }
+function getNumber(value) {
+  return typeof value === "number" ? value : Number.parseInt(typeof value === "string" ? value : String(value), 10);
+}
 function isNullOrWhitespace(value) {
-  if (value == null) {
-    return true;
-  }
-  return value.trim().length === 0;
+  return (value ?? "").trim().length === 0;
 }
 function setAttribute(element, attribute4, value) {
   if (value == null) {
@@ -77,9 +77,6 @@ function setAttribute(element, attribute4, value) {
   } else {
     element.setAttribute(attribute4, String(value));
   }
-}
-function setProperty(element, property, value) {
-  element.setAttribute(property, String(typeof value === "boolean" ? value : false));
 }
 
 // src/accordion.ts
@@ -351,10 +348,10 @@ function handle(event, focusTrap, element) {
     }, 0);
     return;
   }
-  const index2 = elements.indexOf(element);
+  const index3 = elements.indexOf(element);
   let target = focusTrap;
-  if (index2 > -1) {
-    let position = index2 + (event.shiftKey ? -1 : 1);
+  if (index3 > -1) {
+    let position = index3 + (event.shiftKey ? -1 : 1);
     if (position < 0) {
       position = elements.length - 1;
     } else if (position >= elements.length) {
@@ -396,7 +393,7 @@ var FocusTrap = class {
   tabIndex;
   constructor(element) {
     this.tabIndex = element.tabIndex;
-    setAttribute(element, "tabindex", "-1");
+    element.tabIndex = -1;
   }
   static create(element) {
     if (!store2.has(element)) {
@@ -408,7 +405,7 @@ var FocusTrap = class {
     if (focusTrap == null) {
       return;
     }
-    setAttribute(element, "tabindex", focusTrap.tabIndex);
+    element.tabIndex = focusTrap.tabIndex;
     store2.delete(element);
   }
 };
@@ -428,7 +425,7 @@ var FocusTrap = class {
   wait(() => {
     const focusTraps = Array.from(document.querySelectorAll(`[${attribute2}]`));
     for (const focusTrap of focusTraps) {
-      focusTrap.setAttribute(attribute2, "");
+      setAttribute(focusTrap, attribute2, "");
     }
   }, 0);
   document.addEventListener("keydown", onKeydown2, eventOptions.active);
@@ -487,8 +484,8 @@ function getPosition(currentPosition, defaultPosition) {
     return defaultPosition;
   }
   const normalized = currentPosition.trim().toLowerCase();
-  const index2 = positions.indexOf(normalized);
-  return index2 > -1 ? positions[index2] ?? defaultPosition : defaultPosition;
+  const index3 = positions.indexOf(normalized);
+  return index3 > -1 ? positions[index3] ?? defaultPosition : defaultPosition;
 }
 function updateFloated(elements, position) {
   const { anchor, floater, parent } = elements;
@@ -497,7 +494,7 @@ function updateFloated(elements, position) {
   }
   function onRepeat() {
     const floatedPosition = getPosition((parent ?? anchor).getAttribute(position.attribute) ?? "", position.value);
-    floater.setAttribute("position", floatedPosition);
+    setAttribute(floater, "position", floatedPosition);
     const rectangles = {
       anchor: anchor.getBoundingClientRect(),
       floater: floater.getBoundingClientRect()
@@ -555,7 +552,7 @@ function handleGlobalEvent(event, popover, target) {
 }
 function handleToggle(popover, expand) {
   const expanded = typeof expand === "boolean" ? !expand : popover.open;
-  setProperty(popover.button, "aria-expanded", !expanded);
+  setAttribute(popover.button, "aria-expanded", !expanded);
   if (expanded) {
     popover.content.hidden = true;
     popover.timer?.stop();
@@ -579,23 +576,23 @@ function handleToggle(popover, expand) {
 function initialise(popover, button, content) {
   content.hidden = true;
   if (isNullOrWhitespace(popover.id)) {
-    setAttribute(popover, "id", `polite_popover_${++index}`);
+    popover.id = `polite_popover_${++index}`;
   }
   if (isNullOrWhitespace(button.id)) {
-    setAttribute(button, "id", `${popover.id}_button`);
+    button.id = `${popover.id}_button`;
   }
   if (isNullOrWhitespace(content.id)) {
-    setAttribute(content, "id", `${popover.id}_content`);
+    content.id = `${popover.id}_content`;
   }
   setAttribute(button, "aria-controls", content.id);
-  setProperty(button, "aria-expanded", false);
-  setAttribute(button, "aria-haspopup", "dialog");
+  button.ariaExpanded = "false";
+  button.ariaHasPopup = "dialog";
   if (!(button instanceof HTMLButtonElement)) {
-    setAttribute(button, "tabindex", "0");
+    button.tabIndex = 0;
   }
   setAttribute(content, attribute2, "");
-  setAttribute(content, "role", "dialog");
-  setAttribute(content, "aria-modal", "false");
+  content.role = "dialog";
+  content.ariaModal = "false";
   clickCallbacks.set(popover, onClick.bind(popover));
   keydownCallbacks.set(popover, onKeydown3.bind(popover));
   button.addEventListener("click", toggle.bind(popover), eventOptions.passive);
@@ -647,19 +644,174 @@ var PolitePopover = class extends HTMLElement {
 };
 globalThis.customElements.define("polite-popover", PolitePopover);
 
+// src/splitter.ts
+var splitterTypes = ["horizontal", "vertical"];
+var index2 = 0;
+function createSeparator(splitter) {
+  const separator = document.createElement("div");
+  if (isNullOrWhitespace(splitter.primary.id)) {
+    splitter.primary.id = `spiffy_splitter_primary_${++index2}`;
+  }
+  setAttribute(separator, "aria-controls", splitter.primary.id);
+  separator.role = "separator";
+  separator.tabIndex = 0;
+  const originalValue = getAttribute(splitter, "value", "50");
+  const originalNumber = getNumber(originalValue);
+  splitter.values.original = typeof originalNumber === "number" ? originalNumber : 50;
+  const maximum = getAttribute(splitter, "max", "");
+  const minimum = getAttribute(splitter, "min", "");
+  if (maximum.length === 0) {
+    setAbsoluteValue(splitter, separator, "maximum", 100);
+  }
+  if (minimum.length === 0) {
+    setAbsoluteValue(splitter, separator, "minimum", 0);
+  }
+  setFlexValue(splitter, separator, splitter.values.original, false);
+  separator.addEventListener("keydown", (event) => onKeydown4(splitter, event), eventOptions.passive);
+  return separator;
+}
+function onKeydown4(splitter, event) {
+  if (!["ArrowDown", "ArrowLeft", "ArrowRight", "ArrowUp", "End", "Escape", "Home"].includes(event.key)) {
+    return;
+  }
+  const ignored = splitter.type === "vertical" ? ["ArrowLeft", "ArrowRight"] : ["ArrowDown", "ArrowUp"];
+  if (ignored.includes(event.key)) {
+    return;
+  }
+  let value;
+  switch (event.key) {
+    case "ArrowDown":
+    case "ArrowLeft":
+    case "ArrowRight":
+    case "ArrowUp":
+      value = splitter.value + (["ArrowLeft", "ArrowUp"].includes(event.key) ? -1 : 1);
+      break;
+    case "End":
+    case "Home":
+      value = event.key === "End" ? splitter.values.maximum : splitter.values.minimum;
+      break;
+    case "Escape":
+      value = splitter.values.original;
+      break;
+    default:
+      break;
+  }
+  setFlexValue(splitter, splitter.separator, value, true);
+}
+function setAbsoluteValue(splitter, separator, key, value) {
+  let actual = getNumber(value);
+  if (Number.isNaN(actual) || actual === splitter.values[key] || key === "maximum" && actual < splitter.values.minimum || key === "minimum" && actual > splitter.values.maximum) {
+    return;
+  }
+  if (key === "maximum" && actual > 100) {
+    actual = 100;
+  } else if (key === "minimum" && actual < 0) {
+    actual = 0;
+  }
+  splitter.values[key] = actual;
+  setAttribute(separator, key === "maximum" ? "aria-valuemax" : "aria-valuemin", actual);
+  if (key === "maximum" && actual < splitter.values.current || key === "minimum" && actual > splitter.values.current) {
+    setFlexValue(splitter, separator, actual, true);
+  }
+}
+function setFlexValue(splitter, separator, value, emit) {
+  let actual = getNumber(value);
+  if (Number.isNaN(actual) || actual === splitter.values.current) {
+    return;
+  }
+  if (actual < splitter.values.minimum) {
+    actual = splitter.values.minimum;
+  } else if (actual > splitter.values.maximum) {
+    actual = splitter.values.maximum;
+  }
+  separator.ariaValueNow = String(actual);
+  splitter.primary.style.flex = `${actual / 100}`;
+  splitter.values.current = actual;
+  if (emit) {
+    splitter.dispatchEvent(new CustomEvent("change", {
+      detail: {
+        value: actual
+      }
+    }));
+  }
+}
+var SpiffySplitter = class extends HTMLElement {
+  primary;
+  secondary;
+  separator;
+  values = {
+    current: -1,
+    maximum: -1,
+    minimum: -1,
+    original: -1
+  };
+  get max() {
+    return this.values.maximum;
+  }
+  set max(max) {
+    setAbsoluteValue(this, this.separator, "maximum", max);
+  }
+  get min() {
+    return this.values.minimum;
+  }
+  set min(min) {
+    setAbsoluteValue(this, this.separator, "minimum", min);
+  }
+  get type() {
+    const type = getAttribute(this, "type", "horizontal");
+    return splitterTypes.includes(type) ? type : "horizontal";
+  }
+  set type(type) {
+    if (splitterTypes.includes(type)) {
+      setAttribute(this, "type", type);
+    }
+  }
+  get value() {
+    return this.values.current;
+  }
+  set value(value) {
+    setFlexValue(this, this.separator, value, true);
+  }
+  constructor() {
+    super();
+    if (this.children.length < 2) {
+      throw new Error("A <spffy-splitter> must have at least two direct children");
+    }
+    this.primary = this.children[0];
+    this.secondary = [...this.children].slice(1);
+    this.separator = createSeparator(this);
+    this.primary?.insertAdjacentElement("afterend", this.separator);
+  }
+  attributeChangedCallback(name, _, value) {
+    switch (name) {
+      case "max":
+      case "min":
+        setAbsoluteValue(this, this.separator, name === "max" ? "maximum" : "minimum", value);
+        break;
+      case "value":
+        setFlexValue(this, this.separator, value, true);
+        break;
+      default:
+        break;
+    }
+  }
+};
+__publicField(SpiffySplitter, "observedAttributes", ["max", "min", "value"]);
+globalThis.customElements.define("spiffy-splitter", SpiffySplitter);
+
 // src/switch.ts
 function initialise2(component, label, input) {
   label.parentElement?.removeChild(label);
   input.parentElement?.removeChild(input);
-  setProperty(component, "aria-checked", input.checked || component.checked);
-  setProperty(component, "aria-disabled", input.disabled || component.disabled);
-  setProperty(component, "aria-readonly", input.readOnly || component.readonly);
-  component.setAttribute("aria-labelledby", `${input.id}_label`);
-  component.setAttribute("id", input.id);
-  component.setAttribute("name", input.name ?? input.id);
-  component.setAttribute("role", "switch");
-  component.setAttribute("tabindex", "0");
-  component.setAttribute("value", input.value);
+  setAttribute(component, "aria-checked", input.checked || component.checked);
+  setAttribute(component, "aria-disabled", input.disabled || component.disabled);
+  setAttribute(component, "aria-labelledby", `${input.id}_label`);
+  setAttribute(component, "aria-readonly", input.readOnly || component.readonly);
+  setAttribute(component, "value", input.value);
+  component.id = input.id;
+  component.name = input.name ?? input.id;
+  component.role = "switch";
+  component.tabIndex = 0;
   const off = getAttribute(component, "swanky-switch-off", "Off");
   const on = getAttribute(component, "swanky-switch-on", "On");
   component.insertAdjacentHTML("afterbegin", render(input.id, label, off, on));
@@ -699,13 +851,13 @@ var SwankySwitch = class extends HTMLElement {
     return this.getAttribute("aria-checked") === "true";
   }
   set checked(checked) {
-    setProperty(this, "aria-checked", checked);
+    setAttribute(this, "aria-checked", checked);
   }
   get disabled() {
     return this.getAttribute("aria-disabled") === "true";
   }
   set disabled(disabled) {
-    setProperty(this, "aria-disabled", disabled);
+    setAttribute(this, "aria-disabled", disabled);
   }
   get form() {
     return this.internals?.form ?? void 0;
@@ -723,7 +875,7 @@ var SwankySwitch = class extends HTMLElement {
     return this.getAttribute("aria-readonly") === "true";
   }
   set readonly(readonly) {
-    setProperty(this, "aria-readonly", readonly);
+    setAttribute(this, "aria-readonly", readonly);
   }
   get validationMessage() {
     return this.internals?.validationMessage ?? "";
@@ -815,8 +967,8 @@ var Tooltip = class {
     }
     element.hidden = true;
     setAttribute(element, contentAttribute, "");
-    setAttribute(element, "role", "tooltip");
-    setProperty(element, "aria-hidden", true);
+    element.ariaHidden = "true";
+    element.role = "tooltip";
     return element;
   }
   onClick(event) {
@@ -875,6 +1027,6 @@ observer2.observe(document, {
 wait(() => {
   const tooltips = Array.from(document.querySelectorAll(`[${attribute3}]`));
   for (const tooltip of tooltips) {
-    tooltip.setAttribute(attribute3, "");
+    setAttribute(tooltip, attribute3, "");
   }
 }, 0);

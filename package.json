@@ -54,6 +54,13 @@
 			"require": "./dist/cjs/popover.js",
 			"default": "./dist/iife/popover.js"
 		},
+		"./splitter": {
+			"script": "./dist/iife/splitter.js",
+			"module": "./dist/esm/splitter.js",
+			"import": "./dist/esm/splitter.js",
+			"require": "./dist/cjs/splitter.js",
+			"default": "./dist/iife/splitter.js"
+		},
 		"./switch": {
 			"script": "./dist/iife/switch.js",
 			"module": "./dist/esm/switch.js",
@@ -96,5 +103,5 @@
 	},
 	"type": "module",
 	"unpkg": "dist/iife/index.js",
-	"version": "0.15.0"
+	"version": "0.16.0"
 }
