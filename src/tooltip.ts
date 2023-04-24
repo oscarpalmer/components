@@ -1,5 +1,5 @@
 import {Repeated, wait} from '@oscarpalmer/timer';
-import {eventOptions, findParent, focusableSelector, setAttribute} from './helpers';
+import {eventOptions, findParent, getFocusableSelector} from './helpers';
 import {updateFloated} from './helpers/floated';
 
 type Callbacks = {
@@ -45,7 +45,7 @@ class Tooltip {
 	private timer: Repeated | undefined;
 
 	constructor(private readonly anchor: HTMLElement) {
-		this.focusable = anchor.matches(focusableSelector);
+		this.focusable = anchor.matches(getFocusableSelector());
 
 		this.floater = Tooltip.createFloater(anchor);
 
@@ -83,7 +83,7 @@ class Tooltip {
 
 		element.hidden = true;
 
-		setAttribute(element, contentAttribute, '');
+		element.setAttribute(contentAttribute, '');
 
 		element.ariaHidden = 'true';
 		element.role = 'tooltip';
@@ -122,9 +122,16 @@ class Tooltip {
 		if (show) {
 			this.timer?.stop();
 
-			this.timer = updateFloated(this as never, {
-				attribute: positionAttribute,
-				value: 'above',
+			this.timer = updateFloated({
+				elements: {
+					anchor: this.anchor,
+					floater: this.floater,
+				},
+				position: {
+					attribute: positionAttribute,
+					defaultValue: 'vertical',
+					preferAbove: true,
+				},
 			});
 		} else {
 			this.floater.hidden = true;
@@ -167,6 +174,6 @@ wait(() => {
 	const tooltips = Array.from(document.querySelectorAll(`[${attribute}]`));
 
 	for (const tooltip of tooltips) {
-		setAttribute(tooltip as never, attribute, '');
+		tooltip.setAttribute(attribute, '');
 	}
 }, 0);

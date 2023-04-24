@@ -11,23 +11,6 @@ var eventOptions = {
   active: { capture: false, passive: false },
   passive: { capture: false, passive: true }
 };
-var focusableSelectors = [
-  '[contenteditable]:not([contenteditable="false"])',
-  "[href]",
-  "[tabindex]:not(slot)",
-  "audio[controls]",
-  "button",
-  "details",
-  "details[open] > summary",
-  "embed",
-  "iframe",
-  "input",
-  "object",
-  "select",
-  "textarea",
-  "video[controls]"
-];
-var focusableSelector = focusableSelectors.map((selector) => `${selector}:not([disabled]):not([hidden]):not([tabindex="-1"])`).join(",");
 
 // src/accordion.ts
 var keys = ["ArrowDown", "ArrowLeft", "ArrowRight", "ArrowUp", "End", "Home"];
@@ -40,6 +23,7 @@ function onKeydown(component, event) {
   if (current === -1) {
     return;
   }
+  event.preventDefault();
   let destination = -1;
   switch (event.key) {
     case "ArrowDown":
@@ -81,7 +65,7 @@ var AccurateAccordion = class extends HTMLElement {
     __publicField(this, "details", []);
     updateChildren(this);
     this.observer = new MutationObserver((_) => updateChildren(this));
-    this.addEventListener("keydown", (event) => onKeydown(this, event), eventOptions.passive);
+    this.addEventListener("keydown", (event) => onKeydown(this, event), eventOptions.active);
   }
   connectedCallback() {
     this.observer.observe(this, {
@@ -93,4 +77,4 @@ var AccurateAccordion = class extends HTMLElement {
     this.observer.disconnect();
   }
 };
-globalThis.customElements.define("accurate-accordion", AccurateAccordion);
+customElements.define("accurate-accordion", AccurateAccordion);

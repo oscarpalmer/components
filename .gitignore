@@ -3,3 +3,4 @@ dist/**/*.map
 node_modules/
 test/
 www/
+*.DS_Store

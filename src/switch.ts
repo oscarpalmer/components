@@ -1,50 +1,101 @@
-import {eventOptions, getAttribute, setAttribute} from './helpers';
+import {eventOptions, isNullOrWhitespace} from './helpers';
+
+function getLabel(id: string, content: string): HTMLElement {
+	const label = document.createElement('span');
+
+	label.ariaHidden = true as never;
+	label.className = 'swanky-switch__label';
+	label.id = `${id}_label`;
+	label.innerHTML = content;
+
+	return label;
+}
+
+function getStatus(): HTMLElement {
+	const status = document.createElement('span');
+
+	status.ariaHidden = true as never;
+	status.className = 'swanky-switch__status';
+
+	const indicator = document.createElement('span');
+
+	indicator.className = 'swanky-switch__status__indicator';
+
+	status.appendChild(indicator);
+
+	return status;
+}
+
+function getText(on: string, off: string): HTMLElement {
+	const text = document.createElement('span');
+
+	text.ariaHidden = true as never;
+	text.className = 'swanky-switch__text'
+
+	const textOff = document.createElement('span');
+
+	textOff.className = 'swanky-switch__text__off';
+	textOff.innerHTML = off;
+
+	const textOn = document.createElement('span');
+
+	textOn.className = 'swanky-switch__text__on';
+	textOn.innerHTML = on;
+
+	text.appendChild(textOff);
+	text.appendChild(textOn);
+
+	return text;
+}
 
 function initialise(component: SwankySwitch, label: HTMLElement, input: HTMLInputElement): void {
 	label.parentElement?.removeChild(label);
 	input.parentElement?.removeChild(input);
 
-	setAttribute(component, 'aria-checked', input.checked || component.checked);
-	setAttribute(component, 'aria-disabled', input.disabled || component.disabled);
-	setAttribute(component, 'aria-labelledby', `${input.id}_label`);
-	setAttribute(component, 'aria-readonly', input.readOnly || component.readonly);
-	setAttribute(component, 'value', input.value);
+	component.setAttribute('aria-checked', (input.checked || component.checked) as never);
+	component.setAttribute('aria-disabled', (input.disabled || component.disabled) as never);
+	component.setAttribute('aria-labelledby', `${input.id}_label`);
+	component.setAttribute('aria-readonly', (input.readOnly || component.readonly) as never);
+	component.setAttribute('value', input.value);
 
 	component.id = input.id;
 	component.name = input.name ?? input.id;
 	component.role = 'switch';
 	component.tabIndex = 0;
 
-	const off = getAttribute(component, 'swanky-switch-off', 'Off');
-	const on = getAttribute(component, 'swanky-switch-on', 'On');
+	let off = component.getAttribute('swanky-switch-off');
+	let on = component.getAttribute('swanky-switch-on');
 
-	component.insertAdjacentHTML('afterbegin', render(input.id, label, off, on));
+	if (isNullOrWhitespace(off)) {
+		off = 'Off';
+	}
+
+	if (isNullOrWhitespace(on)) {
+		on = 'On';
+	}
+
+	component.insertAdjacentElement('beforeend', getLabel(component.id, label.innerHTML));
+	component.insertAdjacentElement('beforeend', getStatus());
+	component.insertAdjacentElement('beforeend', getText(on as never, off as never));
 
 	component.addEventListener('click', onToggle.bind(component), eventOptions.passive);
-	component.addEventListener('keydown', onKey.bind(component), eventOptions.passive);
+	component.addEventListener('keydown', onKey.bind(component), eventOptions.active);
 }
 
 function onKey(this: SwankySwitch, event: KeyboardEvent): void {
-	if ((event.key === ' ' || event.key === 'Enter') && (this instanceof SwankySwitch)) {
-		toggle(this);
+	if (!(this instanceof SwankySwitch) || ![' ', 'Enter'].includes(event.key)) {
+		return;
 	}
+
+	event.preventDefault();
+
+	toggle(this);
 }
 
 function onToggle(this: SwankySwitch): void {
 	if (this instanceof SwankySwitch) {
 		toggle(this);
 	}
-}
-
-function render(id: string, label: HTMLElement, off: string, on: string): string {
-	return `<swanky-switch-label id="${id}_label">${label.innerHTML}</swanky-switch-label>
-<swanky-switch-status aria-hidden="true">
-	<swanky-switch-status-indicator></swanky-switch-status-indicator>
-</swanky-switch-status>
-<swanky-switch-text aria-hidden="true">
-	<swanky-switch-text-off>${off}</swanky-switch-text-off>
-	<swanky-switch-text-on>${on}</swanky-switch-text-on>
-</swanky-switch-text>`;
 }
 
 function toggle(component: SwankySwitch): void {
@@ -67,7 +118,7 @@ class SwankySwitch extends HTMLElement {
 	}
 
 	set checked(checked: boolean) {
-		setAttribute(this, 'aria-checked', checked);
+		this.setAttribute('aria-checked', checked as never);
 	}
 
 	get disabled(): boolean {
@@ -75,7 +126,7 @@ class SwankySwitch extends HTMLElement {
 	}
 
 	set disabled(disabled: boolean) {
-		setAttribute(this, 'aria-disabled', disabled);
+		this.setAttribute('aria-disabled', disabled as never);
 	}
 
 	get form(): HTMLFormElement | undefined {
@@ -91,7 +142,7 @@ class SwankySwitch extends HTMLElement {
 	}
 
 	set name(name: string) {
-		setAttribute(this, 'name', name);
+		this.setAttribute('name', name);
 	}
 
 	get readonly(): boolean {
@@ -99,7 +150,7 @@ class SwankySwitch extends HTMLElement {
 	}
 
 	set readonly(readonly: boolean) {
-		setAttribute(this, 'aria-readonly', readonly);
+		this.setAttribute('aria-readonly', readonly as never);
 	}
 
 	get validationMessage(): string {
@@ -111,7 +162,7 @@ class SwankySwitch extends HTMLElement {
 	}
 
 	get value(): string {
-		return this.getAttribute('value') ?? this.checked ? 'on' : 'off';
+		return this.getAttribute('value') ?? (this.checked ? 'on' : 'off');
 	}
 
 	get willValidate(): boolean {
@@ -146,4 +197,4 @@ class SwankySwitch extends HTMLElement {
 	}
 }
 
-globalThis.customElements.define('swanky-switch', SwankySwitch);
+customElements.define('swanky-switch', SwankySwitch);

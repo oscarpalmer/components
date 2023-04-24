@@ -1,5 +1,5 @@
 import {wait} from '@oscarpalmer/timer';
-import {eventOptions, findParent, getFocusableElements, setAttribute} from './helpers';
+import {eventOptions, getFocusableElements, findParent} from './helpers';
 
 export const attribute = 'formal-focus-trap';
 
@@ -100,11 +100,13 @@ class FocusTrap {
 }
 
 ((): void => {
-	if (typeof (globalThis as any)._formalFocusTrap !== 'undefined') {
+	const context: {formalFocusTrap?: number} = globalThis as never;
+
+	if (context.formalFocusTrap != null) {
 		return;
 	}
 
-	(globalThis as any)._formalFocusTrap = null;
+	context.formalFocusTrap = 1;
 
 	const observer = new MutationObserver(observe);
 
@@ -120,7 +122,7 @@ class FocusTrap {
 		const focusTraps = Array.from(document.querySelectorAll(`[${attribute}]`));
 
 		for (const focusTrap of focusTraps) {
-			setAttribute(focusTrap as never, attribute, '');
+			focusTrap.setAttribute(attribute, '');
 		}
 	}, 0);
 

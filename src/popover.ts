@@ -1,5 +1,5 @@
 import {Repeated, wait} from '@oscarpalmer/timer';
-import {defineProperty, eventOptions, findParent, getFocusableElements, isNullOrWhitespace, setAttribute} from './helpers';
+import {eventOptions, getFocusableElements, findParent, isNullOrWhitespace} from './helpers';
 import {updateFloated} from './helpers/floated';
 import {attribute} from './focus-trap';
 
@@ -64,7 +64,7 @@ function handleToggle(popover: PolitePopover, expand?: boolean | Event): void {
 		? !expand
 		: popover.open;
 
-	setAttribute(popover.button, 'aria-expanded', !expanded);
+	popover.button.setAttribute('aria-expanded', !expanded as never);
 
 	if (expanded) {
 		popover.content.hidden = true;
@@ -76,12 +76,16 @@ function handleToggle(popover: PolitePopover, expand?: boolean | Event): void {
 		popover.timer?.stop();
 
 		popover.timer = updateFloated({
-			anchor: popover.button,
-			floater: popover.content,
-			parent: popover,
-		}, {
-			attribute: 'position',
-			value: 'below-left',
+			elements: {
+				anchor: popover.button,
+				floater: popover.content,
+				parent: popover,
+			},
+			position: {
+				attribute: 'position',
+				defaultValue: 'vertical',
+				preferAbove: false,
+			},
 		});
 
 		wait(() => {
@@ -107,7 +111,7 @@ function initialise(popover: PolitePopover, button: HTMLButtonElement, content: 
 		content.id = `${popover.id}_content`;
 	}
 
-	setAttribute(button, 'aria-controls', content.id);
+	button.setAttribute('aria-controls', content.id);
 
 	button.ariaExpanded = 'false';
 	button.ariaHasPopup = 'dialog';
@@ -116,7 +120,7 @@ function initialise(popover: PolitePopover, button: HTMLButtonElement, content: 
 		(button as HTMLElement).tabIndex = 0;
 	}
 
-	setAttribute(content, attribute, '');
+	content.setAttribute(attribute, '');
 
 	content.role = 'dialog';
 	content.ariaModal = 'false';
@@ -146,8 +150,9 @@ function toggle(this: PolitePopover, expand?: boolean | Event): void {
 }
 
 class PolitePopover extends HTMLElement {
-	button!: HTMLElement;
-	content!: HTMLElement;
+	readonly button!: HTMLElement;
+	readonly content!: HTMLElement;
+
 	timer: Repeated | undefined;
 
 	get open(): boolean {
@@ -174,8 +179,8 @@ class PolitePopover extends HTMLElement {
 			throw new Error('<polite-popover> must have an element with the attribute \'polite-popover-content\'');
 		}
 
-		defineProperty(this, 'button', button);
-		defineProperty(this, 'content', content);
+		this.button = button;
+		this.content = content;
 
 		initialise(this, button as HTMLButtonElement, content);
 	}
@@ -187,4 +192,4 @@ class PolitePopover extends HTMLElement {
 	}
 }
 
-globalThis.customElements.define('polite-popover', PolitePopover);
+customElements.define('polite-popover', PolitePopover);

@@ -156,23 +156,6 @@ var eventOptions = {
   active: { capture: false, passive: false },
   passive: { capture: false, passive: true }
 };
-var focusableSelectors = [
-  '[contenteditable]:not([contenteditable="false"])',
-  "[href]",
-  "[tabindex]:not(slot)",
-  "audio[controls]",
-  "button",
-  "details",
-  "details[open] > summary",
-  "embed",
-  "iframe",
-  "input",
-  "object",
-  "select",
-  "textarea",
-  "video[controls]"
-];
-var focusableSelector = focusableSelectors.map((selector) => `${selector}:not([disabled]):not([hidden]):not([tabindex="-1"])`).join(",");
 function findParent(element, match) {
   const matchIsSelector = typeof match === "string";
   if (matchIsSelector ? element.matches(match) : match(element)) {
@@ -191,23 +174,37 @@ function findParent(element, match) {
   return parent != null ? parent : void 0;
 }
 function getFocusableElements(context) {
-  var _a;
   const focusable = [];
-  const elements = Array.from(context.querySelectorAll(focusableSelector));
+  const elements = Array.from(context.querySelectorAll(getFocusableSelector()));
   for (const element of elements) {
-    const style = (_a = globalThis.getComputedStyle) == null ? void 0 : _a.call(globalThis, element);
+    const style = getComputedStyle == null ? void 0 : getComputedStyle(element);
     if (style == null || style.display !== "none" && style.visibility !== "hidden") {
       focusable.push(element);
     }
   }
   return focusable;
 }
-function setAttribute(element, attribute2, value) {
-  if (value == null) {
-    element.removeAttribute(attribute2);
-  } else {
-    element.setAttribute(attribute2, String(value));
+function getFocusableSelector() {
+  const context = globalThis;
+  if (context.focusableSelector == null) {
+    context.focusableSelector = [
+      '[contenteditable]:not([contenteditable="false"])',
+      "[href]",
+      "[tabindex]:not(slot)",
+      "audio[controls]",
+      "button",
+      "details",
+      "details[open] > summary",
+      "embed",
+      "iframe",
+      "input",
+      "object",
+      "select",
+      "textarea",
+      "video[controls]"
+    ].map((selector) => `${selector}:not([disabled]):not([hidden]):not([tabindex="-1"])`).join(",");
   }
+  return context.focusableSelector;
 }
 
 // src/focus-trap.ts
@@ -285,10 +282,11 @@ var FocusTrap = class {
   }
 };
 (() => {
-  if (typeof globalThis._formalFocusTrap !== "undefined") {
+  const context = globalThis;
+  if (context.formalFocusTrap != null) {
     return;
   }
-  globalThis._formalFocusTrap = null;
+  context.formalFocusTrap = 1;
   const observer = new MutationObserver(observe);
   observer.observe(document, {
     attributeFilter: [attribute],
@@ -300,7 +298,7 @@ var FocusTrap = class {
   wait(() => {
     const focusTraps = Array.from(document.querySelectorAll(`[${attribute}]`));
     for (const focusTrap of focusTraps) {
-      setAttribute(focusTrap, attribute, "");
+      focusTrap.setAttribute(attribute, "");
     }
   }, 0);
   document.addEventListener("keydown", onKeydown, eventOptions.active);

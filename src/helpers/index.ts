@@ -3,34 +3,6 @@ export const eventOptions = {
 	passive: {capture: false, passive: true},
 };
 
-const focusableSelectors = [
-	'[contenteditable]:not([contenteditable="false"])',
-	'[href]',
-	'[tabindex]:not(slot)',
-	'audio[controls]',
-	'button',
-	'details',
-	'details[open] > summary',
-	'embed',
-	'iframe',
-	'input',
-	'object',
-	'select',
-	'textarea',
-	'video[controls]',
-];
-
-export const focusableSelector = focusableSelectors
-	.map(selector => `${selector}:not([disabled]):not([hidden]):not([tabindex="-1"])`)
-	.join(',');
-
-export function defineProperty(obj: unknown, key: PropertyKey, value: unknown): void {
-	Object.defineProperty(obj, key, {
-		value,
-		writable: false,
-	});
-}
-
 export function findParent(element: HTMLElement, match: string | ((element: HTMLElement) => boolean)): HTMLElement | undefined {
 	const matchIsSelector = typeof match === 'string';
 
@@ -55,21 +27,13 @@ export function findParent(element: HTMLElement, match: string | ((element: HTML
 	return parent ?? undefined;
 }
 
-export function getAttribute(element: HTMLElement, attribute: string, defaultValue: string): string {
-	const value = element.getAttribute(attribute);
-
-	return value == null || value.trim().length === 0
-		? defaultValue
-		: value;
-}
-
-export function getFocusableElements(context: Element): HTMLElement[] {
+export function getFocusableElements(context: HTMLElement): HTMLElement[] {
 	const focusable: HTMLElement[] = [];
 
-	const elements = Array.from(context.querySelectorAll(focusableSelector));
+	const elements = Array.from(context.querySelectorAll(getFocusableSelector()));
 
 	for (const element of elements) {
-		const style = globalThis.getComputedStyle?.(element);
+		const style = getComputedStyle?.(element);
 
 		if (style == null || (style.display !== 'none' && style.visibility !== 'hidden')) {
 			focusable.push(element as HTMLElement);
@@ -79,20 +43,47 @@ export function getFocusableElements(context: Element): HTMLElement[] {
 	return focusable;
 }
 
+export function getFocusableSelector(): string {
+	const context: {focusableSelector?: string} = globalThis as never;
+
+	if (context.focusableSelector == null) {
+		context.focusableSelector = [
+			'[contenteditable]:not([contenteditable="false"])',
+			'[href]',
+			'[tabindex]:not(slot)',
+			'audio[controls]',
+			'button',
+			'details',
+			'details[open] > summary',
+			'embed',
+			'iframe',
+			'input',
+			'object',
+			'select',
+			'textarea',
+			'video[controls]',
+		]
+			.map(selector => `${selector}:not([disabled]):not([hidden]):not([tabindex="-1"])`)
+			.join(',');
+	}
+
+	return context.focusableSelector;
+}
+
 export function getNumber(value: any): number {
 	return typeof value === 'number'
 		? value
 		: Number.parseInt(typeof value === 'string' ? value : String(value), 10);
 }
 
-export function isNullOrWhitespace(value: string): boolean {
-	return (value ?? '').trim().length === 0;
+export function getTextDirection(element: HTMLElement): 'ltr' | 'rtl' {
+	const {direction} = getComputedStyle?.(element);
+
+	return direction === 'rtl'
+		? 'rtl'
+		: 'ltr';
 }
 
-export function setAttribute(element: HTMLElement, attribute: string, value: unknown): void {
-	if (value == null) {
-		element.removeAttribute(attribute);
-	} else {
-		element.setAttribute(attribute, String(value));
-	}
+export function isNullOrWhitespace(value: string | null | undefined): boolean {
+	return (value ?? '').trim().length === 0;
 }

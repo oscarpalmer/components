@@ -11,74 +11,80 @@ var eventOptions = {
   active: { capture: false, passive: false },
   passive: { capture: false, passive: true }
 };
-var focusableSelectors = [
-  '[contenteditable]:not([contenteditable="false"])',
-  "[href]",
-  "[tabindex]:not(slot)",
-  "audio[controls]",
-  "button",
-  "details",
-  "details[open] > summary",
-  "embed",
-  "iframe",
-  "input",
-  "object",
-  "select",
-  "textarea",
-  "video[controls]"
-];
-var focusableSelector = focusableSelectors.map((selector) => `${selector}:not([disabled]):not([hidden]):not([tabindex="-1"])`).join(",");
-function getAttribute(element, attribute, defaultValue) {
-  const value = element.getAttribute(attribute);
-  return value == null || value.trim().length === 0 ? defaultValue : value;
-}
-function setAttribute(element, attribute, value) {
-  if (value == null) {
-    element.removeAttribute(attribute);
-  } else {
-    element.setAttribute(attribute, String(value));
-  }
+function isNullOrWhitespace(value) {
+  return (value != null ? value : "").trim().length === 0;
 }
 
 // src/switch.ts
+function getLabel(id, content) {
+  const label = document.createElement("span");
+  label.ariaHidden = true;
+  label.className = "swanky-switch__label";
+  label.id = `${id}_label`;
+  label.innerHTML = content;
+  return label;
+}
+function getStatus() {
+  const status = document.createElement("span");
+  status.ariaHidden = true;
+  status.className = "swanky-switch__status";
+  const indicator = document.createElement("span");
+  indicator.className = "swanky-switch__status__indicator";
+  status.appendChild(indicator);
+  return status;
+}
+function getText(on, off) {
+  const text = document.createElement("span");
+  text.ariaHidden = true;
+  text.className = "swanky-switch__text";
+  const textOff = document.createElement("span");
+  textOff.className = "swanky-switch__text__off";
+  textOff.innerHTML = off;
+  const textOn = document.createElement("span");
+  textOn.className = "swanky-switch__text__on";
+  textOn.innerHTML = on;
+  text.appendChild(textOff);
+  text.appendChild(textOn);
+  return text;
+}
 function initialise(component, label, input) {
   var _a, _b, _c;
   (_a = label.parentElement) == null ? void 0 : _a.removeChild(label);
   (_b = input.parentElement) == null ? void 0 : _b.removeChild(input);
-  setAttribute(component, "aria-checked", input.checked || component.checked);
-  setAttribute(component, "aria-disabled", input.disabled || component.disabled);
-  setAttribute(component, "aria-labelledby", `${input.id}_label`);
-  setAttribute(component, "aria-readonly", input.readOnly || component.readonly);
-  setAttribute(component, "value", input.value);
+  component.setAttribute("aria-checked", input.checked || component.checked);
+  component.setAttribute("aria-disabled", input.disabled || component.disabled);
+  component.setAttribute("aria-labelledby", `${input.id}_label`);
+  component.setAttribute("aria-readonly", input.readOnly || component.readonly);
+  component.setAttribute("value", input.value);
   component.id = input.id;
   component.name = (_c = input.name) != null ? _c : input.id;
   component.role = "switch";
   component.tabIndex = 0;
-  const off = getAttribute(component, "swanky-switch-off", "Off");
-  const on = getAttribute(component, "swanky-switch-on", "On");
-  component.insertAdjacentHTML("afterbegin", render(input.id, label, off, on));
+  let off = component.getAttribute("swanky-switch-off");
+  let on = component.getAttribute("swanky-switch-on");
+  if (isNullOrWhitespace(off)) {
+    off = "Off";
+  }
+  if (isNullOrWhitespace(on)) {
+    on = "On";
+  }
+  component.insertAdjacentElement("beforeend", getLabel(component.id, label.innerHTML));
+  component.insertAdjacentElement("beforeend", getStatus());
+  component.insertAdjacentElement("beforeend", getText(on, off));
   component.addEventListener("click", onToggle.bind(component), eventOptions.passive);
-  component.addEventListener("keydown", onKey.bind(component), eventOptions.passive);
+  component.addEventListener("keydown", onKey.bind(component), eventOptions.active);
 }
 function onKey(event) {
-  if ((event.key === " " || event.key === "Enter") && this instanceof SwankySwitch) {
-    toggle(this);
+  if (!(this instanceof SwankySwitch) || ![" ", "Enter"].includes(event.key)) {
+    return;
   }
+  event.preventDefault();
+  toggle(this);
 }
 function onToggle() {
   if (this instanceof SwankySwitch) {
     toggle(this);
   }
-}
-function render(id, label, off, on) {
-  return `<swanky-switch-label id="${id}_label">${label.innerHTML}</swanky-switch-label>
-<swanky-switch-status aria-hidden="true">
-	<swanky-switch-status-indicator></swanky-switch-status-indicator>
-</swanky-switch-status>
-<swanky-switch-text aria-hidden="true">
-	<swanky-switch-text-off>${off}</swanky-switch-text-off>
-	<swanky-switch-text-on>${on}</swanky-switch-text-on>
-</swanky-switch-text>`;
 }
 function toggle(component) {
   if (component.disabled || component.readonly) {
@@ -107,13 +113,13 @@ var SwankySwitch = class extends HTMLElement {
     return this.getAttribute("aria-checked") === "true";
   }
   set checked(checked) {
-    setAttribute(this, "aria-checked", checked);
+    this.setAttribute("aria-checked", checked);
   }
   get disabled() {
     return this.getAttribute("aria-disabled") === "true";
   }
   set disabled(disabled) {
-    setAttribute(this, "aria-disabled", disabled);
+    this.setAttribute("aria-disabled", disabled);
   }
   get form() {
     var _a, _b;
@@ -128,13 +134,13 @@ var SwankySwitch = class extends HTMLElement {
     return (_a = this.getAttribute("name")) != null ? _a : "";
   }
   set name(name) {
-    setAttribute(this, "name", name);
+    this.setAttribute("name", name);
   }
   get readonly() {
     return this.getAttribute("aria-readonly") === "true";
   }
   set readonly(readonly) {
-    setAttribute(this, "aria-readonly", readonly);
+    this.setAttribute("aria-readonly", readonly);
   }
   get validationMessage() {
     var _a, _b;
@@ -146,7 +152,7 @@ var SwankySwitch = class extends HTMLElement {
   }
   get value() {
     var _a;
-    return ((_a = this.getAttribute("value")) != null ? _a : this.checked) ? "on" : "off";
+    return (_a = this.getAttribute("value")) != null ? _a : this.checked ? "on" : "off";
   }
   get willValidate() {
     var _a, _b;
@@ -162,4 +168,4 @@ var SwankySwitch = class extends HTMLElement {
   }
 };
 __publicField(SwankySwitch, "formAssociated", true);
-globalThis.customElements.define("swanky-switch", SwankySwitch);
+customElements.define("swanky-switch", SwankySwitch);

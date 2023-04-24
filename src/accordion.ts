@@ -13,6 +13,8 @@ function onKeydown(component: AccurateAccordion, event: KeyboardEvent): void {
 		return;
 	}
 
+	event.preventDefault();
+
 	let destination = - 1;
 
 	switch (event.key) {
@@ -66,7 +68,7 @@ class AccurateAccordion extends HTMLElement {
 
 		this.observer = new MutationObserver(_ => updateChildren(this));
 
-		this.addEventListener('keydown', event => onKeydown(this, event), eventOptions.passive);
+		this.addEventListener('keydown', event => onKeydown(this, event), eventOptions.active);
 	}
 
 	connectedCallback(): void {
@@ -81,4 +83,4 @@ class AccurateAccordion extends HTMLElement {
 	}
 }
 
-globalThis.customElements.define('accurate-accordion', AccurateAccordion);
+customElements.define('accurate-accordion', AccurateAccordion);

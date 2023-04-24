@@ -11,57 +11,33 @@ var eventOptions = {
   active: { capture: false, passive: false },
   passive: { capture: false, passive: true }
 };
-var focusableSelectors = [
-  '[contenteditable]:not([contenteditable="false"])',
-  "[href]",
-  "[tabindex]:not(slot)",
-  "audio[controls]",
-  "button",
-  "details",
-  "details[open] > summary",
-  "embed",
-  "iframe",
-  "input",
-  "object",
-  "select",
-  "textarea",
-  "video[controls]"
-];
-var focusableSelector = focusableSelectors.map((selector) => `${selector}:not([disabled]):not([hidden]):not([tabindex="-1"])`).join(",");
-function getAttribute(element, attribute, defaultValue) {
-  const value = element.getAttribute(attribute);
-  return value == null || value.trim().length === 0 ? defaultValue : value;
-}
 function getNumber(value) {
   return typeof value === "number" ? value : Number.parseInt(typeof value === "string" ? value : String(value), 10);
 }
 function isNullOrWhitespace(value) {
   return (value != null ? value : "").trim().length === 0;
 }
-function setAttribute(element, attribute, value) {
-  if (value == null) {
-    element.removeAttribute(attribute);
-  } else {
-    element.setAttribute(attribute, String(value));
-  }
-}
 
 // src/splitter.ts
 var splitterTypes = ["horizontal", "vertical"];
 var index = 0;
 function createSeparator(splitter) {
+  var _a, _b;
   const separator = document.createElement("div");
   if (isNullOrWhitespace(splitter.primary.id)) {
     splitter.primary.id = `spiffy_splitter_primary_${++index}`;
   }
-  setAttribute(separator, "aria-controls", splitter.primary.id);
+  separator.setAttribute("aria-controls", splitter.primary.id);
   separator.role = "separator";
   separator.tabIndex = 0;
-  const originalValue = getAttribute(splitter, "value", "50");
+  let originalValue = splitter.getAttribute("value");
+  if (isNullOrWhitespace(originalValue)) {
+    originalValue = "50";
+  }
   const originalNumber = getNumber(originalValue);
   splitter.values.original = typeof originalNumber === "number" ? originalNumber : 50;
-  const maximum = getAttribute(splitter, "max", "");
-  const minimum = getAttribute(splitter, "min", "");
+  const maximum = (_a = splitter.getAttribute("max")) != null ? _a : "";
+  const minimum = (_b = splitter.getAttribute("min")) != null ? _b : "";
   if (maximum.length === 0) {
     setAbsoluteValue(splitter, separator, "maximum", 100);
   }
@@ -111,7 +87,7 @@ function setAbsoluteValue(splitter, separator, key, value) {
     actual = 0;
   }
   splitter.values[key] = actual;
-  setAttribute(separator, key === "maximum" ? "aria-valuemax" : "aria-valuemin", actual);
+  separator.setAttribute(key === "maximum" ? "aria-valuemax" : "aria-valuemin", actual);
   if (key === "maximum" && actual < splitter.values.current || key === "minimum" && actual > splitter.values.current) {
     setFlexValue(splitter, separator, actual, true);
   }
@@ -126,7 +102,7 @@ function setFlexValue(splitter, separator, value, emit) {
   } else if (actual > splitter.values.maximum) {
     actual = splitter.values.maximum;
   }
-  separator.ariaValueNow = String(actual);
+  separator.ariaValueNow = actual;
   splitter.primary.style.flex = `${actual / 100}`;
   splitter.values.current = actual;
   if (emit) {
@@ -171,12 +147,13 @@ var SpiffySplitter = class extends HTMLElement {
     setAbsoluteValue(this, this.separator, "minimum", min);
   }
   get type() {
-    const type = getAttribute(this, "type", "horizontal");
+    var _a;
+    const type = (_a = this.getAttribute("type")) != null ? _a : "horizontal";
     return splitterTypes.includes(type) ? type : "horizontal";
   }
   set type(type) {
     if (splitterTypes.includes(type)) {
-      setAttribute(this, "type", type);
+      this.setAttribute("type", type);
     }
   }
   get value() {
@@ -200,4 +177,4 @@ var SpiffySplitter = class extends HTMLElement {
   }
 };
 __publicField(SpiffySplitter, "observedAttributes", ["max", "min", "value"]);
-globalThis.customElements.define("spiffy-splitter", SpiffySplitter);
+customElements.define("spiffy-splitter", SpiffySplitter);

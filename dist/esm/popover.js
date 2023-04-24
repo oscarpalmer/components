@@ -126,29 +126,6 @@ var eventOptions = {
   active: { capture: false, passive: false },
   passive: { capture: false, passive: true }
 };
-var focusableSelectors = [
-  '[contenteditable]:not([contenteditable="false"])',
-  "[href]",
-  "[tabindex]:not(slot)",
-  "audio[controls]",
-  "button",
-  "details",
-  "details[open] > summary",
-  "embed",
-  "iframe",
-  "input",
-  "object",
-  "select",
-  "textarea",
-  "video[controls]"
-];
-var focusableSelector = focusableSelectors.map((selector) => `${selector}:not([disabled]):not([hidden]):not([tabindex="-1"])`).join(",");
-function defineProperty(obj, key, value) {
-  Object.defineProperty(obj, key, {
-    value,
-    writable: false
-  });
-}
 function findParent(element, match) {
   const matchIsSelector = typeof match === "string";
   if (matchIsSelector ? element.matches(match) : match(element)) {
@@ -168,100 +145,200 @@ function findParent(element, match) {
 }
 function getFocusableElements(context) {
   const focusable = [];
-  const elements = Array.from(context.querySelectorAll(focusableSelector));
+  const elements = Array.from(context.querySelectorAll(getFocusableSelector()));
   for (const element of elements) {
-    const style = globalThis.getComputedStyle?.(element);
+    const style = getComputedStyle?.(element);
     if (style == null || style.display !== "none" && style.visibility !== "hidden") {
       focusable.push(element);
     }
   }
   return focusable;
 }
+function getFocusableSelector() {
+  const context = globalThis;
+  if (context.focusableSelector == null) {
+    context.focusableSelector = [
+      '[contenteditable]:not([contenteditable="false"])',
+      "[href]",
+      "[tabindex]:not(slot)",
+      "audio[controls]",
+      "button",
+      "details",
+      "details[open] > summary",
+      "embed",
+      "iframe",
+      "input",
+      "object",
+      "select",
+      "textarea",
+      "video[controls]"
+    ].map((selector) => `${selector}:not([disabled]):not([hidden]):not([tabindex="-1"])`).join(",");
+  }
+  return context.focusableSelector;
+}
+function getTextDirection(element) {
+  const { direction } = getComputedStyle?.(element);
+  return direction === "rtl" ? "rtl" : "ltr";
+}
 function isNullOrWhitespace(value) {
   return (value ?? "").trim().length === 0;
 }
-function setAttribute(element, attribute2, value) {
-  if (value == null) {
-    element.removeAttribute(attribute2);
-  } else {
-    element.setAttribute(attribute2, String(value));
-  }
-}
 
 // src/helpers/floated.ts
-var positions = ["above", "above-left", "above-right", "below", "below-left", "below-right", "horizontal", "left", "right", "vertical"];
-function getLeft(rectangles, position) {
-  const { left, right } = rectangles.anchor;
-  const { width } = rectangles.floater;
+var allPositions = [
+  "above",
+  "above-left",
+  "above-right",
+  "any",
+  "below",
+  "below-left",
+  "below-right",
+  "horizontal",
+  "horizontal-bottom",
+  "horizontal-top",
+  "left",
+  "left-bottom",
+  "left-top",
+  "right",
+  "right-bottom",
+  "right-top",
+  "vertical",
+  "vertical-left",
+  "vertical-right"
+];
+var domRectKeys = ["bottom", "height", "left", "right", "top", "width"];
+var horizontalPositions = ["left", "horizontal", "right"];
+var transformedPositions = ["above", "any", "below", "vertical", ...horizontalPositions];
+function calculatePosition(position, rectangles, rightToLeft, preferAbove) {
+  if (position !== "any") {
+    const left2 = getLeft(rectangles, position, rightToLeft);
+    const top2 = getTop(rectangles, position, preferAbove);
+    return { top: top2, left: left2 };
+  }
+  const { anchor, floater } = rectangles;
+  const left = getAbsolute(anchor.right, anchor.left, floater.width, innerWidth, rightToLeft);
+  const top = getAbsolute(anchor.top, anchor.bottom, floater.height, innerHeight, preferAbove);
+  return { left, top };
+}
+function getAbsolute(start, end, offset, max, preferMin) {
+  const maxPosition = end + offset;
+  const minPosition = start - offset;
+  if (preferMin) {
+    return minPosition < 0 ? maxPosition > max ? minPosition : end : minPosition;
+  }
+  return maxPosition > max ? minPosition < 0 ? end : minPosition : end;
+}
+function getActualPosition(original, rectangles, values) {
+  if (!transformedPositions.includes(original)) {
+    return original;
+  }
+  const { anchor, floater } = rectangles;
+  const isHorizontal = horizontalPositions.includes(original);
+  const prefix = isHorizontal ? values.left === anchor.right ? "right" : values.left === anchor.left - floater.width ? "left" : null : values.top === anchor.bottom ? "below" : values.top === anchor.top - floater.height ? "above" : null;
+  const suffix = isHorizontal ? values.top === anchor.top ? "top" : values.top === anchor.bottom - floater.height ? "bottom" : null : values.left === anchor.left ? "left" : values.left === anchor.right - floater.width ? "right" : null;
+  return [prefix, suffix].filter((value) => value != null).join("-");
+}
+function getLeft(rectangles, position, rightToLeft) {
+  const { anchor, floater } = rectangles;
   switch (position) {
     case "above":
     case "below":
     case "vertical":
-      return left + rectangles.anchor.width / 2 - width / 2;
+      return anchor.left + anchor.width / 2 - floater.width / 2;
     case "above-left":
     case "below-left":
-      return left;
+    case "vertical-left":
+      return anchor.left;
     case "above-right":
     case "below-right":
-      return right - width;
+    case "vertical-right":
+      return anchor.right - floater.width;
     case "horizontal":
-      return right + width > globalThis.innerWidth ? left - width < 0 ? right : left - width : right;
+    case "horizontal-bottom":
+    case "horizontal-top": {
+      return getAbsolute(anchor.left, anchor.right, floater.width, innerWidth, rightToLeft);
+    }
     case "left":
-      return left - width;
+    case "left-bottom":
+    case "left-top":
+      return anchor.left - floater.width;
     case "right":
-      return right;
+    case "right-bottom":
+    case "right-top":
+      return anchor.right;
     default:
-      return 0;
+      return anchor.left;
   }
 }
-function getTop(rectangles, position) {
-  const { bottom, top } = rectangles.anchor;
-  const { height } = rectangles.floater;
-  switch (position) {
-    case "above":
-    case "above-left":
-    case "above-right":
-      return top - height;
-    case "below":
-    case "below-left":
-    case "below-right":
-      return bottom;
-    case "horizontal":
-    case "left":
-    case "right":
-      return top + rectangles.anchor.height / 2 - height / 2;
-    case "vertical":
-      return bottom + height > globalThis.innerHeight ? top - height < 0 ? bottom : top - height : bottom;
-    default:
-      return 0;
-  }
-}
-function getPosition(currentPosition, defaultPosition) {
+function getOriginalPosition(currentPosition, defaultPosition) {
   if (currentPosition == null) {
     return defaultPosition;
   }
   const normalized = currentPosition.trim().toLowerCase();
-  const index2 = positions.indexOf(normalized);
-  return index2 > -1 ? positions[index2] ?? defaultPosition : defaultPosition;
+  const index2 = allPositions.indexOf(normalized);
+  return index2 > -1 ? allPositions[index2] ?? defaultPosition : defaultPosition;
 }
-function updateFloated(elements, position) {
-  const { anchor, floater, parent } = elements;
+function getTop(rectangles, position, preferAbove) {
+  const { anchor, floater } = rectangles;
+  switch (position) {
+    case "above":
+    case "above-left":
+    case "above-right":
+      return anchor.top - floater.height;
+    case "horizontal":
+    case "left":
+    case "right":
+      return anchor.top + anchor.height / 2 - floater.height / 2;
+    case "below":
+    case "below-left":
+    case "below-right":
+      return anchor.bottom;
+    case "horizontal-bottom":
+    case "left-bottom":
+    case "right-bottom":
+      return anchor.bottom - floater.height;
+    case "horizontal-top":
+    case "left-top":
+    case "right-top":
+      return anchor.top;
+    case "vertical":
+    case "vertical-left":
+    case "vertical-right": {
+      return getAbsolute(anchor.top, anchor.bottom, floater.height, innerHeight, preferAbove);
+    }
+    default:
+      return anchor.bottom;
+  }
+}
+function updateFloated(parameters) {
+  const { anchor, floater, parent } = parameters.elements;
+  const rightToLeft = getTextDirection(floater) === "rtl";
+  let previousPosition;
+  let previousRectangle;
   function afterRepeat() {
     anchor.insertAdjacentElement("afterend", floater);
   }
   function onRepeat() {
-    const floatedPosition = getPosition((parent ?? anchor).getAttribute(position.attribute) ?? "", position.value);
-    setAttribute(floater, "position", floatedPosition);
+    const currentPosition = getOriginalPosition((parent ?? anchor).getAttribute(parameters.position.attribute) ?? "", parameters.position.defaultValue);
+    const currentRectangle = anchor.getBoundingClientRect();
+    if (previousPosition === currentPosition && domRectKeys.every((key) => previousRectangle?.[key] === currentRectangle[key])) {
+      return;
+    }
+    previousPosition = currentPosition;
+    previousRectangle = currentRectangle;
     const rectangles = {
-      anchor: anchor.getBoundingClientRect(),
+      anchor: currentRectangle,
       floater: floater.getBoundingClientRect()
     };
-    const top = getTop(rectangles, floatedPosition);
-    const left = getLeft(rectangles, floatedPosition);
-    const matrix = `matrix(1, 0, 0, 1, ${left}, ${top})`;
+    const values = calculatePosition(currentPosition, rectangles, rightToLeft, parameters.position.preferAbove);
+    const matrix = `matrix(1, 0, 0, 1, ${values.left}, ${values.top})`;
+    if (floater.style.transform === matrix) {
+      return;
+    }
     floater.style.position = "fixed";
     floater.style.inset = "0 auto auto 0";
     floater.style.transform = matrix;
+    floater.setAttribute("position", getActualPosition(currentPosition, rectangles, values));
   }
   document.body.appendChild(floater);
   floater.hidden = false;
@@ -341,10 +418,11 @@ var FocusTrap = class {
   }
 };
 (() => {
-  if (typeof globalThis._formalFocusTrap !== "undefined") {
+  const context = globalThis;
+  if (context.formalFocusTrap != null) {
     return;
   }
-  globalThis._formalFocusTrap = null;
+  context.formalFocusTrap = 1;
   const observer = new MutationObserver(observe);
   observer.observe(document, {
     attributeFilter: [attribute],
@@ -356,7 +434,7 @@ var FocusTrap = class {
   wait(() => {
     const focusTraps = Array.from(document.querySelectorAll(`[${attribute}]`));
     for (const focusTrap of focusTraps) {
-      setAttribute(focusTrap, attribute, "");
+      focusTrap.setAttribute(attribute, "");
     }
   }, 0);
   document.addEventListener("keydown", onKeydown, eventOptions.active);
@@ -403,7 +481,7 @@ function handleGlobalEvent(event, popover, target) {
 }
 function handleToggle(popover, expand) {
   const expanded = typeof expand === "boolean" ? !expand : popover.open;
-  setAttribute(popover.button, "aria-expanded", !expanded);
+  popover.button.setAttribute("aria-expanded", !expanded);
   if (expanded) {
     popover.content.hidden = true;
     popover.timer?.stop();
@@ -411,12 +489,16 @@ function handleToggle(popover, expand) {
   } else {
     popover.timer?.stop();
     popover.timer = updateFloated({
-      anchor: popover.button,
-      floater: popover.content,
-      parent: popover
-    }, {
-      attribute: "position",
-      value: "below-left"
+      elements: {
+        anchor: popover.button,
+        floater: popover.content,
+        parent: popover
+      },
+      position: {
+        attribute: "position",
+        defaultValue: "vertical",
+        preferAbove: false
+      }
     });
     wait(() => {
       afterToggle(popover, true);
@@ -435,13 +517,13 @@ function initialise(popover, button, content) {
   if (isNullOrWhitespace(content.id)) {
     content.id = `${popover.id}_content`;
   }
-  setAttribute(button, "aria-controls", content.id);
+  button.setAttribute("aria-controls", content.id);
   button.ariaExpanded = "false";
   button.ariaHasPopup = "dialog";
   if (!(button instanceof HTMLButtonElement)) {
     button.tabIndex = 0;
   }
-  setAttribute(content, attribute, "");
+  content.setAttribute(attribute, "");
   content.role = "dialog";
   content.ariaModal = "false";
   clickCallbacks.set(popover, onClick.bind(popover));
@@ -483,8 +565,8 @@ var PolitePopover = class extends HTMLElement {
     if (content == null || !(content instanceof HTMLElement)) {
       throw new Error("<polite-popover> must have an element with the attribute 'polite-popover-content'");
     }
-    defineProperty(this, "button", button);
-    defineProperty(this, "content", content);
+    this.button = button;
+    this.content = content;
     initialise(this, button, content);
   }
   toggle() {
@@ -493,4 +575,4 @@ var PolitePopover = class extends HTMLElement {
     }
   }
 };
-globalThis.customElements.define("polite-popover", PolitePopover);
+customElements.define("polite-popover", PolitePopover);

@@ -11,29 +11,6 @@ var eventOptions = {
   active: { capture: false, passive: false },
   passive: { capture: false, passive: true }
 };
-var focusableSelectors = [
-  '[contenteditable]:not([contenteditable="false"])',
-  "[href]",
-  "[tabindex]:not(slot)",
-  "audio[controls]",
-  "button",
-  "details",
-  "details[open] > summary",
-  "embed",
-  "iframe",
-  "input",
-  "object",
-  "select",
-  "textarea",
-  "video[controls]"
-];
-var focusableSelector = focusableSelectors.map((selector) => `${selector}:not([disabled]):not([hidden]):not([tabindex="-1"])`).join(",");
-function defineProperty(obj, key, value) {
-  Object.defineProperty(obj, key, {
-    value,
-    writable: false
-  });
-}
 function findParent(element, match) {
   const matchIsSelector = typeof match === "string";
   if (matchIsSelector ? element.matches(match) : match(element)) {
@@ -51,34 +28,48 @@ function findParent(element, match) {
   }
   return parent != null ? parent : void 0;
 }
-function getAttribute(element, attribute4, defaultValue) {
-  const value = element.getAttribute(attribute4);
-  return value == null || value.trim().length === 0 ? defaultValue : value;
-}
 function getFocusableElements(context) {
-  var _a;
   const focusable = [];
-  const elements = Array.from(context.querySelectorAll(focusableSelector));
+  const elements = Array.from(context.querySelectorAll(getFocusableSelector()));
   for (const element of elements) {
-    const style = (_a = globalThis.getComputedStyle) == null ? void 0 : _a.call(globalThis, element);
+    const style = getComputedStyle == null ? void 0 : getComputedStyle(element);
     if (style == null || style.display !== "none" && style.visibility !== "hidden") {
       focusable.push(element);
     }
   }
   return focusable;
 }
+function getFocusableSelector() {
+  const context = globalThis;
+  if (context.focusableSelector == null) {
+    context.focusableSelector = [
+      '[contenteditable]:not([contenteditable="false"])',
+      "[href]",
+      "[tabindex]:not(slot)",
+      "audio[controls]",
+      "button",
+      "details",
+      "details[open] > summary",
+      "embed",
+      "iframe",
+      "input",
+      "object",
+      "select",
+      "textarea",
+      "video[controls]"
+    ].map((selector) => `${selector}:not([disabled]):not([hidden]):not([tabindex="-1"])`).join(",");
+  }
+  return context.focusableSelector;
+}
 function getNumber(value) {
   return typeof value === "number" ? value : Number.parseInt(typeof value === "string" ? value : String(value), 10);
 }
+function getTextDirection(element) {
+  const { direction } = getComputedStyle == null ? void 0 : getComputedStyle(element);
+  return direction === "rtl" ? "rtl" : "ltr";
+}
 function isNullOrWhitespace(value) {
   return (value != null ? value : "").trim().length === 0;
-}
-function setAttribute(element, attribute4, value) {
-  if (value == null) {
-    element.removeAttribute(attribute4);
-  } else {
-    element.setAttribute(attribute4, String(value));
-  }
 }
 
 // src/accordion.ts
@@ -92,6 +83,7 @@ function onKeydown(component, event) {
   if (current === -1) {
     return;
   }
+  event.preventDefault();
   let destination = -1;
   switch (event.key) {
     case "ArrowDown":
@@ -133,7 +125,7 @@ var AccurateAccordion = class extends HTMLElement {
     __publicField(this, "details", []);
     updateChildren(this);
     this.observer = new MutationObserver((_) => updateChildren(this));
-    this.addEventListener("keydown", (event) => onKeydown(this, event), eventOptions.passive);
+    this.addEventListener("keydown", (event) => onKeydown(this, event), eventOptions.active);
   }
   connectedCallback() {
     this.observer.observe(this, {
@@ -145,7 +137,7 @@ var AccurateAccordion = class extends HTMLElement {
     this.observer.disconnect();
   }
 };
-globalThis.customElements.define("accurate-accordion", AccurateAccordion);
+customElements.define("accurate-accordion", AccurateAccordion);
 
 // node_modules/@oscarpalmer/timer/dist/timer.js
 var milliseconds = Math.round(1e3 / 60);
@@ -422,10 +414,11 @@ var FocusTrap = class {
   }
 };
 (() => {
-  if (typeof globalThis._formalFocusTrap !== "undefined") {
+  const context = globalThis;
+  if (context.formalFocusTrap != null) {
     return;
   }
-  globalThis._formalFocusTrap = null;
+  context.formalFocusTrap = 1;
   const observer3 = new MutationObserver(observe2);
   observer3.observe(document, {
     attributeFilter: [attribute2],
@@ -437,88 +430,169 @@ var FocusTrap = class {
   wait(() => {
     const focusTraps = Array.from(document.querySelectorAll(`[${attribute2}]`));
     for (const focusTrap of focusTraps) {
-      setAttribute(focusTrap, attribute2, "");
+      focusTrap.setAttribute(attribute2, "");
     }
   }, 0);
   document.addEventListener("keydown", onKeydown2, eventOptions.active);
 })();
 
 // src/helpers/floated.ts
-var positions = ["above", "above-left", "above-right", "below", "below-left", "below-right", "horizontal", "left", "right", "vertical"];
-function getLeft(rectangles, position) {
-  const { left, right } = rectangles.anchor;
-  const { width } = rectangles.floater;
+var allPositions = [
+  "above",
+  "above-left",
+  "above-right",
+  "any",
+  "below",
+  "below-left",
+  "below-right",
+  "horizontal",
+  "horizontal-bottom",
+  "horizontal-top",
+  "left",
+  "left-bottom",
+  "left-top",
+  "right",
+  "right-bottom",
+  "right-top",
+  "vertical",
+  "vertical-left",
+  "vertical-right"
+];
+var domRectKeys = ["bottom", "height", "left", "right", "top", "width"];
+var horizontalPositions = ["left", "horizontal", "right"];
+var transformedPositions = ["above", "any", "below", "vertical", ...horizontalPositions];
+function calculatePosition(position, rectangles, rightToLeft, preferAbove) {
+  if (position !== "any") {
+    const left2 = getLeft(rectangles, position, rightToLeft);
+    const top2 = getTop(rectangles, position, preferAbove);
+    return { top: top2, left: left2 };
+  }
+  const { anchor, floater } = rectangles;
+  const left = getAbsolute(anchor.right, anchor.left, floater.width, innerWidth, rightToLeft);
+  const top = getAbsolute(anchor.top, anchor.bottom, floater.height, innerHeight, preferAbove);
+  return { left, top };
+}
+function getAbsolute(start, end, offset, max, preferMin) {
+  const maxPosition = end + offset;
+  const minPosition = start - offset;
+  if (preferMin) {
+    return minPosition < 0 ? maxPosition > max ? minPosition : end : minPosition;
+  }
+  return maxPosition > max ? minPosition < 0 ? end : minPosition : end;
+}
+function getActualPosition(original, rectangles, values) {
+  if (!transformedPositions.includes(original)) {
+    return original;
+  }
+  const { anchor, floater } = rectangles;
+  const isHorizontal = horizontalPositions.includes(original);
+  const prefix = isHorizontal ? values.left === anchor.right ? "right" : values.left === anchor.left - floater.width ? "left" : null : values.top === anchor.bottom ? "below" : values.top === anchor.top - floater.height ? "above" : null;
+  const suffix = isHorizontal ? values.top === anchor.top ? "top" : values.top === anchor.bottom - floater.height ? "bottom" : null : values.left === anchor.left ? "left" : values.left === anchor.right - floater.width ? "right" : null;
+  return [prefix, suffix].filter((value) => value != null).join("-");
+}
+function getLeft(rectangles, position, rightToLeft) {
+  const { anchor, floater } = rectangles;
   switch (position) {
     case "above":
     case "below":
     case "vertical":
-      return left + rectangles.anchor.width / 2 - width / 2;
+      return anchor.left + anchor.width / 2 - floater.width / 2;
     case "above-left":
     case "below-left":
-      return left;
+    case "vertical-left":
+      return anchor.left;
     case "above-right":
     case "below-right":
-      return right - width;
+    case "vertical-right":
+      return anchor.right - floater.width;
     case "horizontal":
-      return right + width > globalThis.innerWidth ? left - width < 0 ? right : left - width : right;
+    case "horizontal-bottom":
+    case "horizontal-top": {
+      return getAbsolute(anchor.left, anchor.right, floater.width, innerWidth, rightToLeft);
+    }
     case "left":
-      return left - width;
+    case "left-bottom":
+    case "left-top":
+      return anchor.left - floater.width;
     case "right":
-      return right;
+    case "right-bottom":
+    case "right-top":
+      return anchor.right;
     default:
-      return 0;
+      return anchor.left;
   }
 }
-function getTop(rectangles, position) {
-  const { bottom, top } = rectangles.anchor;
-  const { height } = rectangles.floater;
-  switch (position) {
-    case "above":
-    case "above-left":
-    case "above-right":
-      return top - height;
-    case "below":
-    case "below-left":
-    case "below-right":
-      return bottom;
-    case "horizontal":
-    case "left":
-    case "right":
-      return top + rectangles.anchor.height / 2 - height / 2;
-    case "vertical":
-      return bottom + height > globalThis.innerHeight ? top - height < 0 ? bottom : top - height : bottom;
-    default:
-      return 0;
-  }
-}
-function getPosition(currentPosition, defaultPosition) {
+function getOriginalPosition(currentPosition, defaultPosition) {
   var _a;
   if (currentPosition == null) {
     return defaultPosition;
   }
   const normalized = currentPosition.trim().toLowerCase();
-  const index3 = positions.indexOf(normalized);
-  return index3 > -1 ? (_a = positions[index3]) != null ? _a : defaultPosition : defaultPosition;
+  const index3 = allPositions.indexOf(normalized);
+  return index3 > -1 ? (_a = allPositions[index3]) != null ? _a : defaultPosition : defaultPosition;
 }
-function updateFloated(elements, position) {
-  const { anchor, floater, parent } = elements;
+function getTop(rectangles, position, preferAbove) {
+  const { anchor, floater } = rectangles;
+  switch (position) {
+    case "above":
+    case "above-left":
+    case "above-right":
+      return anchor.top - floater.height;
+    case "horizontal":
+    case "left":
+    case "right":
+      return anchor.top + anchor.height / 2 - floater.height / 2;
+    case "below":
+    case "below-left":
+    case "below-right":
+      return anchor.bottom;
+    case "horizontal-bottom":
+    case "left-bottom":
+    case "right-bottom":
+      return anchor.bottom - floater.height;
+    case "horizontal-top":
+    case "left-top":
+    case "right-top":
+      return anchor.top;
+    case "vertical":
+    case "vertical-left":
+    case "vertical-right": {
+      return getAbsolute(anchor.top, anchor.bottom, floater.height, innerHeight, preferAbove);
+    }
+    default:
+      return anchor.bottom;
+  }
+}
+function updateFloated(parameters) {
+  const { anchor, floater, parent } = parameters.elements;
+  const rightToLeft = getTextDirection(floater) === "rtl";
+  let previousPosition;
+  let previousRectangle;
   function afterRepeat() {
     anchor.insertAdjacentElement("afterend", floater);
   }
   function onRepeat() {
     var _a;
-    const floatedPosition = getPosition((_a = (parent != null ? parent : anchor).getAttribute(position.attribute)) != null ? _a : "", position.value);
-    setAttribute(floater, "position", floatedPosition);
+    const currentPosition = getOriginalPosition((_a = (parent != null ? parent : anchor).getAttribute(parameters.position.attribute)) != null ? _a : "", parameters.position.defaultValue);
+    const currentRectangle = anchor.getBoundingClientRect();
+    if (previousPosition === currentPosition && domRectKeys.every((key) => (previousRectangle == null ? void 0 : previousRectangle[key]) === currentRectangle[key])) {
+      return;
+    }
+    previousPosition = currentPosition;
+    previousRectangle = currentRectangle;
     const rectangles = {
-      anchor: anchor.getBoundingClientRect(),
+      anchor: currentRectangle,
       floater: floater.getBoundingClientRect()
     };
-    const top = getTop(rectangles, floatedPosition);
-    const left = getLeft(rectangles, floatedPosition);
-    const matrix = `matrix(1, 0, 0, 1, ${left}, ${top})`;
+    const values = calculatePosition(currentPosition, rectangles, rightToLeft, parameters.position.preferAbove);
+    const matrix = `matrix(1, 0, 0, 1, ${values.left}, ${values.top})`;
+    if (floater.style.transform === matrix) {
+      return;
+    }
     floater.style.position = "fixed";
     floater.style.inset = "0 auto auto 0";
     floater.style.transform = matrix;
+    floater.setAttribute("position", getActualPosition(currentPosition, rectangles, values));
   }
   document.body.appendChild(floater);
   floater.hidden = false;
@@ -568,7 +642,7 @@ function handleGlobalEvent(event, popover, target) {
 function handleToggle(popover, expand) {
   var _a, _b;
   const expanded = typeof expand === "boolean" ? !expand : popover.open;
-  setAttribute(popover.button, "aria-expanded", !expanded);
+  popover.button.setAttribute("aria-expanded", !expanded);
   if (expanded) {
     popover.content.hidden = true;
     (_a = popover.timer) == null ? void 0 : _a.stop();
@@ -576,12 +650,16 @@ function handleToggle(popover, expand) {
   } else {
     (_b = popover.timer) == null ? void 0 : _b.stop();
     popover.timer = updateFloated({
-      anchor: popover.button,
-      floater: popover.content,
-      parent: popover
-    }, {
-      attribute: "position",
-      value: "below-left"
+      elements: {
+        anchor: popover.button,
+        floater: popover.content,
+        parent: popover
+      },
+      position: {
+        attribute: "position",
+        defaultValue: "vertical",
+        preferAbove: false
+      }
     });
     wait(() => {
       afterToggle(popover, true);
@@ -600,13 +678,13 @@ function initialise(popover, button, content) {
   if (isNullOrWhitespace(content.id)) {
     content.id = `${popover.id}_content`;
   }
-  setAttribute(button, "aria-controls", content.id);
+  button.setAttribute("aria-controls", content.id);
   button.ariaExpanded = "false";
   button.ariaHasPopup = "dialog";
   if (!(button instanceof HTMLButtonElement)) {
     button.tabIndex = 0;
   }
-  setAttribute(content, attribute2, "");
+  content.setAttribute(attribute2, "");
   content.role = "dialog";
   content.ariaModal = "false";
   clickCallbacks.set(popover, onClick.bind(popover));
@@ -642,8 +720,8 @@ var PolitePopover = class extends HTMLElement {
     if (content == null || !(content instanceof HTMLElement)) {
       throw new Error("<polite-popover> must have an element with the attribute 'polite-popover-content'");
     }
-    defineProperty(this, "button", button);
-    defineProperty(this, "content", content);
+    this.button = button;
+    this.content = content;
     initialise(this, button, content);
   }
   get open() {
@@ -659,24 +737,28 @@ var PolitePopover = class extends HTMLElement {
     }
   }
 };
-globalThis.customElements.define("polite-popover", PolitePopover);
+customElements.define("polite-popover", PolitePopover);
 
 // src/splitter.ts
 var splitterTypes = ["horizontal", "vertical"];
 var index2 = 0;
 function createSeparator(splitter) {
+  var _a, _b;
   const separator = document.createElement("div");
   if (isNullOrWhitespace(splitter.primary.id)) {
     splitter.primary.id = `spiffy_splitter_primary_${++index2}`;
   }
-  setAttribute(separator, "aria-controls", splitter.primary.id);
+  separator.setAttribute("aria-controls", splitter.primary.id);
   separator.role = "separator";
   separator.tabIndex = 0;
-  const originalValue = getAttribute(splitter, "value", "50");
+  let originalValue = splitter.getAttribute("value");
+  if (isNullOrWhitespace(originalValue)) {
+    originalValue = "50";
+  }
   const originalNumber = getNumber(originalValue);
   splitter.values.original = typeof originalNumber === "number" ? originalNumber : 50;
-  const maximum = getAttribute(splitter, "max", "");
-  const minimum = getAttribute(splitter, "min", "");
+  const maximum = (_a = splitter.getAttribute("max")) != null ? _a : "";
+  const minimum = (_b = splitter.getAttribute("min")) != null ? _b : "";
   if (maximum.length === 0) {
     setAbsoluteValue(splitter, separator, "maximum", 100);
   }
@@ -726,7 +808,7 @@ function setAbsoluteValue(splitter, separator, key, value) {
     actual = 0;
   }
   splitter.values[key] = actual;
-  setAttribute(separator, key === "maximum" ? "aria-valuemax" : "aria-valuemin", actual);
+  separator.setAttribute(key === "maximum" ? "aria-valuemax" : "aria-valuemin", actual);
   if (key === "maximum" && actual < splitter.values.current || key === "minimum" && actual > splitter.values.current) {
     setFlexValue(splitter, separator, actual, true);
   }
@@ -741,7 +823,7 @@ function setFlexValue(splitter, separator, value, emit) {
   } else if (actual > splitter.values.maximum) {
     actual = splitter.values.maximum;
   }
-  separator.ariaValueNow = String(actual);
+  separator.ariaValueNow = actual;
   splitter.primary.style.flex = `${actual / 100}`;
   splitter.values.current = actual;
   if (emit) {
@@ -786,12 +868,13 @@ var SpiffySplitter = class extends HTMLElement {
     setAbsoluteValue(this, this.separator, "minimum", min);
   }
   get type() {
-    const type = getAttribute(this, "type", "horizontal");
+    var _a;
+    const type = (_a = this.getAttribute("type")) != null ? _a : "horizontal";
     return splitterTypes.includes(type) ? type : "horizontal";
   }
   set type(type) {
     if (splitterTypes.includes(type)) {
-      setAttribute(this, "type", type);
+      this.setAttribute("type", type);
     }
   }
   get value() {
@@ -815,47 +898,78 @@ var SpiffySplitter = class extends HTMLElement {
   }
 };
 __publicField(SpiffySplitter, "observedAttributes", ["max", "min", "value"]);
-globalThis.customElements.define("spiffy-splitter", SpiffySplitter);
+customElements.define("spiffy-splitter", SpiffySplitter);
 
 // src/switch.ts
+function getLabel(id, content) {
+  const label = document.createElement("span");
+  label.ariaHidden = true;
+  label.className = "swanky-switch__label";
+  label.id = `${id}_label`;
+  label.innerHTML = content;
+  return label;
+}
+function getStatus() {
+  const status = document.createElement("span");
+  status.ariaHidden = true;
+  status.className = "swanky-switch__status";
+  const indicator = document.createElement("span");
+  indicator.className = "swanky-switch__status__indicator";
+  status.appendChild(indicator);
+  return status;
+}
+function getText(on, off) {
+  const text = document.createElement("span");
+  text.ariaHidden = true;
+  text.className = "swanky-switch__text";
+  const textOff = document.createElement("span");
+  textOff.className = "swanky-switch__text__off";
+  textOff.innerHTML = off;
+  const textOn = document.createElement("span");
+  textOn.className = "swanky-switch__text__on";
+  textOn.innerHTML = on;
+  text.appendChild(textOff);
+  text.appendChild(textOn);
+  return text;
+}
 function initialise2(component, label, input) {
   var _a, _b, _c;
   (_a = label.parentElement) == null ? void 0 : _a.removeChild(label);
   (_b = input.parentElement) == null ? void 0 : _b.removeChild(input);
-  setAttribute(component, "aria-checked", input.checked || component.checked);
-  setAttribute(component, "aria-disabled", input.disabled || component.disabled);
-  setAttribute(component, "aria-labelledby", `${input.id}_label`);
-  setAttribute(component, "aria-readonly", input.readOnly || component.readonly);
-  setAttribute(component, "value", input.value);
+  component.setAttribute("aria-checked", input.checked || component.checked);
+  component.setAttribute("aria-disabled", input.disabled || component.disabled);
+  component.setAttribute("aria-labelledby", `${input.id}_label`);
+  component.setAttribute("aria-readonly", input.readOnly || component.readonly);
+  component.setAttribute("value", input.value);
   component.id = input.id;
   component.name = (_c = input.name) != null ? _c : input.id;
   component.role = "switch";
   component.tabIndex = 0;
-  const off = getAttribute(component, "swanky-switch-off", "Off");
-  const on = getAttribute(component, "swanky-switch-on", "On");
-  component.insertAdjacentHTML("afterbegin", render(input.id, label, off, on));
+  let off = component.getAttribute("swanky-switch-off");
+  let on = component.getAttribute("swanky-switch-on");
+  if (isNullOrWhitespace(off)) {
+    off = "Off";
+  }
+  if (isNullOrWhitespace(on)) {
+    on = "On";
+  }
+  component.insertAdjacentElement("beforeend", getLabel(component.id, label.innerHTML));
+  component.insertAdjacentElement("beforeend", getStatus());
+  component.insertAdjacentElement("beforeend", getText(on, off));
   component.addEventListener("click", onToggle.bind(component), eventOptions.passive);
-  component.addEventListener("keydown", onKey.bind(component), eventOptions.passive);
+  component.addEventListener("keydown", onKey.bind(component), eventOptions.active);
 }
 function onKey(event) {
-  if ((event.key === " " || event.key === "Enter") && this instanceof SwankySwitch) {
-    toggle2(this);
+  if (!(this instanceof SwankySwitch) || ![" ", "Enter"].includes(event.key)) {
+    return;
   }
+  event.preventDefault();
+  toggle2(this);
 }
 function onToggle() {
   if (this instanceof SwankySwitch) {
     toggle2(this);
   }
-}
-function render(id, label, off, on) {
-  return `<swanky-switch-label id="${id}_label">${label.innerHTML}</swanky-switch-label>
-<swanky-switch-status aria-hidden="true">
-	<swanky-switch-status-indicator></swanky-switch-status-indicator>
-</swanky-switch-status>
-<swanky-switch-text aria-hidden="true">
-	<swanky-switch-text-off>${off}</swanky-switch-text-off>
-	<swanky-switch-text-on>${on}</swanky-switch-text-on>
-</swanky-switch-text>`;
 }
 function toggle2(component) {
   if (component.disabled || component.readonly) {
@@ -884,13 +998,13 @@ var SwankySwitch = class extends HTMLElement {
     return this.getAttribute("aria-checked") === "true";
   }
   set checked(checked) {
-    setAttribute(this, "aria-checked", checked);
+    this.setAttribute("aria-checked", checked);
   }
   get disabled() {
     return this.getAttribute("aria-disabled") === "true";
   }
   set disabled(disabled) {
-    setAttribute(this, "aria-disabled", disabled);
+    this.setAttribute("aria-disabled", disabled);
   }
   get form() {
     var _a, _b;
@@ -905,13 +1019,13 @@ var SwankySwitch = class extends HTMLElement {
     return (_a = this.getAttribute("name")) != null ? _a : "";
   }
   set name(name) {
-    setAttribute(this, "name", name);
+    this.setAttribute("name", name);
   }
   get readonly() {
     return this.getAttribute("aria-readonly") === "true";
   }
   set readonly(readonly) {
-    setAttribute(this, "aria-readonly", readonly);
+    this.setAttribute("aria-readonly", readonly);
   }
   get validationMessage() {
     var _a, _b;
@@ -923,7 +1037,7 @@ var SwankySwitch = class extends HTMLElement {
   }
   get value() {
     var _a;
-    return ((_a = this.getAttribute("value")) != null ? _a : this.checked) ? "on" : "off";
+    return (_a = this.getAttribute("value")) != null ? _a : this.checked ? "on" : "off";
   }
   get willValidate() {
     var _a, _b;
@@ -939,7 +1053,7 @@ var SwankySwitch = class extends HTMLElement {
   }
 };
 __publicField(SwankySwitch, "formAssociated", true);
-globalThis.customElements.define("swanky-switch", SwankySwitch);
+customElements.define("swanky-switch", SwankySwitch);
 
 // src/tooltip.ts
 var attribute3 = "toasty-tooltip";
@@ -971,7 +1085,7 @@ var Tooltip = class {
     __publicField(this, "floater");
     __publicField(this, "focusable");
     __publicField(this, "timer");
-    this.focusable = anchor.matches(focusableSelector);
+    this.focusable = anchor.matches(getFocusableSelector());
     this.floater = Tooltip.createFloater(anchor);
     this.handleCallbacks(true);
   }
@@ -996,7 +1110,7 @@ var Tooltip = class {
       throw new Error(`A '${attribute3}'-attributed element must have a valid id reference in either the 'aria-describedby' or 'aria-labelledby'-attribute.`);
     }
     element.hidden = true;
-    setAttribute(element, contentAttribute, "");
+    element.setAttribute(contentAttribute, "");
     element.ariaHidden = "true";
     element.role = "tooltip";
     return element;
@@ -1024,9 +1138,16 @@ var Tooltip = class {
     document[method]("keydown", this.callbacks.keydown, eventOptions.passive);
     if (show) {
       (_a = this.timer) == null ? void 0 : _a.stop();
-      this.timer = updateFloated(this, {
-        attribute: positionAttribute,
-        value: "above"
+      this.timer = updateFloated({
+        elements: {
+          anchor: this.anchor,
+          floater: this.floater
+        },
+        position: {
+          attribute: positionAttribute,
+          defaultValue: "vertical",
+          preferAbove: true
+        }
       });
     } else {
       this.floater.hidden = true;
@@ -1058,6 +1179,6 @@ observer2.observe(document, {
 wait(() => {
   const tooltips = Array.from(document.querySelectorAll(`[${attribute3}]`));
   for (const tooltip of tooltips) {
-    setAttribute(tooltip, attribute3, "");
+    tooltip.setAttribute(attribute3, "");
   }
 }, 0);

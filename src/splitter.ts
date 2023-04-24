@@ -1,4 +1,4 @@
-import {eventOptions, getAttribute, getNumber, isNullOrWhitespace, setAttribute} from './helpers';
+import {eventOptions, getNumber, isNullOrWhitespace} from './helpers';
 
 type Absolute = 'maximum' | 'minimum';
 type Type = 'horizontal' | 'vertical';
@@ -17,20 +17,25 @@ function createSeparator(splitter: SpiffySplitter): HTMLElement {
 		splitter.primary.id = `spiffy_splitter_primary_${++index}`;
 	}
 
-	setAttribute(separator, 'aria-controls', splitter.primary.id);
+	separator.setAttribute('aria-controls', splitter.primary.id);
 
 	separator.role = 'separator';
 	separator.tabIndex = 0;
 
-	const originalValue = getAttribute(splitter, 'value', '50');
+	let originalValue = splitter.getAttribute('value');
+
+	if (isNullOrWhitespace(originalValue)) {
+		originalValue = '50';
+	}
+
 	const originalNumber = getNumber(originalValue);
 
 	splitter.values.original = typeof originalNumber === 'number'
 		? originalNumber
 		: 50;
 
-	const maximum = getAttribute(splitter, 'max', '');
-	const minimum = getAttribute(splitter, 'min', '');
+	const maximum = splitter.getAttribute('max') ?? '';
+	const minimum = splitter.getAttribute('min') ?? '';
 
 	if (maximum.length === 0) {
 		setAbsoluteValue(splitter, separator, 'maximum', 100);
@@ -105,7 +110,7 @@ function setAbsoluteValue(splitter: SpiffySplitter, separator: HTMLElement, key:
 
 	splitter.values[key] = actual;
 
-	setAttribute(separator, key === 'maximum' ? 'aria-valuemax' : 'aria-valuemin', actual);
+	separator.setAttribute(key === 'maximum' ? 'aria-valuemax' : 'aria-valuemin', actual as never);
 
 	if ((key === 'maximum' && actual < splitter.values.current)
 			|| (key === 'minimum' && actual > splitter.values.current)) {
@@ -126,7 +131,7 @@ function setFlexValue(splitter: SpiffySplitter, separator: HTMLElement, value: a
 		actual = splitter.values.maximum;
 	}
 
-	separator.ariaValueNow = String(actual);
+	separator.ariaValueNow = actual as never;
 
 	splitter.primary.style.flex = `${actual / 100}`;
 	splitter.values.current = actual;
@@ -171,7 +176,7 @@ class SpiffySplitter extends HTMLElement {
 	}
 
 	get type(): Type {
-		const type = getAttribute(this, 'type', 'horizontal');
+		const type = this.getAttribute('type') ?? 'horizontal';
 
 		return (splitterTypes.includes(type as never)
 			? type
@@ -180,7 +185,7 @@ class SpiffySplitter extends HTMLElement {
 
 	set type(type: Type) {
 		if (splitterTypes.includes(type)) {
-			setAttribute(this, 'type', type);
+			this.setAttribute('type', type);
 		}
 	}
 
@@ -222,4 +227,4 @@ class SpiffySplitter extends HTMLElement {
 	}
 }
 
-globalThis.customElements.define('spiffy-splitter', SpiffySplitter);
+customElements.define('spiffy-splitter', SpiffySplitter);
