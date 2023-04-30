@@ -56,7 +56,7 @@ function getFocusableSelector() {
       "select",
       "textarea",
       "video[controls]"
-    ].map((selector) => `${selector}:not([disabled]):not([hidden]):not([tabindex="-1"])`).join(",");
+    ].map((selector3) => `${selector3}:not([disabled]):not([hidden]):not([tabindex="-1"])`).join(",");
   }
   return context.focusableSelector;
 }
@@ -73,11 +73,16 @@ function isNullOrWhitespace(value) {
 
 // src/accordion.ts
 var keys = ["ArrowDown", "ArrowLeft", "ArrowRight", "ArrowUp", "End", "Home"];
+var store = /* @__PURE__ */ new WeakMap();
 function onKeydown(component, event) {
-  if (document.activeElement?.tagName !== "SUMMARY" || !keys.includes(event.key) || component.details.length === 0) {
+  if (document.activeElement?.tagName !== "SUMMARY" || !keys.includes(event.key)) {
     return;
   }
-  const current = component.details.indexOf(document.activeElement.parentElement);
+  const stored = store.get(component);
+  if (stored == null || stored.elements.length === 0) {
+    return;
+  }
+  const current = stored.elements.indexOf(document.activeElement.parentElement);
   if (current === -1) {
     return;
   }
@@ -93,48 +98,89 @@ function onKeydown(component, event) {
       destination = current - 1;
       break;
     case "End":
-      destination = component.details.length - 1;
+      destination = stored.elements.length - 1;
       break;
     case "Home":
       destination = 0;
       break;
   }
   if (destination < 0) {
-    destination = component.details.length - 1;
-  } else if (destination >= component.details.length) {
+    destination = stored.elements.length - 1;
+  } else if (destination >= stored.elements.length) {
     destination = 0;
   }
   if (destination === current) {
     return;
   }
-  const summary = component.details[destination]?.querySelector(":scope > summary");
+  const summary = stored.elements[destination]?.querySelector(":scope > summary");
   if (summary != null) {
     summary.focus?.();
   }
 }
-function updateChildren(component) {
-  component.details.splice(0);
-  component.details.push(...component.querySelectorAll(":scope > details"));
+function onToggle(component, element) {
+  if (element.open && !component.multiple) {
+    toggleDetails(component, element);
+  }
+}
+function setDetails(component) {
+  const stored = store.get(component);
+  if (stored == null) {
+    return;
+  }
+  stored.elements = [...component.querySelectorAll(":scope > details")];
+  for (const element of stored.elements) {
+    element.addEventListener("toggle", () => onToggle(component, element));
+  }
+}
+function toggleDetails(component, active) {
+  const stored = store.get(component);
+  if (stored == null) {
+    return;
+  }
+  for (const element of stored.elements) {
+    if (element !== active && element.open) {
+      element.open = false;
+    }
+  }
 }
 var AccurateAccordion = class extends HTMLElement {
-  observer;
-  details = [];
+  get multiple() {
+    return this.getAttribute("multiple") !== "false";
+  }
+  set multiple(multiple) {
+    if (typeof multiple === "boolean") {
+      this.setAttribute("multiple", multiple);
+    }
+  }
   constructor() {
     super();
-    updateChildren(this);
-    this.observer = new MutationObserver((_) => updateChildren(this));
+    const stored = {
+      elements: [],
+      observer: new MutationObserver((_) => setDetails(this))
+    };
+    store.set(this, stored);
+    setDetails(this);
     this.addEventListener("keydown", (event) => onKeydown(this, event), eventOptions.active);
+    if (!this.multiple) {
+      toggleDetails(this, stored.elements.find((details) => details.open));
+    }
+  }
+  attributeChangedCallback(name) {
+    if (name === "multiple" && !this.multiple) {
+      toggleDetails(this, store.get(this)?.elements.find((details) => details.open));
+    }
   }
   connectedCallback() {
-    this.observer.observe(this, {
+    store.get(this)?.observer.observe(this, {
       childList: true,
       subtree: true
     });
   }
   disconnectedCallback() {
-    this.observer.disconnect();
+    store.get(this)?.observer.disconnect();
   }
 };
+__publicField(AccurateAccordion, "observedAttributes", ["max", "min", "value"]);
 customElements.define("accurate-accordion", AccurateAccordion);
 
 // node_modules/@oscarpalmer/timer/dist/timer.js
@@ -261,8 +307,8 @@ function wait(callback, time) {
 }
 
 // src/details.ts
-var attribute = "delicious-details";
-var store = /* @__PURE__ */ new WeakMap();
+var selector = "delicious-details";
+var store2 = /* @__PURE__ */ new WeakMap();
 function observe(records) {
   for (const record of records) {
     if (record.type !== "attributes") {
@@ -270,9 +316,9 @@ function observe(records) {
     }
     const element = record.target;
     if (!(element instanceof HTMLDetailsElement)) {
-      throw new Error(`An element with the '${attribute}'-attribute must be a <details>-element`);
+      throw new Error(`An element with the '${selector}'-attribute must be a <details>-element`);
     }
-    if (element.getAttribute(attribute) == null) {
+    if (element.getAttribute(selector) == null) {
       DeliciousDetails.destroy(element);
     } else {
       DeliciousDetails.create(element);
@@ -296,7 +342,7 @@ var DeliciousDetails = class {
     if (event.key !== "Escape" || !this.details.open) {
       return;
     }
-    const children = [...this.details.querySelectorAll(`[${attribute}][open]`)];
+    const children = [...this.details.querySelectorAll(`[${selector}][open]`)];
     if (children.some((child) => child.contains(document.activeElement)) || !this.details.contains(document.activeElement)) {
       return;
     }
@@ -307,33 +353,33 @@ var DeliciousDetails = class {
     document[this.details.open ? "addEventListener" : "removeEventListener"]?.("keydown", this.callbacks.onKeydown, eventOptions.passive);
   }
   static create(element) {
-    if (!store.has(element)) {
-      store.set(element, new DeliciousDetails(element));
+    if (!store2.has(element)) {
+      store2.set(element, new DeliciousDetails(element));
     }
   }
   static destroy(element) {
-    store.delete(element);
+    store2.delete(element);
   }
 };
 var observer = new MutationObserver(observe);
 observer.observe(document, {
-  attributeFilter: [attribute],
+  attributeFilter: [selector],
   attributeOldValue: true,
   attributes: true,
   childList: true,
   subtree: true
 });
 wait(() => {
-  const details = Array.from(document.querySelectorAll(`[${attribute}]`));
-  for (const detail of details) {
-    detail.setAttribute(attribute, "");
+  const elements = Array.from(document.querySelectorAll(`[${selector}]`));
+  for (const element of elements) {
+    element.setAttribute(selector, "");
   }
 }, 0);
 
 // src/focus-trap.ts
-var attribute2 = "formal-focus-trap";
-var store2 = /* @__PURE__ */ new WeakMap();
-function handle(event, focusTrap, element) {
+var selector2 = "formal-focus-trap";
+var store3 = /* @__PURE__ */ new WeakMap();
+function handleEvent(event, focusTrap, element) {
   const elements = getFocusableElements(focusTrap);
   if (element === focusTrap) {
     wait(() => {
@@ -362,7 +408,7 @@ function observe2(records) {
       continue;
     }
     const element = record.target;
-    if (element.getAttribute(attribute2) == null) {
+    if (element.getAttribute(selector2) == null) {
       FocusTrap.destroy(element);
     } else {
       FocusTrap.create(element);
@@ -374,13 +420,13 @@ function onKeydown2(event) {
     return;
   }
   const eventTarget = event.target;
-  const focusTrap = findParent(eventTarget, `[${attribute2}]`);
+  const focusTrap = findParent(eventTarget, `[${selector2}]`);
   if (focusTrap == null) {
     return;
   }
   event.preventDefault();
   event.stopImmediatePropagation();
-  handle(event, focusTrap, eventTarget);
+  handleEvent(event, focusTrap, eventTarget);
 }
 var FocusTrap = class {
   tabIndex;
@@ -389,17 +435,17 @@ var FocusTrap = class {
     element.tabIndex = -1;
   }
   static create(element) {
-    if (!store2.has(element)) {
-      store2.set(element, new FocusTrap(element));
+    if (!store3.has(element)) {
+      store3.set(element, new FocusTrap(element));
     }
   }
   static destroy(element) {
-    const focusTrap = store2.get(element);
+    const focusTrap = store3.get(element);
     if (focusTrap == null) {
       return;
     }
     element.tabIndex = focusTrap.tabIndex;
-    store2.delete(element);
+    store3.delete(element);
   }
 };
 (() => {
@@ -410,16 +456,16 @@ var FocusTrap = class {
   context.formalFocusTrap = 1;
   const observer3 = new MutationObserver(observe2);
   observer3.observe(document, {
-    attributeFilter: [attribute2],
+    attributeFilter: [selector2],
     attributeOldValue: true,
     attributes: true,
     childList: true,
     subtree: true
   });
   wait(() => {
-    const focusTraps = Array.from(document.querySelectorAll(`[${attribute2}]`));
-    for (const focusTrap of focusTraps) {
-      focusTrap.setAttribute(attribute2, "");
+    const elements = Array.from(document.querySelectorAll(`[${selector2}]`));
+    for (const element of elements) {
+      element.setAttribute(selector2, "");
     }
   }, 0);
   document.addEventListener("keydown", onKeydown2, eventOptions.active);
@@ -587,58 +633,56 @@ function updateFloated(parameters) {
 }
 
 // src/popover.ts
-var clickCallbacks = /* @__PURE__ */ new WeakMap();
-var keydownCallbacks = /* @__PURE__ */ new WeakMap();
+var store4 = /* @__PURE__ */ new WeakMap();
 var index = 0;
-function afterToggle(popover, active) {
-  handleCallbacks(popover, active);
-  if (active && popover.content) {
-    (getFocusableElements(popover.content)?.[0] ?? popover.content).focus();
+function afterToggle(component, active) {
+  handleCallbacks(component, active);
+  if (active && component.content) {
+    (getFocusableElements(component.content)?.[0] ?? component.content).focus();
   } else {
-    popover.button?.focus();
+    component.button?.focus();
   }
 }
-function handleCallbacks(popover, add) {
-  const clickCallback = clickCallbacks.get(popover);
-  const keydownCallback = keydownCallbacks.get(popover);
-  if (clickCallback == null || keydownCallback == null) {
+function handleCallbacks(component, add) {
+  const callbacks = store4.get(component);
+  if (callbacks == null) {
     return;
   }
   const method = add ? "addEventListener" : "removeEventListener";
-  document[method]("click", clickCallback, eventOptions.passive);
-  document[method]("keydown", keydownCallback, eventOptions.passive);
+  document[method]("click", callbacks.click, eventOptions.passive);
+  document[method]("keydown", callbacks.keydown, eventOptions.passive);
 }
-function handleGlobalEvent(event, popover, target) {
-  const { button, content } = popover;
+function handleGlobalEvent(event, component, target) {
+  const { button, content } = component;
   if (button == null || content == null) {
     return;
   }
   const floater = findParent(target, "[polite-popover-content]");
   if (floater == null) {
-    handleToggle(popover, false);
+    handleToggle(component, false);
     return;
   }
   event.stopPropagation();
   const children = Array.from(document.body.children);
   const difference = children.indexOf(floater) - children.indexOf(content);
   if (difference < (event instanceof KeyboardEvent ? 1 : 0)) {
-    handleToggle(popover, false);
+    handleToggle(component, false);
   }
 }
-function handleToggle(popover, expand) {
-  const expanded = typeof expand === "boolean" ? !expand : popover.open;
-  popover.button.setAttribute("aria-expanded", !expanded);
+function handleToggle(component, expand) {
+  const expanded = typeof expand === "boolean" ? !expand : component.open;
+  component.button.setAttribute("aria-expanded", !expanded);
   if (expanded) {
-    popover.content.hidden = true;
-    popover.timer?.stop();
-    afterToggle(popover, false);
+    component.content.hidden = true;
+    component.timer?.stop();
+    afterToggle(component, false);
   } else {
-    popover.timer?.stop();
-    popover.timer = updateFloated({
+    component.timer?.stop();
+    component.timer = updateFloated({
       elements: {
-        anchor: popover.button,
-        floater: popover.content,
-        parent: popover
+        anchor: component.button,
+        floater: component.content,
+        parent: component
       },
       position: {
         attribute: "position",
@@ -647,21 +691,21 @@ function handleToggle(popover, expand) {
       }
     });
     wait(() => {
-      afterToggle(popover, true);
+      afterToggle(component, true);
     }, 50);
   }
-  popover.dispatchEvent(new Event("toggle"));
+  component.dispatchEvent(new Event("toggle"));
 }
-function initialise(popover, button, content) {
+function initialise(component, button, content) {
   content.hidden = true;
-  if (isNullOrWhitespace(popover.id)) {
-    popover.id = `polite_popover_${++index}`;
+  if (isNullOrWhitespace(component.id)) {
+    component.id = `polite_popover_${++index}`;
   }
   if (isNullOrWhitespace(button.id)) {
-    button.id = `${popover.id}_button`;
+    button.id = `${component.id}_button`;
   }
   if (isNullOrWhitespace(content.id)) {
-    content.id = `${popover.id}_content`;
+    content.id = `${component.id}_content`;
   }
   button.setAttribute("aria-controls", content.id);
   button.ariaExpanded = "false";
@@ -669,27 +713,36 @@ function initialise(popover, button, content) {
   if (!(button instanceof HTMLButtonElement)) {
     button.tabIndex = 0;
   }
-  content.setAttribute(attribute2, "");
+  content.setAttribute(selector2, "");
   content.role = "dialog";
   content.ariaModal = "false";
-  clickCallbacks.set(popover, onClick.bind(popover));
-  keydownCallbacks.set(popover, onKeydown3.bind(popover));
-  button.addEventListener("click", toggle.bind(popover), eventOptions.passive);
+  store4.set(component, {
+    click: onClick.bind(component),
+    keydown: onKeydown3.bind(component)
+  });
+  button.addEventListener("click", toggle.bind(component), eventOptions.passive);
+}
+function isButton(node) {
+  if (node == null) {
+    return false;
+  }
+  if (node instanceof HTMLButtonElement) {
+    return true;
+  }
+  return node instanceof HTMLElement && node.getAttribute("role") === "button";
 }
 function onClick(event) {
-  if (this instanceof PolitePopover && this.open) {
+  if (this.open) {
     handleGlobalEvent(event, this, event.target);
   }
 }
 function onKeydown3(event) {
-  if (this instanceof PolitePopover && this.open && event instanceof KeyboardEvent && event.key === "Escape") {
+  if (this.open && event instanceof KeyboardEvent && event.key === "Escape") {
     handleGlobalEvent(event, this, document.activeElement);
   }
 }
 function toggle(expand) {
-  if (this instanceof PolitePopover) {
-    handleToggle(this, expand);
-  }
+  handleToggle(this, expand);
 }
 var PolitePopover = class extends HTMLElement {
   button;
@@ -705,7 +758,7 @@ var PolitePopover = class extends HTMLElement {
     super();
     const button = this.querySelector(":scope > [polite-popover-button]");
     const content = this.querySelector(":scope > [polite-popover-content]");
-    if (button == null || !(button instanceof HTMLButtonElement || button instanceof HTMLElement && button.getAttribute("role") === "button")) {
+    if (!isButton(button)) {
       throw new Error("<polite-popover> must have a <button>-element (or button-like element) with the attribute 'polite-popover-button'");
     }
     if (content == null || !(content instanceof HTMLElement)) {
@@ -903,15 +956,15 @@ function getText(on, off) {
   const text = document.createElement("span");
   text.ariaHidden = true;
   text.className = "swanky-switch__text";
-  const textOff = document.createElement("span");
-  textOff.className = "swanky-switch__text__off";
-  textOff.innerHTML = off;
-  const textOn = document.createElement("span");
-  textOn.className = "swanky-switch__text__on";
-  textOn.innerHTML = on;
-  text.appendChild(textOff);
-  text.appendChild(textOn);
+  text.appendChild(getTextItem("off", off));
+  text.appendChild(getTextItem("on", on));
   return text;
+}
+function getTextItem(type, content) {
+  const item = document.createElement("span");
+  item.className = `swanky-switch__text__${type}`;
+  item.innerHTML = content;
+  return item;
 }
 function initialise2(component, label, input) {
   label.parentElement?.removeChild(label);
@@ -936,20 +989,18 @@ function initialise2(component, label, input) {
   component.insertAdjacentElement("beforeend", getLabel(component.id, label.innerHTML));
   component.insertAdjacentElement("beforeend", getStatus());
   component.insertAdjacentElement("beforeend", getText(on, off));
-  component.addEventListener("click", onToggle.bind(component), eventOptions.passive);
+  component.addEventListener("click", onToggle2.bind(component), eventOptions.passive);
   component.addEventListener("keydown", onKey.bind(component), eventOptions.active);
 }
 function onKey(event) {
-  if (!(this instanceof SwankySwitch) || ![" ", "Enter"].includes(event.key)) {
+  if (![" ", "Enter"].includes(event.key)) {
     return;
   }
   event.preventDefault();
   toggle2(this);
 }
-function onToggle() {
-  if (this instanceof SwankySwitch) {
-    toggle2(this);
-  }
+function onToggle2() {
+  toggle2(this);
 }
 function toggle2(component) {
   if (component.disabled || component.readonly) {
@@ -1026,17 +1077,17 @@ __publicField(SwankySwitch, "formAssociated", true);
 customElements.define("swanky-switch", SwankySwitch);
 
 // src/tooltip.ts
-var attribute3 = "toasty-tooltip";
-var contentAttribute = `${attribute3}-content`;
-var positionAttribute = `${attribute3}-position`;
-var store3 = /* @__PURE__ */ new WeakMap();
+var attribute = "toasty-tooltip";
+var contentAttribute = `${attribute}-content`;
+var positionAttribute = `${attribute}-position`;
+var store5 = /* @__PURE__ */ new WeakMap();
 function observe3(records) {
   for (const record of records) {
     if (record.type !== "attributes") {
       continue;
     }
     const element = record.target;
-    if (element.getAttribute(attribute3) == null) {
+    if (element.getAttribute(attribute) == null) {
       Tooltip.destroy(element);
     } else {
       Tooltip.create(element);
@@ -1060,23 +1111,23 @@ var Tooltip = class {
   focusable;
   timer;
   static create(anchor) {
-    if (!store3.has(anchor)) {
-      store3.set(anchor, new Tooltip(anchor));
+    if (!store5.has(anchor)) {
+      store5.set(anchor, new Tooltip(anchor));
     }
   }
   static destroy(element) {
-    const tooltip = store3.get(element);
+    const tooltip = store5.get(element);
     if (typeof tooltip === "undefined") {
       return;
     }
     tooltip.handleCallbacks(false);
-    store3.delete(element);
+    store5.delete(element);
   }
   static createFloater(anchor) {
     const id = anchor.getAttribute("aria-describedby") ?? anchor.getAttribute("aria-labelledby");
     const element = id == null ? null : document.getElementById(id);
     if (element == null) {
-      throw new Error(`A '${attribute3}'-attributed element must have a valid id reference in either the 'aria-describedby' or 'aria-labelledby'-attribute.`);
+      throw new Error(`A '${attribute}'-attributed element must have a valid id reference in either the 'aria-describedby' or 'aria-labelledby'-attribute.`);
     }
     element.hidden = true;
     element.setAttribute(contentAttribute, "");
@@ -1138,15 +1189,15 @@ var Tooltip = class {
 };
 var observer2 = new MutationObserver(observe3);
 observer2.observe(document, {
-  attributeFilter: [attribute3],
+  attributeFilter: [attribute],
   attributeOldValue: true,
   attributes: true,
   childList: true,
   subtree: true
 });
 wait(() => {
-  const tooltips = Array.from(document.querySelectorAll(`[${attribute3}]`));
-  for (const tooltip of tooltips) {
-    tooltip.setAttribute(attribute3, "");
+  const elements = Array.from(document.querySelectorAll(`[${attribute}]`));
+  for (const element of elements) {
+    element.setAttribute(attribute, "");
   }
 }, 0);

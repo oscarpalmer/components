@@ -1,12 +1,12 @@
 import {wait} from '@oscarpalmer/timer';
 import {eventOptions} from './helpers';
 
-type DeliciousDetailsCallbacks = {
+type Callbacks = {
 	onKeydown: (event: KeyboardEvent) => void;
 	onToggle: () => void;
 };
 
-const attribute = 'delicious-details';
+const selector = 'delicious-details';
 
 const store = new WeakMap<HTMLDetailsElement, DeliciousDetails>();
 
@@ -19,10 +19,10 @@ function observe(records: MutationRecord[]): void {
 		const element = record.target as HTMLElement;
 
 		if (!(element instanceof HTMLDetailsElement)) {
-			throw new Error(`An element with the '${attribute}'-attribute must be a <details>-element`);
+			throw new Error(`An element with the '${selector}'-attribute must be a <details>-element`);
 		}
 
-		if (element.getAttribute(attribute) == null) {
+		if (element.getAttribute(selector) == null) {
 			DeliciousDetails.destroy(element);
 		} else {
 			DeliciousDetails.create(element);
@@ -31,7 +31,7 @@ function observe(records: MutationRecord[]): void {
 }
 
 class DeliciousDetails {
-	private readonly callbacks!: DeliciousDetailsCallbacks;
+	private readonly callbacks!: Callbacks;
 
 	readonly details: HTMLDetailsElement;
 	readonly summary: HTMLElement | undefined;
@@ -53,7 +53,7 @@ class DeliciousDetails {
 			return;
 		}
 
-		const children = [...this.details.querySelectorAll(`[${attribute}][open]`)];
+		const children = [...this.details.querySelectorAll(`[${selector}][open]`)];
 
 		if (children.some(child => child.contains(document.activeElement)) || !this.details.contains(document.activeElement)) {
 			return;
@@ -82,7 +82,7 @@ class DeliciousDetails {
 const observer = new MutationObserver(observe);
 
 observer.observe(document, {
-	attributeFilter: [attribute],
+	attributeFilter: [selector],
 	attributeOldValue: true,
 	attributes: true,
 	childList: true,
@@ -90,9 +90,9 @@ observer.observe(document, {
 });
 
 wait(() => {
-	const details = Array.from(document.querySelectorAll(`[${attribute}]`));
+	const elements = Array.from(document.querySelectorAll(`[${selector}]`));
 
-	for (const detail of details) {
-		detail.setAttribute(attribute, '');
+	for (const element of elements) {
+		element.setAttribute(selector, '');
 	}
 }, 0);

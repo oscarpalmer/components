@@ -465,8 +465,8 @@ observer.observe(document, {
   subtree: true
 });
 wait(() => {
-  const tooltips = Array.from(document.querySelectorAll(`[${attribute}]`));
-  for (const tooltip of tooltips) {
-    tooltip.setAttribute(attribute, "");
+  const elements = Array.from(document.querySelectorAll(`[${attribute}]`));
+  for (const element of elements) {
+    element.setAttribute(attribute, "");
   }
 }, 0);

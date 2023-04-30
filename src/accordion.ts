@@ -1,13 +1,26 @@
 import {eventOptions} from './helpers';
 
+type Store = {
+	elements: HTMLDetailsElement[];
+	observer: MutationObserver;
+};
+
 const keys: string[] = ['ArrowDown', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'End', 'Home'];
 
+const store = new WeakMap<AccurateAccordion, Store>();
+
 function onKeydown(component: AccurateAccordion, event: KeyboardEvent): void {
-	if (document.activeElement?.tagName !== 'SUMMARY' || !keys.includes(event.key) || component.details.length === 0) {
+	if (document.activeElement?.tagName !== 'SUMMARY' || !keys.includes(event.key)) {
 		return;
 	}
 
-	const current = component.details.indexOf(document.activeElement.parentElement as never);
+	const stored = store.get(component);
+
+	if (stored == null || stored.elements.length === 0) {
+		return;
+	}
+
+	const current = stored.elements.indexOf(document.activeElement.parentElement as never);
 
 	if (current === -1) {
 		return;
@@ -27,7 +40,7 @@ function onKeydown(component: AccurateAccordion, event: KeyboardEvent): void {
 			destination = current - 1;
 			break;
 		case 'End':
-			destination = component.details.length - 1;
+			destination = stored.elements.length - 1;
 			break;
 		case 'Home':
 			destination = 0;
@@ -35,8 +48,8 @@ function onKeydown(component: AccurateAccordion, event: KeyboardEvent): void {
 	}
 
 	if (destination < 0) {
-		destination = component.details.length - 1;
-	} else if (destination >= component.details.length) {
+		destination = stored.elements.length - 1;
+	} else if (destination >= stored.elements.length) {
 		destination = 0;
 	}
 
@@ -44,42 +57,94 @@ function onKeydown(component: AccurateAccordion, event: KeyboardEvent): void {
 		return;
 	}
 
-	const summary = component.details[destination]?.querySelector(':scope > summary');
+	const summary = stored.elements[destination]?.querySelector(':scope > summary');
 
 	if (summary != null) {
 		(summary as HTMLButtonElement).focus?.();
 	}
 }
 
-function updateChildren(component: AccurateAccordion): void {
-	component.details.splice(0);
-	component.details.push(...(component.querySelectorAll(':scope > details') as NodeListOf<HTMLDetailsElement>));
+function onToggle(component: AccurateAccordion, element: HTMLDetailsElement) {
+	if (element.open && !component.multiple) {
+		toggleDetails(component, element);
+	}
+}
+
+function setDetails(component: AccurateAccordion): void {
+	const stored = store.get(component);
+
+	if (stored == null) {
+		return;
+	}
+
+	stored.elements = [...(component.querySelectorAll(':scope > details') as never)];
+
+	for (const element of stored.elements) {
+		element.addEventListener('toggle', () => onToggle(component, element));
+	}
+}
+
+function toggleDetails(component: AccurateAccordion, active: HTMLDetailsElement | undefined): void {
+	const stored = store.get(component);
+
+	if (stored == null) {
+		return;
+	}
+
+	for (const element of stored.elements) {
+		if (element !== active && element.open) {
+			element.open = false;
+		}
+	}
 }
 
 class AccurateAccordion extends HTMLElement {
-	private readonly observer: MutationObserver;
+	static observedAttributes = ['max', 'min', 'value'];
 
-	readonly details: HTMLDetailsElement[] = [];
+	get multiple(): boolean {
+		return this.getAttribute('multiple') !== 'false';
+	}
+
+	set multiple(multiple: boolean) {
+		if (typeof multiple === 'boolean') {
+			this.setAttribute('multiple', multiple as never);
+		}
+	}
 
 	constructor() {
 		super();
 
-		updateChildren(this);
+		const stored: Store = {
+			elements: [],
+			observer: new MutationObserver(_ => setDetails(this)),
+		};
 
-		this.observer = new MutationObserver(_ => updateChildren(this));
+		store.set(this, stored);
+
+		setDetails(this);
 
 		this.addEventListener('keydown', event => onKeydown(this, event), eventOptions.active);
+
+		if (!this.multiple) {
+			toggleDetails(this, stored.elements.find(details => details.open));
+		}
+	}
+
+	attributeChangedCallback(name: string): void {
+		if (name === 'multiple' && !this.multiple) {
+			toggleDetails(this, store.get(this)?.elements.find(details => details.open));
+		}
 	}
 
 	connectedCallback(): void {
-		this.observer.observe(this, {
+		store.get(this)?.observer.observe(this, {
 			childList: true,
 			subtree: true,
 		});
 	}
 
 	disconnectedCallback(): void {
-		this.observer.disconnect();
+		store.get(this)?.observer.disconnect();
 	}
 }
 

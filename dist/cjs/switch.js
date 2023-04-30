@@ -37,15 +37,15 @@ function getText(on, off) {
   const text = document.createElement("span");
   text.ariaHidden = true;
   text.className = "swanky-switch__text";
-  const textOff = document.createElement("span");
-  textOff.className = "swanky-switch__text__off";
-  textOff.innerHTML = off;
-  const textOn = document.createElement("span");
-  textOn.className = "swanky-switch__text__on";
-  textOn.innerHTML = on;
-  text.appendChild(textOff);
-  text.appendChild(textOn);
+  text.appendChild(getTextItem("off", off));
+  text.appendChild(getTextItem("on", on));
   return text;
+}
+function getTextItem(type, content) {
+  const item = document.createElement("span");
+  item.className = `swanky-switch__text__${type}`;
+  item.innerHTML = content;
+  return item;
 }
 function initialise(component, label, input) {
   var _a, _b, _c;
@@ -75,16 +75,14 @@ function initialise(component, label, input) {
   component.addEventListener("keydown", onKey.bind(component), eventOptions.active);
 }
 function onKey(event) {
-  if (!(this instanceof SwankySwitch) || ![" ", "Enter"].includes(event.key)) {
+  if (![" ", "Enter"].includes(event.key)) {
     return;
   }
   event.preventDefault();
   toggle(this);
 }
 function onToggle() {
-  if (this instanceof SwankySwitch) {
-    toggle(this);
-  }
+  toggle(this);
 }
 function toggle(component) {
   if (component.disabled || component.readonly) {

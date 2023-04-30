@@ -1,11 +1,11 @@
 import {wait} from '@oscarpalmer/timer';
 import {eventOptions, getFocusableElements, findParent} from './helpers';
 
-export const attribute = 'formal-focus-trap';
+export const selector = 'formal-focus-trap';
 
 const store = new WeakMap<HTMLElement, FocusTrap>();
 
-function handle(event: KeyboardEvent, focusTrap: HTMLElement, element: HTMLElement): void {
+function handleEvent(event: KeyboardEvent, focusTrap: HTMLElement, element: HTMLElement): void {
 	const elements = getFocusableElements(focusTrap);
 
 	if (element === focusTrap) {
@@ -45,7 +45,7 @@ function observe(records: MutationRecord[]) {
 
 		const element = record.target as HTMLElement;
 
-		if (element.getAttribute(attribute) == null) {
+		if (element.getAttribute(selector) == null) {
 			FocusTrap.destroy(element);
 		} else {
 			FocusTrap.create(element);
@@ -59,7 +59,7 @@ function onKeydown(event: KeyboardEvent): void {
 	}
 
 	const eventTarget = event.target as HTMLElement;
-	const focusTrap = findParent(eventTarget, `[${attribute}]`);
+	const focusTrap = findParent(eventTarget, `[${selector}]`);
 
 	if (focusTrap == null) {
 		return;
@@ -68,7 +68,7 @@ function onKeydown(event: KeyboardEvent): void {
 	event.preventDefault();
 	event.stopImmediatePropagation();
 
-	handle(event, focusTrap, eventTarget);
+	handleEvent(event, focusTrap, eventTarget);
 }
 
 class FocusTrap {
@@ -111,7 +111,7 @@ class FocusTrap {
 	const observer = new MutationObserver(observe);
 
 	observer.observe(document, {
-		attributeFilter: [attribute],
+		attributeFilter: [selector],
 		attributeOldValue: true,
 		attributes: true,
 		childList: true,
@@ -119,10 +119,10 @@ class FocusTrap {
 	});
 
 	wait(() => {
-		const focusTraps = Array.from(document.querySelectorAll(`[${attribute}]`));
+		const elements = Array.from(document.querySelectorAll(`[${selector}]`));
 
-		for (const focusTrap of focusTraps) {
-			focusTrap.setAttribute(attribute, '');
+		for (const element of elements) {
+			element.setAttribute(selector, '');
 		}
 	}, 0);
 

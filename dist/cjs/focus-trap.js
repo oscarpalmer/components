@@ -25,7 +25,7 @@ var __publicField = (obj, key, value) => {
 // src/focus-trap.ts
 var focus_trap_exports = {};
 __export(focus_trap_exports, {
-  attribute: () => attribute
+  selector: () => selector
 });
 module.exports = __toCommonJS(focus_trap_exports);
 
@@ -202,15 +202,15 @@ function getFocusableSelector() {
       "select",
       "textarea",
       "video[controls]"
-    ].map((selector) => `${selector}:not([disabled]):not([hidden]):not([tabindex="-1"])`).join(",");
+    ].map((selector2) => `${selector2}:not([disabled]):not([hidden]):not([tabindex="-1"])`).join(",");
   }
   return context.focusableSelector;
 }
 
 // src/focus-trap.ts
-var attribute = "formal-focus-trap";
+var selector = "formal-focus-trap";
 var store = /* @__PURE__ */ new WeakMap();
-function handle(event, focusTrap, element) {
+function handleEvent(event, focusTrap, element) {
   var _a;
   const elements = getFocusableElements(focusTrap);
   if (element === focusTrap) {
@@ -241,7 +241,7 @@ function observe(records) {
       continue;
     }
     const element = record.target;
-    if (element.getAttribute(attribute) == null) {
+    if (element.getAttribute(selector) == null) {
       FocusTrap.destroy(element);
     } else {
       FocusTrap.create(element);
@@ -253,13 +253,13 @@ function onKeydown(event) {
     return;
   }
   const eventTarget = event.target;
-  const focusTrap = findParent(eventTarget, `[${attribute}]`);
+  const focusTrap = findParent(eventTarget, `[${selector}]`);
   if (focusTrap == null) {
     return;
   }
   event.preventDefault();
   event.stopImmediatePropagation();
-  handle(event, focusTrap, eventTarget);
+  handleEvent(event, focusTrap, eventTarget);
 }
 var FocusTrap = class {
   constructor(element) {
@@ -289,16 +289,16 @@ var FocusTrap = class {
   context.formalFocusTrap = 1;
   const observer = new MutationObserver(observe);
   observer.observe(document, {
-    attributeFilter: [attribute],
+    attributeFilter: [selector],
     attributeOldValue: true,
     attributes: true,
     childList: true,
     subtree: true
   });
   wait(() => {
-    const focusTraps = Array.from(document.querySelectorAll(`[${attribute}]`));
-    for (const focusTrap of focusTraps) {
-      focusTrap.setAttribute(attribute, "");
+    const elements = Array.from(document.querySelectorAll(`[${selector}]`));
+    for (const element of elements) {
+      element.setAttribute(selector, "");
     }
   }, 0);
   document.addEventListener("keydown", onKeydown, eventOptions.active);

@@ -172,7 +172,7 @@ function getFocusableSelector() {
       "select",
       "textarea",
       "video[controls]"
-    ].map((selector) => `${selector}:not([disabled]):not([hidden]):not([tabindex="-1"])`).join(",");
+    ].map((selector2) => `${selector2}:not([disabled]):not([hidden]):not([tabindex="-1"])`).join(",");
   }
   return context.focusableSelector;
 }
@@ -346,9 +346,9 @@ function updateFloated(parameters) {
 }
 
 // src/focus-trap.ts
-var attribute = "formal-focus-trap";
+var selector = "formal-focus-trap";
 var store = /* @__PURE__ */ new WeakMap();
-function handle(event, focusTrap, element) {
+function handleEvent(event, focusTrap, element) {
   const elements = getFocusableElements(focusTrap);
   if (element === focusTrap) {
     wait(() => {
@@ -377,7 +377,7 @@ function observe(records) {
       continue;
     }
     const element = record.target;
-    if (element.getAttribute(attribute) == null) {
+    if (element.getAttribute(selector) == null) {
       FocusTrap.destroy(element);
     } else {
       FocusTrap.create(element);
@@ -389,13 +389,13 @@ function onKeydown(event) {
     return;
   }
   const eventTarget = event.target;
-  const focusTrap = findParent(eventTarget, `[${attribute}]`);
+  const focusTrap = findParent(eventTarget, `[${selector}]`);
   if (focusTrap == null) {
     return;
   }
   event.preventDefault();
   event.stopImmediatePropagation();
-  handle(event, focusTrap, eventTarget);
+  handleEvent(event, focusTrap, eventTarget);
 }
 var FocusTrap = class {
   tabIndex;
@@ -425,74 +425,72 @@ var FocusTrap = class {
   context.formalFocusTrap = 1;
   const observer = new MutationObserver(observe);
   observer.observe(document, {
-    attributeFilter: [attribute],
+    attributeFilter: [selector],
     attributeOldValue: true,
     attributes: true,
     childList: true,
     subtree: true
   });
   wait(() => {
-    const focusTraps = Array.from(document.querySelectorAll(`[${attribute}]`));
-    for (const focusTrap of focusTraps) {
-      focusTrap.setAttribute(attribute, "");
+    const elements = Array.from(document.querySelectorAll(`[${selector}]`));
+    for (const element of elements) {
+      element.setAttribute(selector, "");
     }
   }, 0);
   document.addEventListener("keydown", onKeydown, eventOptions.active);
 })();
 
 // src/popover.ts
-var clickCallbacks = /* @__PURE__ */ new WeakMap();
-var keydownCallbacks = /* @__PURE__ */ new WeakMap();
+var store2 = /* @__PURE__ */ new WeakMap();
 var index = 0;
-function afterToggle(popover, active) {
-  handleCallbacks(popover, active);
-  if (active && popover.content) {
-    (getFocusableElements(popover.content)?.[0] ?? popover.content).focus();
+function afterToggle(component, active) {
+  handleCallbacks(component, active);
+  if (active && component.content) {
+    (getFocusableElements(component.content)?.[0] ?? component.content).focus();
   } else {
-    popover.button?.focus();
+    component.button?.focus();
   }
 }
-function handleCallbacks(popover, add) {
-  const clickCallback = clickCallbacks.get(popover);
-  const keydownCallback = keydownCallbacks.get(popover);
-  if (clickCallback == null || keydownCallback == null) {
+function handleCallbacks(component, add) {
+  const callbacks = store2.get(component);
+  if (callbacks == null) {
     return;
   }
   const method = add ? "addEventListener" : "removeEventListener";
-  document[method]("click", clickCallback, eventOptions.passive);
-  document[method]("keydown", keydownCallback, eventOptions.passive);
+  document[method]("click", callbacks.click, eventOptions.passive);
+  document[method]("keydown", callbacks.keydown, eventOptions.passive);
 }
-function handleGlobalEvent(event, popover, target) {
-  const { button, content } = popover;
+function handleGlobalEvent(event, component, target) {
+  const { button, content } = component;
   if (button == null || content == null) {
     return;
   }
   const floater = findParent(target, "[polite-popover-content]");
   if (floater == null) {
-    handleToggle(popover, false);
+    handleToggle(component, false);
     return;
   }
   event.stopPropagation();
   const children = Array.from(document.body.children);
   const difference = children.indexOf(floater) - children.indexOf(content);
   if (difference < (event instanceof KeyboardEvent ? 1 : 0)) {
-    handleToggle(popover, false);
+    handleToggle(component, false);
   }
 }
-function handleToggle(popover, expand) {
-  const expanded = typeof expand === "boolean" ? !expand : popover.open;
-  popover.button.setAttribute("aria-expanded", !expanded);
+function handleToggle(component, expand) {
+  const expanded = typeof expand === "boolean" ? !expand : component.open;
+  component.button.setAttribute("aria-expanded", !expanded);
   if (expanded) {
-    popover.content.hidden = true;
-    popover.timer?.stop();
-    afterToggle(popover, false);
+    component.content.hidden = true;
+    component.timer?.stop();
+    afterToggle(component, false);
   } else {
-    popover.timer?.stop();
-    popover.timer = updateFloated({
+    component.timer?.stop();
+    component.timer = updateFloated({
       elements: {
-        anchor: popover.button,
-        floater: popover.content,
-        parent: popover
+        anchor: component.button,
+        floater: component.content,
+        parent: component
       },
       position: {
         attribute: "position",
@@ -501,21 +499,21 @@ function handleToggle(popover, expand) {
       }
     });
     wait(() => {
-      afterToggle(popover, true);
+      afterToggle(component, true);
     }, 50);
   }
-  popover.dispatchEvent(new Event("toggle"));
+  component.dispatchEvent(new Event("toggle"));
 }
-function initialise(popover, button, content) {
+function initialise(component, button, content) {
   content.hidden = true;
-  if (isNullOrWhitespace(popover.id)) {
-    popover.id = `polite_popover_${++index}`;
+  if (isNullOrWhitespace(component.id)) {
+    component.id = `polite_popover_${++index}`;
   }
   if (isNullOrWhitespace(button.id)) {
-    button.id = `${popover.id}_button`;
+    button.id = `${component.id}_button`;
   }
   if (isNullOrWhitespace(content.id)) {
-    content.id = `${popover.id}_content`;
+    content.id = `${component.id}_content`;
   }
   button.setAttribute("aria-controls", content.id);
   button.ariaExpanded = "false";
@@ -523,27 +521,36 @@ function initialise(popover, button, content) {
   if (!(button instanceof HTMLButtonElement)) {
     button.tabIndex = 0;
   }
-  content.setAttribute(attribute, "");
+  content.setAttribute(selector, "");
   content.role = "dialog";
   content.ariaModal = "false";
-  clickCallbacks.set(popover, onClick.bind(popover));
-  keydownCallbacks.set(popover, onKeydown2.bind(popover));
-  button.addEventListener("click", toggle.bind(popover), eventOptions.passive);
+  store2.set(component, {
+    click: onClick.bind(component),
+    keydown: onKeydown2.bind(component)
+  });
+  button.addEventListener("click", toggle.bind(component), eventOptions.passive);
+}
+function isButton(node) {
+  if (node == null) {
+    return false;
+  }
+  if (node instanceof HTMLButtonElement) {
+    return true;
+  }
+  return node instanceof HTMLElement && node.getAttribute("role") === "button";
 }
 function onClick(event) {
-  if (this instanceof PolitePopover && this.open) {
+  if (this.open) {
     handleGlobalEvent(event, this, event.target);
   }
 }
 function onKeydown2(event) {
-  if (this instanceof PolitePopover && this.open && event instanceof KeyboardEvent && event.key === "Escape") {
+  if (this.open && event instanceof KeyboardEvent && event.key === "Escape") {
     handleGlobalEvent(event, this, document.activeElement);
   }
 }
 function toggle(expand) {
-  if (this instanceof PolitePopover) {
-    handleToggle(this, expand);
-  }
+  handleToggle(this, expand);
 }
 var PolitePopover = class extends HTMLElement {
   button;
@@ -559,7 +566,7 @@ var PolitePopover = class extends HTMLElement {
     super();
     const button = this.querySelector(":scope > [polite-popover-button]");
     const content = this.querySelector(":scope > [polite-popover-content]");
-    if (button == null || !(button instanceof HTMLButtonElement || button instanceof HTMLElement && button.getAttribute("role") === "button")) {
+    if (!isButton(button)) {
       throw new Error("<polite-popover> must have a <button>-element (or button-like element) with the attribute 'polite-popover-button'");
     }
     if (content == null || !(content instanceof HTMLElement)) {

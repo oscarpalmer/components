@@ -14,12 +14,17 @@ var eventOptions = {
 
 // src/accordion.ts
 var keys = ["ArrowDown", "ArrowLeft", "ArrowRight", "ArrowUp", "End", "Home"];
+var store = /* @__PURE__ */ new WeakMap();
 function onKeydown(component, event) {
   var _a, _b, _c;
-  if (((_a = document.activeElement) == null ? void 0 : _a.tagName) !== "SUMMARY" || !keys.includes(event.key) || component.details.length === 0) {
+  if (((_a = document.activeElement) == null ? void 0 : _a.tagName) !== "SUMMARY" || !keys.includes(event.key)) {
     return;
   }
-  const current = component.details.indexOf(document.activeElement.parentElement);
+  const stored = store.get(component);
+  if (stored == null || stored.elements.length === 0) {
+    return;
+  }
+  const current = stored.elements.indexOf(document.activeElement.parentElement);
   if (current === -1) {
     return;
   }
@@ -35,46 +40,90 @@ function onKeydown(component, event) {
       destination = current - 1;
       break;
     case "End":
-      destination = component.details.length - 1;
+      destination = stored.elements.length - 1;
       break;
     case "Home":
       destination = 0;
       break;
   }
   if (destination < 0) {
-    destination = component.details.length - 1;
-  } else if (destination >= component.details.length) {
+    destination = stored.elements.length - 1;
+  } else if (destination >= stored.elements.length) {
     destination = 0;
   }
   if (destination === current) {
     return;
   }
-  const summary = (_b = component.details[destination]) == null ? void 0 : _b.querySelector(":scope > summary");
+  const summary = (_b = stored.elements[destination]) == null ? void 0 : _b.querySelector(":scope > summary");
   if (summary != null) {
     (_c = summary.focus) == null ? void 0 : _c.call(summary);
   }
 }
-function updateChildren(component) {
-  component.details.splice(0);
-  component.details.push(...component.querySelectorAll(":scope > details"));
+function onToggle(component, element) {
+  if (element.open && !component.multiple) {
+    toggleDetails(component, element);
+  }
+}
+function setDetails(component) {
+  const stored = store.get(component);
+  if (stored == null) {
+    return;
+  }
+  stored.elements = [...component.querySelectorAll(":scope > details")];
+  for (const element of stored.elements) {
+    element.addEventListener("toggle", () => onToggle(component, element));
+  }
+}
+function toggleDetails(component, active) {
+  const stored = store.get(component);
+  if (stored == null) {
+    return;
+  }
+  for (const element of stored.elements) {
+    if (element !== active && element.open) {
+      element.open = false;
+    }
+  }
 }
 var AccurateAccordion = class extends HTMLElement {
+  get multiple() {
+    return this.getAttribute("multiple") !== "false";
+  }
+  set multiple(multiple) {
+    if (typeof multiple === "boolean") {
+      this.setAttribute("multiple", multiple);
+    }
+  }
   constructor() {
     super();
-    __publicField(this, "observer");
-    __publicField(this, "details", []);
-    updateChildren(this);
-    this.observer = new MutationObserver((_) => updateChildren(this));
+    const stored = {
+      elements: [],
+      observer: new MutationObserver((_) => setDetails(this))
+    };
+    store.set(this, stored);
+    setDetails(this);
     this.addEventListener("keydown", (event) => onKeydown(this, event), eventOptions.active);
+    if (!this.multiple) {
+      toggleDetails(this, stored.elements.find((details) => details.open));
+    }
+  }
+  attributeChangedCallback(name) {
+    var _a;
+    if (name === "multiple" && !this.multiple) {
+      toggleDetails(this, (_a = store.get(this)) == null ? void 0 : _a.elements.find((details) => details.open));
+    }
   }
   connectedCallback() {
-    this.observer.observe(this, {
+    var _a;
+    (_a = store.get(this)) == null ? void 0 : _a.observer.observe(this, {
       childList: true,
       subtree: true
     });
   }
   disconnectedCallback() {
-    this.observer.disconnect();
+    var _a;
+    (_a = store.get(this)) == null ? void 0 : _a.observer.disconnect();
   }
 };
+__publicField(AccurateAccordion, "observedAttributes", ["max", "min", "value"]);
 customElements.define("accurate-accordion", AccurateAccordion);

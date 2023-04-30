@@ -135,7 +135,7 @@ var eventOptions = {
 };
 
 // src/details.ts
-var attribute = "delicious-details";
+var selector = "delicious-details";
 var store = /* @__PURE__ */ new WeakMap();
 function observe(records) {
   for (const record of records) {
@@ -144,9 +144,9 @@ function observe(records) {
     }
     const element = record.target;
     if (!(element instanceof HTMLDetailsElement)) {
-      throw new Error(`An element with the '${attribute}'-attribute must be a <details>-element`);
+      throw new Error(`An element with the '${selector}'-attribute must be a <details>-element`);
     }
-    if (element.getAttribute(attribute) == null) {
+    if (element.getAttribute(selector) == null) {
       DeliciousDetails.destroy(element);
     } else {
       DeliciousDetails.create(element);
@@ -171,7 +171,7 @@ var DeliciousDetails = class {
     if (event.key !== "Escape" || !this.details.open) {
       return;
     }
-    const children = [...this.details.querySelectorAll(`[${attribute}][open]`)];
+    const children = [...this.details.querySelectorAll(`[${selector}][open]`)];
     if (children.some((child) => child.contains(document.activeElement)) || !this.details.contains(document.activeElement)) {
       return;
     }
@@ -196,15 +196,15 @@ var DeliciousDetails = class {
 };
 var observer = new MutationObserver(observe);
 observer.observe(document, {
-  attributeFilter: [attribute],
+  attributeFilter: [selector],
   attributeOldValue: true,
   attributes: true,
   childList: true,
   subtree: true
 });
 wait(() => {
-  const details = Array.from(document.querySelectorAll(`[${attribute}]`));
-  for (const detail of details) {
-    detail.setAttribute(attribute, "");
+  const elements = Array.from(document.querySelectorAll(`[${selector}]`));
+  for (const element of elements) {
+    element.setAttribute(selector, "");
   }
 }, 0);

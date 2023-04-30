@@ -32,20 +32,19 @@ function getText(on: string, off: string): HTMLElement {
 	text.ariaHidden = true as never;
 	text.className = 'swanky-switch__text'
 
-	const textOff = document.createElement('span');
-
-	textOff.className = 'swanky-switch__text__off';
-	textOff.innerHTML = off;
-
-	const textOn = document.createElement('span');
-
-	textOn.className = 'swanky-switch__text__on';
-	textOn.innerHTML = on;
-
-	text.appendChild(textOff);
-	text.appendChild(textOn);
+	text.appendChild(getTextItem('off', off));
+	text.appendChild(getTextItem('on', on));
 
 	return text;
+}
+
+function getTextItem(type: 'off' | 'on', content: string): HTMLSpanElement {
+	const item = document.createElement('span');
+
+	item.className = `swanky-switch__text__${type}`;
+	item.innerHTML = content;
+
+	return item;
 }
 
 function initialise(component: SwankySwitch, label: HTMLElement, input: HTMLInputElement): void {
@@ -83,7 +82,7 @@ function initialise(component: SwankySwitch, label: HTMLElement, input: HTMLInpu
 }
 
 function onKey(this: SwankySwitch, event: KeyboardEvent): void {
-	if (!(this instanceof SwankySwitch) || ![' ', 'Enter'].includes(event.key)) {
+	if (![' ', 'Enter'].includes(event.key)) {
 		return;
 	}
 
@@ -93,9 +92,7 @@ function onKey(this: SwankySwitch, event: KeyboardEvent): void {
 }
 
 function onToggle(this: SwankySwitch): void {
-	if (this instanceof SwankySwitch) {
-		toggle(this);
-	}
+	toggle(this);
 }
 
 function toggle(component: SwankySwitch): void {
