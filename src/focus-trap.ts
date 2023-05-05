@@ -1,7 +1,7 @@
 import {wait} from '@oscarpalmer/timer';
 import {eventOptions, getFocusableElements, findParent} from './helpers';
 
-export const selector = 'formal-focus-trap';
+export const selector = 'palmer-focus-trap';
 
 const store = new WeakMap<HTMLElement, FocusTrap>();
 
@@ -100,13 +100,13 @@ class FocusTrap {
 }
 
 ((): void => {
-	const context: {formalFocusTrap?: number} = globalThis as never;
+	const context: {palmerFocusTrap?: number} = globalThis as never;
 
-	if (context.formalFocusTrap != null) {
+	if (context.palmerFocusTrap != null) {
 		return;
 	}
 
-	context.formalFocusTrap = 1;
+	context.palmerFocusTrap = 1;
 
 	const observer = new MutationObserver(observe);
 

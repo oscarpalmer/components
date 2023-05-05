@@ -172,7 +172,7 @@ function getFocusableSelector() {
       "select",
       "textarea",
       "video[controls]"
-    ].map((selector2) => `${selector2}:not([disabled]):not([hidden]):not([tabindex="-1"])`).join(",");
+    ].map((selector3) => `${selector3}:not([disabled]):not([hidden]):not([tabindex="-1"])`).join(",");
   }
   return context.focusableSelector;
 }
@@ -346,7 +346,7 @@ function updateFloated(parameters) {
 }
 
 // src/focus-trap.ts
-var selector = "formal-focus-trap";
+var selector = "palmer-focus-trap";
 var store = /* @__PURE__ */ new WeakMap();
 function handleEvent(event, focusTrap, element) {
   const elements = getFocusableElements(focusTrap);
@@ -419,10 +419,10 @@ var FocusTrap = class {
 };
 (() => {
   const context = globalThis;
-  if (context.formalFocusTrap != null) {
+  if (context.palmerFocusTrap != null) {
     return;
   }
-  context.formalFocusTrap = 1;
+  context.palmerFocusTrap = 1;
   const observer = new MutationObserver(observe);
   observer.observe(document, {
     attributeFilter: [selector],
@@ -441,6 +441,7 @@ var FocusTrap = class {
 })();
 
 // src/popover.ts
+var selector2 = "palmer-popover";
 var store2 = /* @__PURE__ */ new WeakMap();
 var index = 0;
 function afterToggle(component, active) {
@@ -465,7 +466,7 @@ function handleGlobalEvent(event, component, target) {
   if (button == null || content == null) {
     return;
   }
-  const floater = findParent(target, "[polite-popover-content]");
+  const floater = findParent(target, `[${selector2}-content]`);
   if (floater == null) {
     handleToggle(component, false);
     return;
@@ -507,7 +508,7 @@ function handleToggle(component, expand) {
 function initialise(component, button, content) {
   content.hidden = true;
   if (isNullOrWhitespace(component.id)) {
-    component.id = `polite_popover_${++index}`;
+    component.id = `palmer_popover_${++index}`;
   }
   if (isNullOrWhitespace(button.id)) {
     button.id = `${component.id}_button`;
@@ -552,7 +553,7 @@ function onKeydown2(event) {
 function toggle(expand) {
   handleToggle(this, expand);
 }
-var PolitePopover = class extends HTMLElement {
+var PalmerPopover = class extends HTMLElement {
   button;
   content;
   timer;
@@ -564,13 +565,13 @@ var PolitePopover = class extends HTMLElement {
   }
   constructor() {
     super();
-    const button = this.querySelector(":scope > [polite-popover-button]");
-    const content = this.querySelector(":scope > [polite-popover-content]");
+    const button = this.querySelector(`:scope > [${selector2}-button]`);
+    const content = this.querySelector(`:scope > [${selector2}-content]`);
     if (!isButton(button)) {
-      throw new Error("<polite-popover> must have a <button>-element (or button-like element) with the attribute 'polite-popover-button'");
+      throw new Error(`<${selector2}> must have a <button>-element (or button-like element) with the attribute '${selector2}-button`);
     }
     if (content == null || !(content instanceof HTMLElement)) {
-      throw new Error("<polite-popover> must have an element with the attribute 'polite-popover-content'");
+      throw new Error(`<${selector2}> must have an element with the attribute '${selector2}-content'`);
     }
     this.button = button;
     this.content = content;
@@ -582,4 +583,4 @@ var PolitePopover = class extends HTMLElement {
     }
   }
 };
-customElements.define("polite-popover", PolitePopover);
+customElements.define(selector2, PalmerPopover);

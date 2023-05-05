@@ -1,53 +1,53 @@
 import {eventOptions, isNullOrWhitespace} from './helpers';
 
-function getLabel(id: string, content: string): HTMLElement {
+function getLabel(id: string, className: string, content: string): HTMLElement {
 	const label = document.createElement('span');
 
 	label.ariaHidden = true as never;
-	label.className = 'swanky-switch__label';
+	label.className = `${className}__label`;
 	label.id = `${id}_label`;
 	label.innerHTML = content;
 
 	return label;
 }
 
-function getStatus(): HTMLElement {
+function getStatus(className: string): HTMLElement {
 	const status = document.createElement('span');
 
 	status.ariaHidden = true as never;
-	status.className = 'swanky-switch__status';
+	status.className = `${className}__status`;
 
 	const indicator = document.createElement('span');
 
-	indicator.className = 'swanky-switch__status__indicator';
+	indicator.className = `${className}__status__indicator`;
 
 	status.appendChild(indicator);
 
 	return status;
 }
 
-function getText(on: string, off: string): HTMLElement {
+function getText(className: string, on: string, off: string): HTMLElement {
 	const text = document.createElement('span');
 
 	text.ariaHidden = true as never;
-	text.className = 'swanky-switch__text'
+	text.className = `${className}__text`;
 
-	text.appendChild(getTextItem('off', off));
-	text.appendChild(getTextItem('on', on));
+	text.appendChild(getTextItem('off', className, off));
+	text.appendChild(getTextItem('on', className, on));
 
 	return text;
 }
 
-function getTextItem(type: 'off' | 'on', content: string): HTMLSpanElement {
+function getTextItem(type: 'off' | 'on', className: string, content: string): HTMLSpanElement {
 	const item = document.createElement('span');
 
-	item.className = `swanky-switch__text__${type}`;
+	item.className = `${className}__text__${type}`;
 	item.innerHTML = content;
 
 	return item;
 }
 
-function initialise(component: SwankySwitch, label: HTMLElement, input: HTMLInputElement): void {
+function initialise(component: PalmerSwitch, label: HTMLElement, input: HTMLInputElement): void {
 	label.parentElement?.removeChild(label);
 	input.parentElement?.removeChild(input);
 
@@ -62,8 +62,13 @@ function initialise(component: SwankySwitch, label: HTMLElement, input: HTMLInpu
 	component.role = 'switch';
 	component.tabIndex = 0;
 
-	let off = component.getAttribute('swanky-switch-off');
-	let on = component.getAttribute('swanky-switch-on');
+	let className = component.getAttribute('classNames');
+	let off = component.getAttribute('off');
+	let on = component.getAttribute('on');
+
+	if (isNullOrWhitespace(className)) {
+		className = 'palmer-switch';
+	}
 
 	if (isNullOrWhitespace(off)) {
 		off = 'Off';
@@ -73,15 +78,15 @@ function initialise(component: SwankySwitch, label: HTMLElement, input: HTMLInpu
 		on = 'On';
 	}
 
-	component.insertAdjacentElement('beforeend', getLabel(component.id, label.innerHTML));
-	component.insertAdjacentElement('beforeend', getStatus());
-	component.insertAdjacentElement('beforeend', getText(on as never, off as never));
+	component.insertAdjacentElement('beforeend', getLabel(component.id, className as never, label.innerHTML));
+	component.insertAdjacentElement('beforeend', getStatus(className as never));
+	component.insertAdjacentElement('beforeend', getText(className as never, on as never, off as never));
 
 	component.addEventListener('click', onToggle.bind(component), eventOptions.passive);
 	component.addEventListener('keydown', onKey.bind(component), eventOptions.active);
 }
 
-function onKey(this: SwankySwitch, event: KeyboardEvent): void {
+function onKey(this: PalmerSwitch, event: KeyboardEvent): void {
 	if (![' ', 'Enter'].includes(event.key)) {
 		return;
 	}
@@ -91,11 +96,11 @@ function onKey(this: SwankySwitch, event: KeyboardEvent): void {
 	toggle(this);
 }
 
-function onToggle(this: SwankySwitch): void {
+function onToggle(this: PalmerSwitch): void {
 	toggle(this);
 }
 
-function toggle(component: SwankySwitch): void {
+function toggle(component: PalmerSwitch): void {
 	if (component.disabled || component.readonly) {
 		return;
 	}
@@ -105,7 +110,7 @@ function toggle(component: SwankySwitch): void {
 	component.dispatchEvent(new Event('change'));
 }
 
-class SwankySwitch extends HTMLElement {
+class PalmerSwitch extends HTMLElement {
 	static formAssociated = true;
 
 	private internals: ElementInternals | undefined;
@@ -171,15 +176,15 @@ class SwankySwitch extends HTMLElement {
 
 		this.internals = this.attachInternals?.();
 
-		const input = this.querySelector('[swanky-switch-input]');
-		const label = this.querySelector('[swanky-switch-label]');
+		const input = this.querySelector('[palmer-switch-input]');
+		const label = this.querySelector('[palmer-switch-label]');
 
 		if (typeof input === 'undefined' || !(input instanceof HTMLInputElement) || input.type !== 'checkbox') {
-			throw new Error('<swanky-switch> must have an <input>-element with type \'checkbox\' and the attribute \'swanky-switch-input\'');
+			throw new Error('<palmer-switch> must have an <input>-element with type \'checkbox\' and the attribute \'palmer-switch-input\'');
 		}
 
 		if (typeof label === 'undefined' || !(label instanceof HTMLElement)) {
-			throw new Error('<swanky-switch> must have a <label>-element with the attribute \'swanky-switch-label\'');
+			throw new Error('<palmer-switch> must have an element with the attribute \'palmer-switch-label\'');
 		}
 
 		initialise(this, label, input);
@@ -194,4 +199,4 @@ class SwankySwitch extends HTMLElement {
 	}
 }
 
-customElements.define('swanky-switch', SwankySwitch);
+customElements.define('palmer-switch', PalmerSwitch);

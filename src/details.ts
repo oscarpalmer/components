@@ -6,9 +6,9 @@ type Callbacks = {
 	onToggle: () => void;
 };
 
-const selector = 'delicious-details';
+const selector = 'palmer-details';
 
-const store = new WeakMap<HTMLDetailsElement, DeliciousDetails>();
+const store = new WeakMap<HTMLDetailsElement, PalmerDetails>();
 
 function observe(records: MutationRecord[]): void {
 	for (const record of records) {
@@ -23,14 +23,14 @@ function observe(records: MutationRecord[]): void {
 		}
 
 		if (element.getAttribute(selector) == null) {
-			DeliciousDetails.destroy(element);
+			PalmerDetails.destroy(element);
 		} else {
-			DeliciousDetails.create(element);
+			PalmerDetails.create(element);
 		}
 	}
 }
 
-class DeliciousDetails {
+class PalmerDetails {
 	private readonly callbacks!: Callbacks;
 
 	readonly details: HTMLDetailsElement;
@@ -70,7 +70,7 @@ class DeliciousDetails {
 
 	static create(element: HTMLDetailsElement): void {
 		if (!store.has(element)) {
-			store.set(element, new DeliciousDetails(element));
+			store.set(element, new PalmerDetails(element));
 		}
 	}
 

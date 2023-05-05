@@ -171,7 +171,7 @@ function getFocusableSelector() {
       "select",
       "textarea",
       "video[controls]"
-    ].map((selector) => `${selector}:not([disabled]):not([hidden]):not([tabindex="-1"])`).join(",");
+    ].map((selector2) => `${selector2}:not([disabled]):not([hidden]):not([tabindex="-1"])`).join(",");
   }
   return context.focusableSelector;
 }
@@ -344,9 +344,9 @@ function updateFloated(parameters) {
 }
 
 // src/tooltip.ts
-var attribute = "toasty-tooltip";
-var contentAttribute = `${attribute}-content`;
-var positionAttribute = `${attribute}-position`;
+var selector = "palmer-tooltip";
+var contentAttribute = `${selector}-content`;
+var positionAttribute = `${selector}-position`;
 var store = /* @__PURE__ */ new WeakMap();
 function observe(records) {
   for (const record of records) {
@@ -354,7 +354,7 @@ function observe(records) {
       continue;
     }
     const element = record.target;
-    if (element.getAttribute(attribute) == null) {
+    if (element.getAttribute(selector) == null) {
       Tooltip.destroy(element);
     } else {
       Tooltip.create(element);
@@ -395,7 +395,7 @@ var Tooltip = class {
     const id = (_a = anchor.getAttribute("aria-describedby")) != null ? _a : anchor.getAttribute("aria-labelledby");
     const element = id == null ? null : document.getElementById(id);
     if (element == null) {
-      throw new Error(`A '${attribute}'-attributed element must have a valid id reference in either the 'aria-describedby' or 'aria-labelledby'-attribute.`);
+      throw new Error(`A '${selector}'-attributed element must have a valid id reference in either the 'aria-describedby' or 'aria-labelledby'-attribute.`);
     }
     element.hidden = true;
     element.setAttribute(contentAttribute, "");
@@ -458,15 +458,15 @@ var Tooltip = class {
 };
 var observer = new MutationObserver(observe);
 observer.observe(document, {
-  attributeFilter: [attribute],
+  attributeFilter: [selector],
   attributeOldValue: true,
   attributes: true,
   childList: true,
   subtree: true
 });
 wait(() => {
-  const elements = Array.from(document.querySelectorAll(`[${attribute}]`));
+  const elements = Array.from(document.querySelectorAll(`[${selector}]`));
   for (const element of elements) {
-    element.setAttribute(attribute, "");
+    element.setAttribute(selector, "");
   }
 }, 0);

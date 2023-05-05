@@ -16,34 +16,34 @@ function isNullOrWhitespace(value) {
 }
 
 // src/switch.ts
-function getLabel(id, content) {
+function getLabel(id, className, content) {
   const label = document.createElement("span");
   label.ariaHidden = true;
-  label.className = "swanky-switch__label";
+  label.className = `${className}__label`;
   label.id = `${id}_label`;
   label.innerHTML = content;
   return label;
 }
-function getStatus() {
+function getStatus(className) {
   const status = document.createElement("span");
   status.ariaHidden = true;
-  status.className = "swanky-switch__status";
+  status.className = `${className}__status`;
   const indicator = document.createElement("span");
-  indicator.className = "swanky-switch__status__indicator";
+  indicator.className = `${className}__status__indicator`;
   status.appendChild(indicator);
   return status;
 }
-function getText(on, off) {
+function getText(className, on, off) {
   const text = document.createElement("span");
   text.ariaHidden = true;
-  text.className = "swanky-switch__text";
-  text.appendChild(getTextItem("off", off));
-  text.appendChild(getTextItem("on", on));
+  text.className = `${className}__text`;
+  text.appendChild(getTextItem("off", className, off));
+  text.appendChild(getTextItem("on", className, on));
   return text;
 }
-function getTextItem(type, content) {
+function getTextItem(type, className, content) {
   const item = document.createElement("span");
-  item.className = `swanky-switch__text__${type}`;
+  item.className = `${className}__text__${type}`;
   item.innerHTML = content;
   return item;
 }
@@ -60,17 +60,21 @@ function initialise(component, label, input) {
   component.name = (_c = input.name) != null ? _c : input.id;
   component.role = "switch";
   component.tabIndex = 0;
-  let off = component.getAttribute("swanky-switch-off");
-  let on = component.getAttribute("swanky-switch-on");
+  let className = component.getAttribute("classNames");
+  let off = component.getAttribute("off");
+  let on = component.getAttribute("on");
+  if (isNullOrWhitespace(className)) {
+    className = "palmer-switch";
+  }
   if (isNullOrWhitespace(off)) {
     off = "Off";
   }
   if (isNullOrWhitespace(on)) {
     on = "On";
   }
-  component.insertAdjacentElement("beforeend", getLabel(component.id, label.innerHTML));
-  component.insertAdjacentElement("beforeend", getStatus());
-  component.insertAdjacentElement("beforeend", getText(on, off));
+  component.insertAdjacentElement("beforeend", getLabel(component.id, className, label.innerHTML));
+  component.insertAdjacentElement("beforeend", getStatus(className));
+  component.insertAdjacentElement("beforeend", getText(className, on, off));
   component.addEventListener("click", onToggle.bind(component), eventOptions.passive);
   component.addEventListener("keydown", onKey.bind(component), eventOptions.active);
 }
@@ -91,19 +95,19 @@ function toggle(component) {
   component.checked = !component.checked;
   component.dispatchEvent(new Event("change"));
 }
-var SwankySwitch = class extends HTMLElement {
+var PalmerSwitch = class extends HTMLElement {
   constructor() {
     var _a;
     super();
     __publicField(this, "internals");
     this.internals = (_a = this.attachInternals) == null ? void 0 : _a.call(this);
-    const input = this.querySelector("[swanky-switch-input]");
-    const label = this.querySelector("[swanky-switch-label]");
+    const input = this.querySelector("[palmer-switch-input]");
+    const label = this.querySelector("[palmer-switch-label]");
     if (typeof input === "undefined" || !(input instanceof HTMLInputElement) || input.type !== "checkbox") {
-      throw new Error("<swanky-switch> must have an <input>-element with type 'checkbox' and the attribute 'swanky-switch-input'");
+      throw new Error("<palmer-switch> must have an <input>-element with type 'checkbox' and the attribute 'palmer-switch-input'");
     }
     if (typeof label === "undefined" || !(label instanceof HTMLElement)) {
-      throw new Error("<swanky-switch> must have a <label>-element with the attribute 'swanky-switch-label'");
+      throw new Error("<palmer-switch> must have an element with the attribute 'palmer-switch-label'");
     }
     initialise(this, label, input);
   }
@@ -165,5 +169,5 @@ var SwankySwitch = class extends HTMLElement {
     return (_b = (_a = this.internals) == null ? void 0 : _a.reportValidity()) != null ? _b : true;
   }
 };
-__publicField(SwankySwitch, "formAssociated", true);
-customElements.define("swanky-switch", SwankySwitch);
+__publicField(PalmerSwitch, "formAssociated", true);
+customElements.define("palmer-switch", PalmerSwitch);

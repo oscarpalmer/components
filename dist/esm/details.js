@@ -125,7 +125,7 @@ var eventOptions = {
 };
 
 // src/details.ts
-var selector = "delicious-details";
+var selector = "palmer-details";
 var store = /* @__PURE__ */ new WeakMap();
 function observe(records) {
   for (const record of records) {
@@ -137,13 +137,13 @@ function observe(records) {
       throw new Error(`An element with the '${selector}'-attribute must be a <details>-element`);
     }
     if (element.getAttribute(selector) == null) {
-      DeliciousDetails.destroy(element);
+      PalmerDetails.destroy(element);
     } else {
-      DeliciousDetails.create(element);
+      PalmerDetails.create(element);
     }
   }
 }
-var DeliciousDetails = class {
+var PalmerDetails = class {
   callbacks;
   details;
   summary;
@@ -172,7 +172,7 @@ var DeliciousDetails = class {
   }
   static create(element) {
     if (!store.has(element)) {
-      store.set(element, new DeliciousDetails(element));
+      store.set(element, new PalmerDetails(element));
     }
   }
   static destroy(element) {

@@ -208,7 +208,7 @@ function getFocusableSelector() {
 }
 
 // src/focus-trap.ts
-var selector = "formal-focus-trap";
+var selector = "palmer-focus-trap";
 var store = /* @__PURE__ */ new WeakMap();
 function handleEvent(event, focusTrap, element) {
   var _a;
@@ -283,10 +283,10 @@ var FocusTrap = class {
 };
 (() => {
   const context = globalThis;
-  if (context.formalFocusTrap != null) {
+  if (context.palmerFocusTrap != null) {
     return;
   }
-  context.formalFocusTrap = 1;
+  context.palmerFocusTrap = 1;
   const observer = new MutationObserver(observe);
   observer.observe(document, {
     attributeFilter: [selector],

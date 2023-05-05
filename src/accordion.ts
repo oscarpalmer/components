@@ -1,15 +1,15 @@
 import {eventOptions} from './helpers';
 
-type Store = {
+type Stored = {
 	elements: HTMLDetailsElement[];
 	observer: MutationObserver;
 };
 
 const keys: string[] = ['ArrowDown', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'End', 'Home'];
 
-const store = new WeakMap<AccurateAccordion, Store>();
+const store = new WeakMap<PalmerAccordion, Stored>();
 
-function onKeydown(component: AccurateAccordion, event: KeyboardEvent): void {
+function onKeydown(component: PalmerAccordion, event: KeyboardEvent): void {
 	if (document.activeElement?.tagName !== 'SUMMARY' || !keys.includes(event.key)) {
 		return;
 	}
@@ -64,13 +64,13 @@ function onKeydown(component: AccurateAccordion, event: KeyboardEvent): void {
 	}
 }
 
-function onToggle(component: AccurateAccordion, element: HTMLDetailsElement) {
+function onToggle(component: PalmerAccordion, element: HTMLDetailsElement) {
 	if (element.open && !component.multiple) {
 		toggleDetails(component, element);
 	}
 }
 
-function setDetails(component: AccurateAccordion): void {
+function setDetails(component: PalmerAccordion): void {
 	const stored = store.get(component);
 
 	if (stored == null) {
@@ -84,7 +84,7 @@ function setDetails(component: AccurateAccordion): void {
 	}
 }
 
-function toggleDetails(component: AccurateAccordion, active: HTMLDetailsElement | undefined): void {
+function toggleDetails(component: PalmerAccordion, active: HTMLDetailsElement | undefined): void {
 	const stored = store.get(component);
 
 	if (stored == null) {
@@ -98,7 +98,7 @@ function toggleDetails(component: AccurateAccordion, active: HTMLDetailsElement 
 	}
 }
 
-class AccurateAccordion extends HTMLElement {
+class PalmerAccordion extends HTMLElement {
 	static observedAttributes = ['max', 'min', 'value'];
 
 	get multiple(): boolean {
@@ -114,7 +114,7 @@ class AccurateAccordion extends HTMLElement {
 	constructor() {
 		super();
 
-		const stored: Store = {
+		const stored: Stored = {
 			elements: [],
 			observer: new MutationObserver(_ => setDetails(this)),
 		};
@@ -148,4 +148,4 @@ class AccurateAccordion extends HTMLElement {
 	}
 }
 
-customElements.define('accurate-accordion', AccurateAccordion);
+customElements.define('palmer-accordion', PalmerAccordion);

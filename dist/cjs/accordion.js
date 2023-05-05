@@ -85,7 +85,7 @@ function toggleDetails(component, active) {
     }
   }
 }
-var AccurateAccordion = class extends HTMLElement {
+var PalmerAccordion = class extends HTMLElement {
   get multiple() {
     return this.getAttribute("multiple") !== "false";
   }
@@ -125,5 +125,5 @@ var AccurateAccordion = class extends HTMLElement {
     (_a = store.get(this)) == null ? void 0 : _a.observer.disconnect();
   }
 };
-__publicField(AccurateAccordion, "observedAttributes", ["max", "min", "value"]);
-customElements.define("accurate-accordion", AccurateAccordion);
+__publicField(PalmerAccordion, "observedAttributes", ["max", "min", "value"]);
+customElements.define("palmer-accordion", PalmerAccordion);

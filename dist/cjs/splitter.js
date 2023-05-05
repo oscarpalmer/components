@@ -19,13 +19,19 @@ function isNullOrWhitespace(value) {
 }
 
 // src/splitter.ts
+var selector = "palmer-splitter";
 var splitterTypes = ["horizontal", "vertical"];
+var store = /* @__PURE__ */ new WeakMap();
 var index = 0;
-function createSeparator(splitter) {
+function createSeparator(splitter, values) {
   var _a, _b;
+  let actualValues = values != null ? values : store.get(splitter);
+  if (actualValues == null) {
+    return null;
+  }
   const separator = document.createElement("div");
   if (isNullOrWhitespace(splitter.primary.id)) {
-    splitter.primary.id = `spiffy_splitter_primary_${++index}`;
+    splitter.primary.id = `palmer_splitter_primary_panel_${++index}`;
   }
   separator.setAttribute("aria-controls", splitter.primary.id);
   separator.role = "separator";
@@ -35,7 +41,7 @@ function createSeparator(splitter) {
     originalValue = "50";
   }
   const originalNumber = getNumber(originalValue);
-  splitter.values.original = typeof originalNumber === "number" ? originalNumber : 50;
+  actualValues.original = typeof originalNumber === "number" ? originalNumber : 50;
   const maximum = (_a = splitter.getAttribute("max")) != null ? _a : "";
   const minimum = (_b = splitter.getAttribute("min")) != null ? _b : "";
   if (maximum.length === 0) {
@@ -44,7 +50,7 @@ function createSeparator(splitter) {
   if (minimum.length === 0) {
     setAbsoluteValue(splitter, separator, "minimum", 0);
   }
-  setFlexValue(splitter, separator, splitter.values.original, false);
+  setFlexValue(splitter, separator, actualValues.original, false);
   separator.addEventListener("keydown", (event) => onKeydown(splitter, event), eventOptions.passive);
   return separator;
 }
@@ -54,6 +60,10 @@ function onKeydown(splitter, event) {
   }
   const ignored = splitter.type === "vertical" ? ["ArrowLeft", "ArrowRight"] : ["ArrowDown", "ArrowUp"];
   if (ignored.includes(event.key)) {
+    return;
+  }
+  const values = store.get(splitter);
+  if (values == null) {
     return;
   }
   let value;
@@ -66,82 +76,88 @@ function onKeydown(splitter, event) {
       break;
     case "End":
     case "Home":
-      value = event.key === "End" ? splitter.values.maximum : splitter.values.minimum;
+      value = event.key === "End" ? values.maximum : values.minimum;
       break;
     case "Escape":
-      value = splitter.values.original;
+      value = values.original;
       break;
     default:
       break;
   }
   setFlexValue(splitter, splitter.separator, value, true);
 }
-function setAbsoluteValue(splitter, separator, key, value) {
-  let actual = getNumber(value);
-  if (Number.isNaN(actual) || actual === splitter.values[key] || key === "maximum" && actual < splitter.values.minimum || key === "minimum" && actual > splitter.values.maximum) {
+function setAbsoluteValue(splitter, separator, key, value, values) {
+  let actualValues = values != null ? values : store.get(splitter);
+  let actualValue = getNumber(value);
+  if (actualValues == null || Number.isNaN(actualValue) || actualValue === actualValues[key] || key === "maximum" && actualValue < actualValues.minimum || key === "minimum" && actualValue > actualValues.maximum) {
     return;
   }
-  if (key === "maximum" && actual > 100) {
-    actual = 100;
-  } else if (key === "minimum" && actual < 0) {
-    actual = 0;
+  if (key === "maximum" && actualValue > 100) {
+    actualValue = 100;
+  } else if (key === "minimum" && actualValue < 0) {
+    actualValue = 0;
   }
-  splitter.values[key] = actual;
-  separator.setAttribute(key === "maximum" ? "aria-valuemax" : "aria-valuemin", actual);
-  if (key === "maximum" && actual < splitter.values.current || key === "minimum" && actual > splitter.values.current) {
-    setFlexValue(splitter, separator, actual, true);
+  actualValues[key] = actualValue;
+  separator.setAttribute(key === "maximum" ? "aria-valuemax" : "aria-valuemin", actualValue);
+  if (key === "maximum" && actualValue < actualValues.current || key === "minimum" && actualValue > actualValues.current) {
+    setFlexValue(splitter, separator, actualValues, true);
   }
 }
-function setFlexValue(splitter, separator, value, emit) {
-  let actual = getNumber(value);
-  if (Number.isNaN(actual) || actual === splitter.values.current) {
+function setFlexValue(splitter, separator, value, emit, values) {
+  let actualValues = values != null ? values : store.get(splitter);
+  let actualValue = getNumber(value);
+  if (actualValues == null || Number.isNaN(actualValue) || actualValue === actualValues.current) {
     return;
   }
-  if (actual < splitter.values.minimum) {
-    actual = splitter.values.minimum;
-  } else if (actual > splitter.values.maximum) {
-    actual = splitter.values.maximum;
+  if (actualValue < actualValues.minimum) {
+    actualValue = actualValues.minimum;
+  } else if (actualValue > actualValues.maximum) {
+    actualValue = actualValues.maximum;
   }
-  separator.ariaValueNow = actual;
-  splitter.primary.style.flex = `${actual / 100}`;
-  splitter.values.current = actual;
+  separator.ariaValueNow = actualValue;
+  splitter.primary.style.flex = `${actualValue / 100}`;
+  splitter.secondary.style.flex = `${(100 - actualValue) / 100}`;
+  actualValues.current = actualValue;
   if (emit) {
     splitter.dispatchEvent(new CustomEvent("change", {
       detail: {
-        value: actual
+        value: actualValue
       }
     }));
   }
 }
-var SpiffySplitter = class extends HTMLElement {
+var PalmerSplitter = class extends HTMLElement {
   constructor() {
     var _a;
     super();
     __publicField(this, "primary");
     __publicField(this, "secondary");
     __publicField(this, "separator");
-    __publicField(this, "values", {
+    if (this.children.length !== 2) {
+      throw new Error(`A <${selector}> must have exactly two direct children`);
+    }
+    const values = {
       current: -1,
       maximum: -1,
       minimum: -1,
       original: -1
-    });
-    if (this.children.length < 2) {
-      throw new Error("A <spffy-splitter> must have at least two direct children");
-    }
+    };
+    store.set(this, values);
     this.primary = this.children[0];
-    this.secondary = [...this.children].slice(1);
-    this.separator = createSeparator(this);
+    this.secondary = this.children[1];
+    this.separator = createSeparator(this, values);
     (_a = this.primary) == null ? void 0 : _a.insertAdjacentElement("afterend", this.separator);
   }
   get max() {
-    return this.values.maximum;
+    var _a;
+    return (_a = store.get(this)) == null ? void 0 : _a.maximum;
   }
   set max(max) {
     setAbsoluteValue(this, this.separator, "maximum", max);
   }
   get min() {
-    return this.values.minimum;
+    var _a;
+    return (_a = store.get(this)) == null ? void 0 : _a.minimum;
   }
   set min(min) {
     setAbsoluteValue(this, this.separator, "minimum", min);
@@ -157,7 +173,8 @@ var SpiffySplitter = class extends HTMLElement {
     }
   }
   get value() {
-    return this.values.current;
+    var _a;
+    return (_a = store.get(this)) == null ? void 0 : _a.current;
   }
   set value(value) {
     setFlexValue(this, this.separator, value, true);
@@ -176,5 +193,5 @@ var SpiffySplitter = class extends HTMLElement {
     }
   }
 };
-__publicField(SpiffySplitter, "observedAttributes", ["max", "min", "value"]);
-customElements.define("spiffy-splitter", SpiffySplitter);
+__publicField(PalmerSplitter, "observedAttributes", ["max", "min", "value"]);
+customElements.define(selector, PalmerSplitter);

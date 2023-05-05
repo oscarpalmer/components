@@ -9,10 +9,10 @@ type Callbacks = {
 	show: (event: Event) => void;
 };
 
-const attribute = 'toasty-tooltip';
+const selector = 'palmer-tooltip';
 
-const contentAttribute = `${attribute}-content`;
-const positionAttribute = `${attribute}-position`;
+const contentAttribute = `${selector}-content`;
+const positionAttribute = `${selector}-position`;
 
 const store = new WeakMap<HTMLElement, Tooltip>();
 
@@ -24,7 +24,7 @@ function observe(records: MutationRecord[]): void {
 
 		const element = record.target as HTMLElement;
 
-		if (element.getAttribute(attribute) == null) {
+		if (element.getAttribute(selector) == null) {
 			Tooltip.destroy(element);
 		} else {
 			Tooltip.create(element);
@@ -78,7 +78,7 @@ class Tooltip {
 			: document.getElementById(id);
 
 		if (element == null) {
-			throw new Error(`A '${attribute}'-attributed element must have a valid id reference in either the 'aria-describedby' or 'aria-labelledby'-attribute.`);
+			throw new Error(`A '${selector}'-attributed element must have a valid id reference in either the 'aria-describedby' or 'aria-labelledby'-attribute.`);
 		}
 
 		element.hidden = true;
@@ -163,7 +163,7 @@ class Tooltip {
 const observer = new MutationObserver(observe);
 
 observer.observe(document, {
-	attributeFilter: [attribute],
+	attributeFilter: [selector],
 	attributeOldValue: true,
 	attributes: true,
 	childList: true,
@@ -171,9 +171,9 @@ observer.observe(document, {
 });
 
 wait(() => {
-	const elements = Array.from(document.querySelectorAll(`[${attribute}]`));
+	const elements = Array.from(document.querySelectorAll(`[${selector}]`));
 
 	for (const element of elements) {
-		element.setAttribute(attribute, '');
+		element.setAttribute(selector, '');
 	}
 }, 0);

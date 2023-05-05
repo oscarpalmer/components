@@ -8,11 +8,13 @@ type Callbacks = {
 	keydown: (event: Event) => void;
 };
 
-const store = new WeakMap<PolitePopover, Callbacks>();
+const selector = 'palmer-popover';
+
+const store = new WeakMap<PalmerPopover, Callbacks>();
 
 let index = 0;
 
-function afterToggle(component: PolitePopover, active: boolean): void {
+function afterToggle(component: PalmerPopover, active: boolean): void {
 	handleCallbacks(component, active);
 
 	if (active && component.content) {
@@ -22,7 +24,7 @@ function afterToggle(component: PolitePopover, active: boolean): void {
 	}
 }
 
-function handleCallbacks(component: PolitePopover, add: boolean): void {
+function handleCallbacks(component: PalmerPopover, add: boolean): void {
 	const callbacks = store.get(component);
 
 	if (callbacks == null) {
@@ -37,14 +39,14 @@ function handleCallbacks(component: PolitePopover, add: boolean): void {
 	document[method]('keydown', callbacks.keydown, eventOptions.passive);
 }
 
-function handleGlobalEvent(event: Event, component: PolitePopover, target: HTMLElement): void {
+function handleGlobalEvent(event: Event, component: PalmerPopover, target: HTMLElement): void {
 	const {button, content} = component;
 
 	if (button == null || content == null) {
 		return;
 	}
 
-	const floater = findParent(target, '[polite-popover-content]');
+	const floater = findParent(target, `[${selector}-content]`);
 
 	if (floater == null) {
 		handleToggle(component, false);
@@ -62,7 +64,7 @@ function handleGlobalEvent(event: Event, component: PolitePopover, target: HTMLE
 	}
 }
 
-function handleToggle(component: PolitePopover, expand?: boolean | Event): void {
+function handleToggle(component: PalmerPopover, expand?: boolean | Event): void {
 	const expanded = typeof expand === 'boolean'
 		? !expand
 		: component.open;
@@ -99,11 +101,11 @@ function handleToggle(component: PolitePopover, expand?: boolean | Event): void 
 	component.dispatchEvent(new Event('toggle'));
 }
 
-function initialise(component: PolitePopover, button: HTMLButtonElement, content: HTMLElement): void {
+function initialise(component: PalmerPopover, button: HTMLButtonElement, content: HTMLElement): void {
 	content.hidden = true;
 
 	if (isNullOrWhitespace(component.id)) {
-		component.id = `polite_popover_${++index}`;
+		component.id = `palmer_popover_${++index}`;
 	}
 
 	if (isNullOrWhitespace(button.id)) {
@@ -148,23 +150,23 @@ function isButton(node: any): boolean {
 	return node instanceof HTMLElement && node.getAttribute('role') === 'button';
 }
 
-function onClick(this: PolitePopover, event: Event): void {
+function onClick(this: PalmerPopover, event: Event): void {
 	if (this.open) {
 		handleGlobalEvent(event, this, event.target as never);
 	}
 }
 
-function onKeydown(this: PolitePopover, event: Event): void {
+function onKeydown(this: PalmerPopover, event: Event): void {
 	if (this.open && (event instanceof KeyboardEvent) && event.key === 'Escape') {
 		handleGlobalEvent(event, this, document.activeElement as never);
 	}
 }
 
-function toggle(this: PolitePopover, expand?: boolean | Event): void {
+function toggle(this: PalmerPopover, expand?: boolean | Event): void {
 	handleToggle(this, expand);
 }
 
-class PolitePopover extends HTMLElement {
+class PalmerPopover extends HTMLElement {
 	readonly button!: HTMLElement;
 	readonly content!: HTMLElement;
 
@@ -181,15 +183,15 @@ class PolitePopover extends HTMLElement {
 	constructor() {
 		super();
 
-		const button = this.querySelector(':scope > [polite-popover-button]');
-		const content = this.querySelector(':scope > [polite-popover-content]');
+		const button = this.querySelector(`:scope > [${selector}-button]`);
+		const content = this.querySelector(`:scope > [${selector}-content]`);
 
 		if (!isButton(button)) {
-			throw new Error('<polite-popover> must have a <button>-element (or button-like element) with the attribute \'polite-popover-button\'');
+			throw new Error(`<${selector}> must have a <button>-element (or button-like element) with the attribute '${selector}-button`);
 		}
 
 		if (content == null || !(content instanceof HTMLElement)) {
-			throw new Error('<polite-popover> must have an element with the attribute \'polite-popover-content\'');
+			throw new Error(`<${selector}> must have an element with the attribute '${selector}-content'`);
 		}
 
 		this.button = button as never;
@@ -205,4 +207,4 @@ class PolitePopover extends HTMLElement {
 	}
 }
 
-customElements.define('polite-popover', PolitePopover);
+customElements.define(selector, PalmerPopover);
