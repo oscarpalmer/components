@@ -1,7 +1,21 @@
 import {eventOptions, getNumber, isNullOrWhitespace} from './helpers';
 
 type Absolute = 'maximum' | 'minimum';
+
+type Callbacks = {
+	keydown: (event: KeyboardEvent) => void;
+	mousemove: (event: MouseEvent) => void;
+	mouseup: () => void;
+};
+
+type Stored = {
+	callbacks: Callbacks;
+	dragging: boolean;
+	values: Values;
+};
+
 type Type = 'horizontal' | 'vertical';
+
 type ValueKey = 'current' | 'original' | Absolute;
 
 type Values = Record<ValueKey, number>;
@@ -10,12 +24,27 @@ const selector = 'palmer-splitter';
 
 const splitterTypes: Type[] = ['horizontal', 'vertical'];
 
-const store = new WeakMap<PalmerSplitter, Values>();
+const store = new WeakMap<PalmerSplitter, Stored>();
 
 let index = 0;
 
-function createSeparator(splitter: PalmerSplitter, values?: Values): HTMLElement {
-	let actualValues = values ?? store.get(splitter);
+function createHandle(component: PalmerSplitter, className: string): HTMLElement {
+	const handle = document.createElement('span');
+
+	handle.className = `${className}__separator__handle`;
+	handle.ariaHidden = 'true';
+
+	handle.textContent = component.type === 'horizontal'
+		? '↕'
+		: '↔';
+
+	handle.addEventListener('mousedown', () => onMousedown(component));
+
+	return handle as never;
+}
+
+function createSeparator(component: PalmerSplitter, values: Values, className: string): HTMLElement {
+	let actualValues = values ?? store.get(component)?.values;
 
 	if (actualValues == null) {
 		return null as never;
@@ -23,51 +52,66 @@ function createSeparator(splitter: PalmerSplitter, values?: Values): HTMLElement
 
 	const separator = document.createElement('div');
 
-	if (isNullOrWhitespace(splitter.primary.id)) {
-		splitter.primary.id = `palmer_splitter_primary_panel_${++index}`;
+	if (isNullOrWhitespace(component.primary.id)) {
+		component.primary.id = `palmer_splitter_primary_panel_${++index}`;
 	}
 
-	separator.setAttribute('aria-controls', splitter.primary.id);
-
+	separator.className = `${className}__separator`;
 	separator.role = 'separator';
 	separator.tabIndex = 0;
 
-	let originalValue = splitter.getAttribute('value');
+	separator.setAttribute('aria-controls', component.primary.id);
+	separator.setAttribute('aria-valuemax', '100');
+	separator.setAttribute('aria-valuemin', '0');
+	separator.setAttribute('aria-valuenow', '50');
 
-	if (isNullOrWhitespace(originalValue)) {
-		originalValue = '50';
+	let original = component.getAttribute('value');
+
+	if (isNullOrWhitespace(original)) {
+		setFlexValue(component, separator, 50);
 	}
 
-	const originalNumber = getNumber(originalValue);
+	separator.appendChild(component.handle);
 
-	actualValues.original = typeof originalNumber === 'number'
-		? originalNumber
-		: 50;
-
-	const maximum = splitter.getAttribute('max') ?? '';
-	const minimum = splitter.getAttribute('min') ?? '';
-
-	if (maximum.length === 0) {
-		setAbsoluteValue(splitter, separator, 'maximum', 100);
-	}
-
-	if (minimum.length === 0) {
-		setAbsoluteValue(splitter, separator, 'minimum', 0);
-	}
-
-	setFlexValue(splitter, separator, actualValues.original, false);
-
-	separator.addEventListener('keydown', event => onKeydown(splitter, event), eventOptions.passive);
+	separator.addEventListener('keydown', event => onSeparatorKeydown(component, event), eventOptions.passive);
 
 	return separator;
 }
 
-function onKeydown(splitter: PalmerSplitter, event: KeyboardEvent): void {
+function onDocumentKeydown(this: PalmerSplitter, event: KeyboardEvent): void {
+	if (event.key === 'Escape') {
+		setDragging(this, false);
+	}
+}
+
+function onMousedown(component: PalmerSplitter): void {
+	setDragging(component, true);
+}
+
+function onMousemove(this: PalmerSplitter, event: MouseEvent): void {
+	const componentRectangle = this.getBoundingClientRect();
+
+	let value: number | undefined = undefined;
+
+	if (this.type === 'horizontal') {
+		value = (event.clientY - componentRectangle.top) / componentRectangle.height;
+	} else {
+		value = (event.clientX - componentRectangle.left) / componentRectangle.width;
+	}
+
+	setFlexValue(this, this.separator, value * 100);
+}
+
+function onMouseup(this: PalmerSplitter): void {
+	setDragging(this, false);
+}
+
+function onSeparatorKeydown(component: PalmerSplitter, event: KeyboardEvent): void {
 	if (!['ArrowDown', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'End', 'Escape', 'Home'].includes(event.key)) {
 		return;
 	}
 
-	const ignored = splitter.type === 'vertical'
+	const ignored = component.type === 'horizontal'
 		? ['ArrowLeft', 'ArrowRight']
 		: ['ArrowDown', 'ArrowUp'];
 
@@ -75,7 +119,7 @@ function onKeydown(splitter: PalmerSplitter, event: KeyboardEvent): void {
 		return;
 	}
 
-	const values = store.get(splitter);
+	const values = store.get(component)?.values;
 
 	if (values == null) {
 		return;
@@ -88,7 +132,7 @@ function onKeydown(splitter: PalmerSplitter, event: KeyboardEvent): void {
 		case 'ArrowLeft':
 		case 'ArrowRight':
 		case 'ArrowUp':
-			value = splitter.value + (['ArrowLeft', 'ArrowUp'].includes(event.key) ? -1 : 1);
+			value = Math.round(component.value + (['ArrowLeft', 'ArrowUp'].includes(event.key) ? -1 : 1));
 			break;
 
 		case 'End':
@@ -105,11 +149,11 @@ function onKeydown(splitter: PalmerSplitter, event: KeyboardEvent): void {
 			break;
 	}
 
-	setFlexValue(splitter, splitter.separator, value, true);
+	setFlexValue(component, component.separator, value, values);
 }
 
-function setAbsoluteValue(splitter: PalmerSplitter, separator: HTMLElement, key: Absolute, value: any, values?: Values): void {
-	let actualValues = values ?? store.get(splitter);
+function setAbsoluteValue(component: PalmerSplitter, separator: HTMLElement, key: Absolute, value: any, setFlex: boolean, values?: Values): void {
+	let actualValues = values ?? store.get(component)?.values;
 	let actualValue = getNumber(value);
 
 	if (actualValues == null
@@ -130,14 +174,35 @@ function setAbsoluteValue(splitter: PalmerSplitter, separator: HTMLElement, key:
 
 	separator.setAttribute(key === 'maximum' ? 'aria-valuemax' : 'aria-valuemin', actualValue as never);
 
-	if ((key === 'maximum' && actualValue < actualValues.current)
-			|| (key === 'minimum' && actualValue > actualValues.current)) {
-		setFlexValue(splitter, separator, actualValues, true);
+	if (setFlex && ((key === 'maximum' && actualValue < actualValues.current)
+			|| (key === 'minimum' && actualValue > actualValues.current))) {
+		setFlexValue(component, separator, actualValue, actualValues);
 	}
 }
 
-function setFlexValue(splitter: PalmerSplitter, separator: HTMLElement, value: any, emit: boolean, values?: Values): void {
-	let actualValues = values ?? store.get(splitter);
+function setDragging(component: PalmerSplitter, active: boolean): void {
+	const stored = store.get(component);
+
+	if (stored == null) {
+		return;
+	}
+
+	const method = active
+		? 'addEventListener'
+		: 'removeEventListener';
+
+	document[method]('keydown', stored.callbacks.keydown as never, eventOptions.passive);
+	document[method]('mousemove', stored.callbacks.mousemove as never, eventOptions.passive);
+	document[method]('mouseup', stored.callbacks.mouseup, eventOptions.passive);
+
+	stored.dragging = active;
+
+	component.style.userSelect = active ? 'none' : 'auto';
+	component.style.webkitUserSelect = active ? 'none' : 'auto';
+}
+
+function setFlexValue(component: PalmerSplitter, separator: HTMLElement, value: any, values?: Values, setOriginal?: boolean): void {
+	let actualValues = values ?? store.get(component)?.values;
 	let actualValue = getNumber(value);
 
 	if (actualValues == null || Number.isNaN(actualValue) || actualValue === actualValues.current) {
@@ -150,65 +215,66 @@ function setFlexValue(splitter: PalmerSplitter, separator: HTMLElement, value: a
 		actualValue = actualValues.maximum;
 	}
 
+	if (setOriginal ?? false) {
+		actualValues.original = actualValue;
+	}
+
 	separator.ariaValueNow = actualValue as never;
 
-	splitter.primary.style.flex = `${actualValue / 100}`;
-	splitter.secondary.style.flex = `${(100 - actualValue) / 100}`;
+	component.primary.style.flex = `${actualValue / 100}`;
+	component.secondary.style.flex = `${(100 - actualValue) / 100}`;
 
 	actualValues.current = actualValue;
 
-	if (emit) {
-		splitter.dispatchEvent(new CustomEvent('change', {
-			detail: {
-				value: actualValue,
-			},
-		}));
-	}
+	component.dispatchEvent(new CustomEvent('change', {
+		detail: {
+			value: actualValue,
+		},
+	}));
 }
 
 class PalmerSplitter extends HTMLElement {
 	static observedAttributes = ['max', 'min', 'value'];
 
+	readonly handle: HTMLElement;
 	readonly primary: HTMLElement;
 	readonly secondary: HTMLElement;
 	readonly separator: HTMLElement;
 
 	get max(): number {
-		return store.get(this)?.maximum as never;
+		return store.get(this)?.values.maximum as never;
 	}
 
 	set max(max: number) {
-		setAbsoluteValue(this, this.separator, 'maximum', max);
+		this.setAttribute('max', max as never);
 	}
 
 	get min(): number {
-		return store.get(this)?.minimum as never;
+		return store.get(this)?.values.minimum as never;
 	}
 
 	set min(min: number) {
-		setAbsoluteValue(this, this.separator, 'minimum', min);
+		this.setAttribute('min', min as never);
 	}
 
 	get type(): Type {
-		const type = this.getAttribute('type') ?? 'horizontal';
+		const type = this.getAttribute('type') ?? 'vertical';
 
 		return (splitterTypes.includes(type as never)
 			? type
-			: 'horizontal') as never;
+			: 'vertical') as never;
 	}
 
 	set type(type: Type) {
-		if (splitterTypes.includes(type)) {
-			this.setAttribute('type', type);
-		}
+		this.setAttribute('type', type);
 	}
 
 	get value(): number {
-		return store.get(this)?.current as never;
+		return store.get(this)?.values.current as never;
 	}
 
 	set value(value: number) {
-		setFlexValue(this, this.separator, value, true);
+		this.setAttribute('value', value as never);
 	}
 
 	constructor() {
@@ -218,19 +284,34 @@ class PalmerSplitter extends HTMLElement {
 			throw new Error(`A <${selector}> must have exactly two direct children`);
 		}
 
-		const values: Values = {
-			current: -1,
-			maximum: -1,
-			minimum: -1,
-			original: -1,
+		const stored: Stored = {
+			callbacks: {
+				keydown: onDocumentKeydown.bind(this),
+				mousemove: onMousemove.bind(this),
+				mouseup: onMouseup.bind(this),
+			},
+			dragging: false,
+			values: {
+				current: -1,
+				maximum: 100,
+				minimum: 0,
+				original: 50,
+			},
 		};
 
-		store.set(this, values);
+		store.set(this, stored);
 
 		this.primary = this.children[0] as never;
 		this.secondary = this.children[1] as never;
 
-		this.separator = createSeparator(this, values);
+		let className = this.getAttribute('className');
+
+		if (isNullOrWhitespace(className)) {
+			className = selector;
+		}
+
+		this.handle = createHandle(this, className as never);
+		this.separator = createSeparator(this, stored.values, className as never);
 
 		this.primary?.insertAdjacentElement('afterend', this.separator);
 	}
@@ -239,10 +320,10 @@ class PalmerSplitter extends HTMLElement {
 		switch (name) {
 			case 'max':
 			case 'min':
-				setAbsoluteValue(this, this.separator, name === 'max' ? 'maximum' : 'minimum', value);
+				setAbsoluteValue(this, this.separator, name === 'max' ? 'maximum' : 'minimum', value, true);
 				break;
 			case 'value':
-				setFlexValue(this, this.separator, value, true);
+				setFlexValue(this, this.separator, value, undefined, true);
 				break;
 			default:
 				break;

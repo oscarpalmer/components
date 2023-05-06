@@ -22,45 +22,68 @@ var selector = "palmer-splitter";
 var splitterTypes = ["horizontal", "vertical"];
 var store = /* @__PURE__ */ new WeakMap();
 var index = 0;
-function createSeparator(splitter, values) {
-  let actualValues = values ?? store.get(splitter);
+function createHandle(component, className) {
+  const handle = document.createElement("span");
+  handle.className = `${className}__separator__handle`;
+  handle.ariaHidden = "true";
+  handle.textContent = component.type === "horizontal" ? "\u2195" : "\u2194";
+  handle.addEventListener("mousedown", () => onMousedown(component));
+  return handle;
+}
+function createSeparator(component, values, className) {
+  let actualValues = values ?? store.get(component)?.values;
   if (actualValues == null) {
     return null;
   }
   const separator = document.createElement("div");
-  if (isNullOrWhitespace(splitter.primary.id)) {
-    splitter.primary.id = `palmer_splitter_primary_panel_${++index}`;
+  if (isNullOrWhitespace(component.primary.id)) {
+    component.primary.id = `palmer_splitter_primary_panel_${++index}`;
   }
-  separator.setAttribute("aria-controls", splitter.primary.id);
+  separator.className = `${className}__separator`;
   separator.role = "separator";
   separator.tabIndex = 0;
-  let originalValue = splitter.getAttribute("value");
-  if (isNullOrWhitespace(originalValue)) {
-    originalValue = "50";
+  separator.setAttribute("aria-controls", component.primary.id);
+  separator.setAttribute("aria-valuemax", "100");
+  separator.setAttribute("aria-valuemin", "0");
+  separator.setAttribute("aria-valuenow", "50");
+  let original = component.getAttribute("value");
+  if (isNullOrWhitespace(original)) {
+    setFlexValue(component, separator, 50);
   }
-  const originalNumber = getNumber(originalValue);
-  actualValues.original = typeof originalNumber === "number" ? originalNumber : 50;
-  const maximum = splitter.getAttribute("max") ?? "";
-  const minimum = splitter.getAttribute("min") ?? "";
-  if (maximum.length === 0) {
-    setAbsoluteValue(splitter, separator, "maximum", 100);
-  }
-  if (minimum.length === 0) {
-    setAbsoluteValue(splitter, separator, "minimum", 0);
-  }
-  setFlexValue(splitter, separator, actualValues.original, false);
-  separator.addEventListener("keydown", (event) => onKeydown(splitter, event), eventOptions.passive);
+  separator.appendChild(component.handle);
+  separator.addEventListener("keydown", (event) => onSeparatorKeydown(component, event), eventOptions.passive);
   return separator;
 }
-function onKeydown(splitter, event) {
+function onDocumentKeydown(event) {
+  if (event.key === "Escape") {
+    setDragging(this, false);
+  }
+}
+function onMousedown(component) {
+  setDragging(component, true);
+}
+function onMousemove(event) {
+  const componentRectangle = this.getBoundingClientRect();
+  let value = void 0;
+  if (this.type === "horizontal") {
+    value = (event.clientY - componentRectangle.top) / componentRectangle.height;
+  } else {
+    value = (event.clientX - componentRectangle.left) / componentRectangle.width;
+  }
+  setFlexValue(this, this.separator, value * 100);
+}
+function onMouseup() {
+  setDragging(this, false);
+}
+function onSeparatorKeydown(component, event) {
   if (!["ArrowDown", "ArrowLeft", "ArrowRight", "ArrowUp", "End", "Escape", "Home"].includes(event.key)) {
     return;
   }
-  const ignored = splitter.type === "vertical" ? ["ArrowLeft", "ArrowRight"] : ["ArrowDown", "ArrowUp"];
+  const ignored = component.type === "horizontal" ? ["ArrowLeft", "ArrowRight"] : ["ArrowDown", "ArrowUp"];
   if (ignored.includes(event.key)) {
     return;
   }
-  const values = store.get(splitter);
+  const values = store.get(component)?.values;
   if (values == null) {
     return;
   }
@@ -70,7 +93,7 @@ function onKeydown(splitter, event) {
     case "ArrowLeft":
     case "ArrowRight":
     case "ArrowUp":
-      value = splitter.value + (["ArrowLeft", "ArrowUp"].includes(event.key) ? -1 : 1);
+      value = Math.round(component.value + (["ArrowLeft", "ArrowUp"].includes(event.key) ? -1 : 1));
       break;
     case "End":
     case "Home":
@@ -82,10 +105,10 @@ function onKeydown(splitter, event) {
     default:
       break;
   }
-  setFlexValue(splitter, splitter.separator, value, true);
+  setFlexValue(component, component.separator, value, values);
 }
-function setAbsoluteValue(splitter, separator, key, value, values) {
-  let actualValues = values ?? store.get(splitter);
+function setAbsoluteValue(component, separator, key, value, setFlex, values) {
+  let actualValues = values ?? store.get(component)?.values;
   let actualValue = getNumber(value);
   if (actualValues == null || Number.isNaN(actualValue) || actualValue === actualValues[key] || key === "maximum" && actualValue < actualValues.minimum || key === "minimum" && actualValue > actualValues.maximum) {
     return;
@@ -97,12 +120,25 @@ function setAbsoluteValue(splitter, separator, key, value, values) {
   }
   actualValues[key] = actualValue;
   separator.setAttribute(key === "maximum" ? "aria-valuemax" : "aria-valuemin", actualValue);
-  if (key === "maximum" && actualValue < actualValues.current || key === "minimum" && actualValue > actualValues.current) {
-    setFlexValue(splitter, separator, actualValues, true);
+  if (setFlex && (key === "maximum" && actualValue < actualValues.current || key === "minimum" && actualValue > actualValues.current)) {
+    setFlexValue(component, separator, actualValue, actualValues);
   }
 }
-function setFlexValue(splitter, separator, value, emit, values) {
-  let actualValues = values ?? store.get(splitter);
+function setDragging(component, active) {
+  const stored = store.get(component);
+  if (stored == null) {
+    return;
+  }
+  const method = active ? "addEventListener" : "removeEventListener";
+  document[method]("keydown", stored.callbacks.keydown, eventOptions.passive);
+  document[method]("mousemove", stored.callbacks.mousemove, eventOptions.passive);
+  document[method]("mouseup", stored.callbacks.mouseup, eventOptions.passive);
+  stored.dragging = active;
+  component.style.userSelect = active ? "none" : "auto";
+  component.style.webkitUserSelect = active ? "none" : "auto";
+}
+function setFlexValue(component, separator, value, values, setOriginal) {
+  let actualValues = values ?? store.get(component)?.values;
   let actualValue = getNumber(value);
   if (actualValues == null || Number.isNaN(actualValue) || actualValue === actualValues.current) {
     return;
@@ -112,74 +148,87 @@ function setFlexValue(splitter, separator, value, emit, values) {
   } else if (actualValue > actualValues.maximum) {
     actualValue = actualValues.maximum;
   }
-  separator.ariaValueNow = actualValue;
-  splitter.primary.style.flex = `${actualValue / 100}`;
-  splitter.secondary.style.flex = `${(100 - actualValue) / 100}`;
-  actualValues.current = actualValue;
-  if (emit) {
-    splitter.dispatchEvent(new CustomEvent("change", {
-      detail: {
-        value: actualValue
-      }
-    }));
+  if (setOriginal ?? false) {
+    actualValues.original = actualValue;
   }
+  separator.ariaValueNow = actualValue;
+  component.primary.style.flex = `${actualValue / 100}`;
+  component.secondary.style.flex = `${(100 - actualValue) / 100}`;
+  actualValues.current = actualValue;
+  component.dispatchEvent(new CustomEvent("change", {
+    detail: {
+      value: actualValue
+    }
+  }));
 }
 var PalmerSplitter = class extends HTMLElement {
+  handle;
   primary;
   secondary;
   separator;
   get max() {
-    return store.get(this)?.maximum;
+    return store.get(this)?.values.maximum;
   }
   set max(max) {
-    setAbsoluteValue(this, this.separator, "maximum", max);
+    this.setAttribute("max", max);
   }
   get min() {
-    return store.get(this)?.minimum;
+    return store.get(this)?.values.minimum;
   }
   set min(min) {
-    setAbsoluteValue(this, this.separator, "minimum", min);
+    this.setAttribute("min", min);
   }
   get type() {
-    const type = this.getAttribute("type") ?? "horizontal";
-    return splitterTypes.includes(type) ? type : "horizontal";
+    const type = this.getAttribute("type") ?? "vertical";
+    return splitterTypes.includes(type) ? type : "vertical";
   }
   set type(type) {
-    if (splitterTypes.includes(type)) {
-      this.setAttribute("type", type);
-    }
+    this.setAttribute("type", type);
   }
   get value() {
-    return store.get(this)?.current;
+    return store.get(this)?.values.current;
   }
   set value(value) {
-    setFlexValue(this, this.separator, value, true);
+    this.setAttribute("value", value);
   }
   constructor() {
     super();
     if (this.children.length !== 2) {
       throw new Error(`A <${selector}> must have exactly two direct children`);
     }
-    const values = {
-      current: -1,
-      maximum: -1,
-      minimum: -1,
-      original: -1
+    const stored = {
+      callbacks: {
+        keydown: onDocumentKeydown.bind(this),
+        mousemove: onMousemove.bind(this),
+        mouseup: onMouseup.bind(this)
+      },
+      dragging: false,
+      values: {
+        current: -1,
+        maximum: 100,
+        minimum: 0,
+        original: 50
+      }
     };
-    store.set(this, values);
+    store.set(this, stored);
     this.primary = this.children[0];
     this.secondary = this.children[1];
-    this.separator = createSeparator(this, values);
+    let className = this.getAttribute("className");
+    if (isNullOrWhitespace(className)) {
+      className = selector;
+    }
+    this.handle = createHandle(this, className);
+    this.separator = createSeparator(this, stored.values, className);
     this.primary?.insertAdjacentElement("afterend", this.separator);
   }
   attributeChangedCallback(name, _, value) {
     switch (name) {
       case "max":
       case "min":
-        setAbsoluteValue(this, this.separator, name === "max" ? "maximum" : "minimum", value);
+        setAbsoluteValue(this, this.separator, name === "max" ? "maximum" : "minimum", value, true);
         break;
       case "value":
-        setFlexValue(this, this.separator, value, true);
+        setFlexValue(this, this.separator, value, void 0, true);
         break;
       default:
         break;
