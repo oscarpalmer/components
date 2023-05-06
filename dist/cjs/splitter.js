@@ -11,6 +11,32 @@ var eventOptions = {
   active: { capture: false, passive: false },
   passive: { capture: false, passive: true }
 };
+var isTouchy = (() => {
+  var _a;
+  try {
+    if ("matchMedia" in window) {
+      const media = matchMedia("(pointer: coarse)");
+      if (media != null && typeof media.matches === "boolean") {
+        return media.matches;
+      }
+    }
+    return "ontouchstart" in window || navigator.maxTouchPoints > 0 || ((_a = navigator == null ? void 0 : navigator.msMaxTouchPoints) != null ? _a : 0) > 0;
+  } catch (_) {
+    return false;
+  }
+})();
+function getCoordinates(event) {
+  var _a, _b;
+  if (event instanceof MouseEvent) {
+    return {
+      x: event.clientX,
+      y: event.clientY
+    };
+  }
+  const x = (_a = event.touches[0]) == null ? void 0 : _a.clientX;
+  const y = (_b = event.touches[0]) == null ? void 0 : _b.clientY;
+  return x == null || y == null ? void 0 : { x, y };
+}
 function getNumber(value) {
   return typeof value === "number" ? value : Number.parseInt(typeof value === "string" ? value : String(value), 10);
 }
@@ -19,6 +45,9 @@ function isNullOrWhitespace(value) {
 }
 
 // src/splitter.ts
+var pointerBeginEvent = isTouchy ? "touchstart" : "mousedown";
+var pointerEndEvent = isTouchy ? "touchend" : "mouseup";
+var pointerMoveEvent = isTouchy ? "touchmove" : "mousemove";
 var selector = "palmer-splitter";
 var splitterTypes = ["horizontal", "vertical"];
 var store = /* @__PURE__ */ new WeakMap();
@@ -28,7 +57,7 @@ function createHandle(component, className) {
   handle.className = `${className}__separator__handle`;
   handle.ariaHidden = "true";
   handle.textContent = component.type === "horizontal" ? "\u2195" : "\u2194";
-  handle.addEventListener("mousedown", () => onMousedown(component));
+  handle.addEventListener(pointerBeginEvent, () => onPointerBegin(component));
   return handle;
 }
 function createSeparator(component, values, className) {
@@ -61,24 +90,28 @@ function onDocumentKeydown(event) {
     setDragging(this, false);
   }
 }
-function onMousedown(component) {
+function onPointerBegin(component) {
   setDragging(component, true);
 }
-function onMousemove(event) {
+function onPointerEnd() {
+  setDragging(this, false);
+}
+function onPointerMove(event) {
+  const coordinates = getCoordinates(event);
+  if (coordinates == null) {
+    return;
+  }
   const componentRectangle = this.getBoundingClientRect();
   let value = void 0;
   if (this.type === "horizontal") {
-    value = (event.clientY - componentRectangle.top) / componentRectangle.height;
+    value = (coordinates.y - componentRectangle.top) / componentRectangle.height;
   } else {
-    value = (event.clientX - componentRectangle.left) / componentRectangle.width;
+    value = (coordinates.x - componentRectangle.left) / componentRectangle.width;
   }
   setFlexValue(this, this.separator, value * 100);
 }
-function onMouseup() {
-  setDragging(this, false);
-}
 function onSeparatorKeydown(component, event) {
-  var _a;
+  var _a, _b;
   if (!["ArrowDown", "ArrowLeft", "ArrowRight", "ArrowUp", "End", "Escape", "Home"].includes(event.key)) {
     return;
   }
@@ -103,7 +136,8 @@ function onSeparatorKeydown(component, event) {
       value = event.key === "End" ? values.maximum : values.minimum;
       break;
     case "Escape":
-      value = values.original;
+      value = (_b = values.initial) != null ? _b : values.original;
+      values.initial = void 0;
       break;
     default:
       break;
@@ -133,13 +167,14 @@ function setDragging(component, active) {
   if (stored == null) {
     return;
   }
+  if (active) {
+    stored.values.initial = Number(stored.values.current);
+  }
   const method = active ? "addEventListener" : "removeEventListener";
   document[method]("keydown", stored.callbacks.keydown, eventOptions.passive);
-  document[method]("mousemove", stored.callbacks.mousemove, eventOptions.passive);
-  document[method]("mouseup", stored.callbacks.mouseup, eventOptions.passive);
+  document[method](pointerEndEvent, stored.callbacks.pointerEnd, eventOptions.passive);
+  document[method](pointerMoveEvent, stored.callbacks.pointerMove, eventOptions.passive);
   stored.dragging = active;
-  component.style.userSelect = active ? "none" : "auto";
-  component.style.webkitUserSelect = active ? "none" : "auto";
 }
 function setFlexValue(component, separator, value, values, setOriginal) {
   var _a;
@@ -180,8 +215,8 @@ var PalmerSplitter = class extends HTMLElement {
     const stored = {
       callbacks: {
         keydown: onDocumentKeydown.bind(this),
-        mousemove: onMousemove.bind(this),
-        mouseup: onMouseup.bind(this)
+        pointerEnd: onPointerEnd.bind(this),
+        pointerMove: onPointerMove.bind(this)
       },
       dragging: false,
       values: {

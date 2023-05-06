@@ -10,6 +10,19 @@ var eventOptions = {
   active: { capture: false, passive: false },
   passive: { capture: false, passive: true }
 };
+var isTouchy = (() => {
+  try {
+    if ("matchMedia" in window) {
+      const media = matchMedia("(pointer: coarse)");
+      if (media != null && typeof media.matches === "boolean") {
+        return media.matches;
+      }
+    }
+    return "ontouchstart" in window || navigator.maxTouchPoints > 0 || (navigator?.msMaxTouchPoints ?? 0) > 0;
+  } catch (_) {
+    return false;
+  }
+})();
 
 // src/accordion.ts
 var keys = ["ArrowDown", "ArrowLeft", "ArrowRight", "ArrowUp", "End", "Home"];

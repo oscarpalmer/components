@@ -1,11 +1,11 @@
-import {eventOptions, getNumber, isNullOrWhitespace} from './helpers';
+import {eventOptions, isTouchy, getCoordinates, getNumber, isNullOrWhitespace} from './helpers';
 
 type Absolute = 'maximum' | 'minimum';
 
 type Callbacks = {
 	keydown: (event: KeyboardEvent) => void;
-	mousemove: (event: MouseEvent) => void;
-	mouseup: () => void;
+	pointerEnd: () => void;
+	pointerMove: (event: MouseEvent | TouchEvent) => void;
 };
 
 type Stored = {
@@ -18,7 +18,13 @@ type Type = 'horizontal' | 'vertical';
 
 type ValueKey = 'current' | 'original' | Absolute;
 
-type Values = Record<ValueKey, number>;
+type Values = Record<ValueKey, number> & {
+	initial?: number;
+};
+
+const pointerBeginEvent = isTouchy ? 'touchstart' : 'mousedown';
+const pointerEndEvent = isTouchy ? 'touchend' : 'mouseup';
+const pointerMoveEvent = isTouchy ? 'touchmove' : 'mousemove';
 
 const selector = 'palmer-splitter';
 
@@ -38,7 +44,7 @@ function createHandle(component: PalmerSplitter, className: string): HTMLElement
 		? '↕'
 		: '↔';
 
-	handle.addEventListener('mousedown', () => onMousedown(component));
+	handle.addEventListener(pointerBeginEvent, () => onPointerBegin(component));
 
 	return handle as never;
 }
@@ -84,26 +90,32 @@ function onDocumentKeydown(this: PalmerSplitter, event: KeyboardEvent): void {
 	}
 }
 
-function onMousedown(component: PalmerSplitter): void {
+function onPointerBegin(component: PalmerSplitter): void {
 	setDragging(component, true);
 }
 
-function onMousemove(this: PalmerSplitter, event: MouseEvent): void {
+function onPointerEnd(this: PalmerSplitter): void {
+	setDragging(this, false);
+}
+
+function onPointerMove(this: PalmerSplitter, event: MouseEvent | TouchEvent): void {
+	const coordinates = getCoordinates(event);
+
+	if (coordinates == null) {
+		return;
+	}
+
 	const componentRectangle = this.getBoundingClientRect();
 
 	let value: number | undefined = undefined;
 
 	if (this.type === 'horizontal') {
-		value = (event.clientY - componentRectangle.top) / componentRectangle.height;
+		value = (coordinates.y - componentRectangle.top) / componentRectangle.height;
 	} else {
-		value = (event.clientX - componentRectangle.left) / componentRectangle.width;
+		value = (coordinates.x - componentRectangle.left) / componentRectangle.width;
 	}
 
 	setFlexValue(this, this.separator, value * 100);
-}
-
-function onMouseup(this: PalmerSplitter): void {
-	setDragging(this, false);
 }
 
 function onSeparatorKeydown(component: PalmerSplitter, event: KeyboardEvent): void {
@@ -143,7 +155,8 @@ function onSeparatorKeydown(component: PalmerSplitter, event: KeyboardEvent): vo
 			break;
 
 		case 'Escape':
-			value = values.original;
+			value = values.initial ?? values.original;
+			values.initial = undefined;
 			break;
 		default:
 			break;
@@ -187,18 +200,21 @@ function setDragging(component: PalmerSplitter, active: boolean): void {
 		return;
 	}
 
+	if (active) {
+		stored.values.initial = Number(stored.values.current);
+	}
+
 	const method = active
 		? 'addEventListener'
 		: 'removeEventListener';
 
 	document[method]('keydown', stored.callbacks.keydown as never, eventOptions.passive);
-	document[method]('mousemove', stored.callbacks.mousemove as never, eventOptions.passive);
-	document[method]('mouseup', stored.callbacks.mouseup, eventOptions.passive);
+	document[method](pointerEndEvent, stored.callbacks.pointerEnd, eventOptions.passive);
+	document[method](pointerMoveEvent, stored.callbacks.pointerMove as never, eventOptions.passive);
 
 	stored.dragging = active;
 
-	component.style.userSelect = active ? 'none' : 'auto';
-	component.style.webkitUserSelect = active ? 'none' : 'auto';
+	// TODO: class or styling for preventing scrolling, selection, etc.
 }
 
 function setFlexValue(component: PalmerSplitter, separator: HTMLElement, value: any, values?: Values, setOriginal?: boolean): void {
@@ -287,8 +303,8 @@ class PalmerSplitter extends HTMLElement {
 		const stored: Stored = {
 			callbacks: {
 				keydown: onDocumentKeydown.bind(this),
-				mousemove: onMousemove.bind(this),
-				mouseup: onMouseup.bind(this),
+				pointerEnd: onPointerEnd.bind(this),
+				pointerMove: onPointerMove.bind(this),
 			},
 			dragging: false,
 			values: {

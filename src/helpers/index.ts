@@ -3,6 +3,24 @@ export const eventOptions = {
 	passive: {capture: false, passive: true},
 };
 
+export const isTouchy = (() => {
+	try {
+		if ('matchMedia' in window) {
+			const media = matchMedia('(pointer: coarse)');
+
+			if (media != null && typeof media.matches === 'boolean') {
+				return media.matches;
+			}
+		}
+
+		return ('ontouchstart' in window)
+			|| navigator.maxTouchPoints > 0
+			|| ((navigator as any)?.msMaxTouchPoints ?? 0) > 0;
+	} catch (_: unknown) {
+		return false;
+	}
+})();
+
 export function findParent(element: HTMLElement, match: string | ((element: HTMLElement) => boolean)): HTMLElement | undefined {
 	const matchIsSelector = typeof match === 'string';
 
@@ -25,6 +43,22 @@ export function findParent(element: HTMLElement, match: string | ((element: HTML
 	}
 
 	return parent ?? undefined;
+}
+
+export function getCoordinates(event: MouseEvent | TouchEvent): {x: number; y: number} | undefined {
+	if (event instanceof MouseEvent) {
+		return {
+			x: event.clientX,
+			y: event.clientY,
+		};
+	}
+
+	const x = event.touches[0]?.clientX;
+	const y = event.touches[0]?.clientY;
+
+	return x == null || y == null
+		? undefined
+		: {x,y};
 }
 
 export function getFocusableElements(context: HTMLElement): HTMLElement[] {
