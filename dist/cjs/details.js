@@ -8,11 +8,10 @@ var __publicField = (obj, key, value) => {
 
 // node_modules/@oscarpalmer/timer/dist/timer.js
 var milliseconds = Math.round(1e3 / 60);
-var request = requestAnimationFrame != null ? requestAnimationFrame : function(callback) {
-  var _a;
-  return (_a = setTimeout == null ? void 0 : setTimeout(() => {
+var request = requestAnimationFrame ?? function(callback) {
+  return setTimeout?.(() => {
     callback(Date.now());
-  }, milliseconds)) != null ? _a : -1;
+  }, milliseconds) ?? -1;
 };
 var Timed = class {
   constructor(callback, time, count, afterCallback) {
@@ -64,7 +63,7 @@ var Timed = class {
       if (!timed.state.active) {
         return;
       }
-      start != null ? start : start = timestamp;
+      start ?? (start = timestamp);
       const elapsed = timestamp - start;
       const elapsedMinimum = elapsed - milliseconds;
       const elapsedMaximum = elapsed + milliseconds;
@@ -106,13 +105,12 @@ var Timed = class {
    * Stop timer
    */
   stop() {
-    var _a, _b, _c;
     this.state.active = false;
     if (typeof this.state.frame === "undefined") {
       return this;
     }
-    (_a = cancelAnimationFrame != null ? cancelAnimationFrame : clearTimeout) == null ? void 0 : _a(this.state.frame);
-    (_c = (_b = this.callbacks).after) == null ? void 0 : _c.call(_b, this.finished);
+    (cancelAnimationFrame ?? clearTimeout)?.(this.state.frame);
+    this.callbacks.after?.(this.finished);
     this.state.frame = void 0;
     return this;
   }
@@ -134,7 +132,6 @@ var eventOptions = {
   passive: { capture: false, passive: true }
 };
 var isTouchy = (() => {
-  var _a;
   try {
     if ("matchMedia" in window) {
       const media = matchMedia("(pointer: coarse)");
@@ -142,7 +139,7 @@ var isTouchy = (() => {
         return media.matches;
       }
     }
-    return "ontouchstart" in window || navigator.maxTouchPoints > 0 || ((_a = navigator == null ? void 0 : navigator.msMaxTouchPoints) != null ? _a : 0) > 0;
+    return "ontouchstart" in window || navigator.maxTouchPoints > 0 || (navigator?.msMaxTouchPoints ?? 0) > 0;
   } catch (_) {
     return false;
   }
@@ -172,9 +169,8 @@ var PalmerDetails = class {
     __publicField(this, "callbacks");
     __publicField(this, "details");
     __publicField(this, "summary");
-    var _a;
     this.details = element;
-    this.summary = (_a = element.querySelector(":scope > summary")) != null ? _a : void 0;
+    this.summary = element.querySelector(":scope > summary") ?? void 0;
     this.callbacks = {
       onKeydown: this.onKeydown.bind(this),
       onToggle: this.onToggle.bind(this)
@@ -190,14 +186,10 @@ var PalmerDetails = class {
       return;
     }
     this.details.open = false;
-    wait(() => {
-      var _a;
-      return (_a = this.summary) == null ? void 0 : _a.focus();
-    }, 0);
+    wait(() => this.summary?.focus(), 0);
   }
   onToggle() {
-    var _a;
-    (_a = document[this.details.open ? "addEventListener" : "removeEventListener"]) == null ? void 0 : _a.call(document, "keydown", this.callbacks.onKeydown, eventOptions.passive);
+    document[this.details.open ? "addEventListener" : "removeEventListener"]?.("keydown", this.callbacks.onKeydown, eventOptions.passive);
   }
   static create(element) {
     if (!store.has(element)) {

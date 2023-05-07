@@ -8,11 +8,10 @@ var __publicField = (obj, key, value) => {
 
 // node_modules/@oscarpalmer/timer/dist/timer.js
 var milliseconds = Math.round(1e3 / 60);
-var request = requestAnimationFrame != null ? requestAnimationFrame : function(callback) {
-  var _a;
-  return (_a = setTimeout == null ? void 0 : setTimeout(() => {
+var request = requestAnimationFrame ?? function(callback) {
+  return setTimeout?.(() => {
     callback(Date.now());
-  }, milliseconds)) != null ? _a : -1;
+  }, milliseconds) ?? -1;
 };
 var Timed = class {
   constructor(callback, time, count, afterCallback) {
@@ -64,7 +63,7 @@ var Timed = class {
       if (!timed.state.active) {
         return;
       }
-      start != null ? start : start = timestamp;
+      start ?? (start = timestamp);
       const elapsed = timestamp - start;
       const elapsedMinimum = elapsed - milliseconds;
       const elapsedMaximum = elapsed + milliseconds;
@@ -106,13 +105,12 @@ var Timed = class {
    * Stop timer
    */
   stop() {
-    var _a, _b, _c;
     this.state.active = false;
     if (typeof this.state.frame === "undefined") {
       return this;
     }
-    (_a = cancelAnimationFrame != null ? cancelAnimationFrame : clearTimeout) == null ? void 0 : _a(this.state.frame);
-    (_c = (_b = this.callbacks).after) == null ? void 0 : _c.call(_b, this.finished);
+    (cancelAnimationFrame ?? clearTimeout)?.(this.state.frame);
+    this.callbacks.after?.(this.finished);
     this.state.frame = void 0;
     return this;
   }
@@ -137,7 +135,6 @@ var eventOptions = {
   passive: { capture: false, passive: true }
 };
 var isTouchy = (() => {
-  var _a;
   try {
     if ("matchMedia" in window) {
       const media = matchMedia("(pointer: coarse)");
@@ -145,7 +142,7 @@ var isTouchy = (() => {
         return media.matches;
       }
     }
-    return "ontouchstart" in window || navigator.maxTouchPoints > 0 || ((_a = navigator == null ? void 0 : navigator.msMaxTouchPoints) != null ? _a : 0) > 0;
+    return "ontouchstart" in window || navigator.maxTouchPoints > 0 || (navigator?.msMaxTouchPoints ?? 0) > 0;
   } catch (_) {
     return false;
   }
@@ -155,7 +152,7 @@ function findParent(element, match) {
   if (matchIsSelector ? element.matches(match) : match(element)) {
     return element;
   }
-  let parent = element == null ? void 0 : element.parentElement;
+  let parent = element?.parentElement;
   while (parent != null) {
     if (parent === document.body) {
       return;
@@ -165,7 +162,7 @@ function findParent(element, match) {
     }
     parent = parent.parentElement;
   }
-  return parent != null ? parent : void 0;
+  return parent ?? void 0;
 }
 function getFocusableSelector() {
   const context = globalThis;
@@ -190,7 +187,7 @@ function getFocusableSelector() {
   return context.focusableSelector;
 }
 function getTextDirection(element) {
-  const { direction } = getComputedStyle == null ? void 0 : getComputedStyle(element);
+  const { direction } = getComputedStyle?.(element);
   return direction === "rtl" ? "rtl" : "ltr";
 }
 
@@ -281,13 +278,12 @@ function getLeft(rectangles, position, rightToLeft) {
   }
 }
 function getOriginalPosition(currentPosition, defaultPosition) {
-  var _a;
   if (currentPosition == null) {
     return defaultPosition;
   }
   const normalized = currentPosition.trim().toLowerCase();
   const index = allPositions.indexOf(normalized);
-  return index > -1 ? (_a = allPositions[index]) != null ? _a : defaultPosition : defaultPosition;
+  return index > -1 ? allPositions[index] ?? defaultPosition : defaultPosition;
 }
 function getTop(rectangles, position, preferAbove) {
   const { anchor, floater } = rectangles;
@@ -330,10 +326,9 @@ function updateFloated(parameters) {
     anchor.insertAdjacentElement("afterend", floater);
   }
   function onRepeat() {
-    var _a;
-    const currentPosition = getOriginalPosition((_a = (parent != null ? parent : anchor).getAttribute(parameters.position.attribute)) != null ? _a : "", parameters.position.defaultValue);
+    const currentPosition = getOriginalPosition((parent ?? anchor).getAttribute(parameters.position.attribute) ?? "", parameters.position.defaultValue);
     const currentRectangle = anchor.getBoundingClientRect();
-    if (previousPosition === currentPosition && domRectKeys.every((key) => (previousRectangle == null ? void 0 : previousRectangle[key]) === currentRectangle[key])) {
+    if (previousPosition === currentPosition && domRectKeys.every((key) => previousRectangle?.[key] === currentRectangle[key])) {
       return;
     }
     previousPosition = currentPosition;
@@ -405,8 +400,7 @@ var Tooltip = class {
     store.delete(element);
   }
   static createFloater(anchor) {
-    var _a;
-    const id = (_a = anchor.getAttribute("aria-describedby")) != null ? _a : anchor.getAttribute("aria-labelledby");
+    const id = anchor.getAttribute("aria-describedby") ?? anchor.getAttribute("aria-labelledby");
     const element = id == null ? null : document.getElementById(id);
     if (element == null) {
       throw new Error(`A '${selector}'-attributed element must have a valid id reference in either the 'aria-describedby' or 'aria-labelledby'-attribute.`);
@@ -434,12 +428,11 @@ var Tooltip = class {
     this.toggle(true);
   }
   toggle(show) {
-    var _a, _b;
     const method = show ? "addEventListener" : "removeEventListener";
     document[method]("click", this.callbacks.click, eventOptions.passive);
     document[method]("keydown", this.callbacks.keydown, eventOptions.passive);
     if (show) {
-      (_a = this.timer) == null ? void 0 : _a.stop();
+      this.timer?.stop();
       this.timer = updateFloated({
         elements: {
           anchor: this.anchor,
@@ -453,7 +446,7 @@ var Tooltip = class {
       });
     } else {
       this.floater.hidden = true;
-      (_b = this.timer) == null ? void 0 : _b.stop();
+      this.timer?.stop();
     }
   }
   handleCallbacks(add) {

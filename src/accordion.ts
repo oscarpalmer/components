@@ -98,7 +98,7 @@ function toggleDetails(component: PalmerAccordion, active: HTMLDetailsElement | 
 	}
 }
 
-class PalmerAccordion extends HTMLElement {
+export class PalmerAccordion extends HTMLElement {
 	static observedAttributes = ['max', 'min', 'value'];
 
 	get multiple(): boolean {

@@ -1,10 +1,33 @@
 "use strict";
 var __defProp = Object.defineProperty;
+var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
+var __getOwnPropNames = Object.getOwnPropertyNames;
+var __hasOwnProp = Object.prototype.hasOwnProperty;
 var __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { enumerable: true, configurable: true, writable: true, value }) : obj[key] = value;
+var __export = (target, all) => {
+  for (var name in all)
+    __defProp(target, name, { get: all[name], enumerable: true });
+};
+var __copyProps = (to, from, except, desc) => {
+  if (from && typeof from === "object" || typeof from === "function") {
+    for (let key of __getOwnPropNames(from))
+      if (!__hasOwnProp.call(to, key) && key !== except)
+        __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
+  }
+  return to;
+};
+var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 var __publicField = (obj, key, value) => {
   __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
   return value;
 };
+
+// src/splitter.ts
+var splitter_exports = {};
+__export(splitter_exports, {
+  PalmerSplitter: () => PalmerSplitter
+});
+module.exports = __toCommonJS(splitter_exports);
 
 // src/helpers/index.ts
 var eventOptions = {
@@ -12,7 +35,6 @@ var eventOptions = {
   passive: { capture: false, passive: true }
 };
 var isTouchy = (() => {
-  var _a;
   try {
     if ("matchMedia" in window) {
       const media = matchMedia("(pointer: coarse)");
@@ -20,28 +42,27 @@ var isTouchy = (() => {
         return media.matches;
       }
     }
-    return "ontouchstart" in window || navigator.maxTouchPoints > 0 || ((_a = navigator == null ? void 0 : navigator.msMaxTouchPoints) != null ? _a : 0) > 0;
+    return "ontouchstart" in window || navigator.maxTouchPoints > 0 || (navigator?.msMaxTouchPoints ?? 0) > 0;
   } catch (_) {
     return false;
   }
 })();
 function getCoordinates(event) {
-  var _a, _b;
   if (event instanceof MouseEvent) {
     return {
       x: event.clientX,
       y: event.clientY
     };
   }
-  const x = (_a = event.touches[0]) == null ? void 0 : _a.clientX;
-  const y = (_b = event.touches[0]) == null ? void 0 : _b.clientY;
+  const x = event.touches[0]?.clientX;
+  const y = event.touches[0]?.clientY;
   return x == null || y == null ? void 0 : { x, y };
 }
 function getNumber(value) {
   return typeof value === "number" ? value : Number.parseInt(typeof value === "string" ? value : String(value), 10);
 }
 function isNullOrWhitespace(value) {
-  return (value != null ? value : "").trim().length === 0;
+  return (value ?? "").trim().length === 0;
 }
 
 // src/splitter.ts
@@ -61,8 +82,7 @@ function createHandle(component, className) {
   return handle;
 }
 function createSeparator(component, values, className) {
-  var _a;
-  let actualValues = values != null ? values : (_a = store.get(component)) == null ? void 0 : _a.values;
+  let actualValues = values ?? store.get(component)?.values;
   if (actualValues == null) {
     return null;
   }
@@ -111,7 +131,6 @@ function onPointerMove(event) {
   setFlexValue(this, this.separator, value * 100);
 }
 function onSeparatorKeydown(component, event) {
-  var _a, _b;
   if (!["ArrowDown", "ArrowLeft", "ArrowRight", "ArrowUp", "End", "Escape", "Home"].includes(event.key)) {
     return;
   }
@@ -119,7 +138,7 @@ function onSeparatorKeydown(component, event) {
   if (ignored.includes(event.key)) {
     return;
   }
-  const values = (_a = store.get(component)) == null ? void 0 : _a.values;
+  const values = store.get(component)?.values;
   if (values == null) {
     return;
   }
@@ -136,7 +155,7 @@ function onSeparatorKeydown(component, event) {
       value = event.key === "End" ? values.maximum : values.minimum;
       break;
     case "Escape":
-      value = (_b = values.initial) != null ? _b : values.original;
+      value = values.initial ?? values.original;
       values.initial = void 0;
       break;
     default:
@@ -145,8 +164,7 @@ function onSeparatorKeydown(component, event) {
   setFlexValue(component, component.separator, value, values);
 }
 function setAbsoluteValue(component, separator, key, value, setFlex, values) {
-  var _a;
-  let actualValues = values != null ? values : (_a = store.get(component)) == null ? void 0 : _a.values;
+  let actualValues = values ?? store.get(component)?.values;
   let actualValue = getNumber(value);
   if (actualValues == null || Number.isNaN(actualValue) || actualValue === actualValues[key] || key === "maximum" && actualValue < actualValues.minimum || key === "minimum" && actualValue > actualValues.maximum) {
     return;
@@ -177,8 +195,7 @@ function setDragging(component, active) {
   stored.dragging = active;
 }
 function setFlexValue(component, separator, value, values, setOriginal) {
-  var _a;
-  let actualValues = values != null ? values : (_a = store.get(component)) == null ? void 0 : _a.values;
+  let actualValues = values ?? store.get(component)?.values;
   let actualValue = getNumber(value);
   if (actualValues == null || Number.isNaN(actualValue) || actualValue === actualValues.current) {
     return;
@@ -188,7 +205,7 @@ function setFlexValue(component, separator, value, values, setOriginal) {
   } else if (actualValue > actualValues.maximum) {
     actualValue = actualValues.maximum;
   }
-  if (setOriginal != null ? setOriginal : false) {
+  if (setOriginal ?? false) {
     actualValues.original = actualValue;
   }
   separator.ariaValueNow = actualValue;
@@ -203,7 +220,6 @@ function setFlexValue(component, separator, value, values, setOriginal) {
 }
 var PalmerSplitter = class extends HTMLElement {
   constructor() {
-    var _a;
     super();
     __publicField(this, "handle");
     __publicField(this, "primary");
@@ -235,33 +251,29 @@ var PalmerSplitter = class extends HTMLElement {
     }
     this.handle = createHandle(this, className);
     this.separator = createSeparator(this, stored.values, className);
-    (_a = this.primary) == null ? void 0 : _a.insertAdjacentElement("afterend", this.separator);
+    this.primary?.insertAdjacentElement("afterend", this.separator);
   }
   get max() {
-    var _a;
-    return (_a = store.get(this)) == null ? void 0 : _a.values.maximum;
+    return store.get(this)?.values.maximum;
   }
   set max(max) {
     this.setAttribute("max", max);
   }
   get min() {
-    var _a;
-    return (_a = store.get(this)) == null ? void 0 : _a.values.minimum;
+    return store.get(this)?.values.minimum;
   }
   set min(min) {
     this.setAttribute("min", min);
   }
   get type() {
-    var _a;
-    const type = (_a = this.getAttribute("type")) != null ? _a : "vertical";
+    const type = this.getAttribute("type") ?? "vertical";
     return splitterTypes.includes(type) ? type : "vertical";
   }
   set type(type) {
     this.setAttribute("type", type);
   }
   get value() {
-    var _a;
-    return (_a = store.get(this)) == null ? void 0 : _a.values.current;
+    return store.get(this)?.values.current;
   }
   set value(value) {
     this.setAttribute("value", value);

@@ -270,3 +270,6 @@ var PalmerSplitter = class extends HTMLElement {
 };
 __publicField(PalmerSplitter, "observedAttributes", ["max", "min", "value"]);
 customElements.define(selector, PalmerSplitter);
+export {
+  PalmerSplitter
+};

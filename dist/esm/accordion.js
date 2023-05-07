@@ -135,3 +135,6 @@ var PalmerAccordion = class extends HTMLElement {
 };
 __publicField(PalmerAccordion, "observedAttributes", ["max", "min", "value"]);
 customElements.define("palmer-accordion", PalmerAccordion);
+export {
+  PalmerAccordion
+};

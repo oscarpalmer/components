@@ -110,7 +110,7 @@ function toggle(component: PalmerSwitch): void {
 	component.dispatchEvent(new Event('change'));
 }
 
-class PalmerSwitch extends HTMLElement {
+export class PalmerSwitch extends HTMLElement {
 	static formAssociated = true;
 
 	private internals: ElementInternals | undefined;

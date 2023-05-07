@@ -6,7 +6,7 @@
 		"lib": [
 			"DOM",
 			"DOM.Iterable",
-			"ES2017"
+			"ES2020"
 		],
 		"moduleResolution": "node",
 		"newLine": "lf",
@@ -24,7 +24,7 @@
 		"skipLibCheck": true,
 		"strict": true,
 		"stripInternal": true,
-		"target": "ES2017",
+		"target": "ES2020",
 		"useDefineForClassFields": true
 	},
 	"include": ["src/**/*.ts"],

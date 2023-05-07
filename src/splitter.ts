@@ -249,7 +249,7 @@ function setFlexValue(component: PalmerSplitter, separator: HTMLElement, value: 
 	}));
 }
 
-class PalmerSplitter extends HTMLElement {
+export class PalmerSplitter extends HTMLElement {
 	static observedAttributes = ['max', 'min', 'value'];
 
 	readonly handle: HTMLElement;

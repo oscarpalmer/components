@@ -597,3 +597,6 @@ var PalmerPopover = class extends HTMLElement {
   }
 };
 customElements.define(selector2, PalmerPopover);
+export {
+  PalmerPopover
+};

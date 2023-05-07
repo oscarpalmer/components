@@ -172,3 +172,6 @@ var PalmerSwitch = class extends HTMLElement {
 };
 __publicField(PalmerSwitch, "formAssociated", true);
 customElements.define("palmer-switch", PalmerSwitch);
+export {
+  PalmerSwitch
+};

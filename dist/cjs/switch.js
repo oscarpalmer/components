@@ -1,10 +1,33 @@
 "use strict";
 var __defProp = Object.defineProperty;
+var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
+var __getOwnPropNames = Object.getOwnPropertyNames;
+var __hasOwnProp = Object.prototype.hasOwnProperty;
 var __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { enumerable: true, configurable: true, writable: true, value }) : obj[key] = value;
+var __export = (target, all) => {
+  for (var name in all)
+    __defProp(target, name, { get: all[name], enumerable: true });
+};
+var __copyProps = (to, from, except, desc) => {
+  if (from && typeof from === "object" || typeof from === "function") {
+    for (let key of __getOwnPropNames(from))
+      if (!__hasOwnProp.call(to, key) && key !== except)
+        __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
+  }
+  return to;
+};
+var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 var __publicField = (obj, key, value) => {
   __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
   return value;
 };
+
+// src/switch.ts
+var switch_exports = {};
+__export(switch_exports, {
+  PalmerSwitch: () => PalmerSwitch
+});
+module.exports = __toCommonJS(switch_exports);
 
 // src/helpers/index.ts
 var eventOptions = {
@@ -12,7 +35,6 @@ var eventOptions = {
   passive: { capture: false, passive: true }
 };
 var isTouchy = (() => {
-  var _a;
   try {
     if ("matchMedia" in window) {
       const media = matchMedia("(pointer: coarse)");
@@ -20,13 +42,13 @@ var isTouchy = (() => {
         return media.matches;
       }
     }
-    return "ontouchstart" in window || navigator.maxTouchPoints > 0 || ((_a = navigator == null ? void 0 : navigator.msMaxTouchPoints) != null ? _a : 0) > 0;
+    return "ontouchstart" in window || navigator.maxTouchPoints > 0 || (navigator?.msMaxTouchPoints ?? 0) > 0;
   } catch (_) {
     return false;
   }
 })();
 function isNullOrWhitespace(value) {
-  return (value != null ? value : "").trim().length === 0;
+  return (value ?? "").trim().length === 0;
 }
 
 // src/switch.ts
@@ -62,16 +84,15 @@ function getTextItem(type, className, content) {
   return item;
 }
 function initialise(component, label, input) {
-  var _a, _b, _c;
-  (_a = label.parentElement) == null ? void 0 : _a.removeChild(label);
-  (_b = input.parentElement) == null ? void 0 : _b.removeChild(input);
+  label.parentElement?.removeChild(label);
+  input.parentElement?.removeChild(input);
   component.setAttribute("aria-checked", input.checked || component.checked);
   component.setAttribute("aria-disabled", input.disabled || component.disabled);
   component.setAttribute("aria-labelledby", `${input.id}_label`);
   component.setAttribute("aria-readonly", input.readOnly || component.readonly);
   component.setAttribute("value", input.value);
   component.id = input.id;
-  component.name = (_c = input.name) != null ? _c : input.id;
+  component.name = input.name ?? input.id;
   component.role = "switch";
   component.tabIndex = 0;
   let className = component.getAttribute("classNames");
@@ -111,10 +132,9 @@ function toggle(component) {
 }
 var PalmerSwitch = class extends HTMLElement {
   constructor() {
-    var _a;
     super();
     __publicField(this, "internals");
-    this.internals = (_a = this.attachInternals) == null ? void 0 : _a.call(this);
+    this.internals = this.attachInternals?.();
     const input = this.querySelector("[palmer-switch-input]");
     const label = this.querySelector("[palmer-switch-label]");
     if (typeof input === "undefined" || !(input instanceof HTMLInputElement) || input.type !== "checkbox") {
@@ -138,16 +158,13 @@ var PalmerSwitch = class extends HTMLElement {
     this.setAttribute("aria-disabled", disabled);
   }
   get form() {
-    var _a, _b;
-    return (_b = (_a = this.internals) == null ? void 0 : _a.form) != null ? _b : void 0;
+    return this.internals?.form ?? void 0;
   }
   get labels() {
-    var _a;
-    return (_a = this.internals) == null ? void 0 : _a.labels;
+    return this.internals?.labels;
   }
   get name() {
-    var _a;
-    return (_a = this.getAttribute("name")) != null ? _a : "";
+    return this.getAttribute("name") ?? "";
   }
   set name(name) {
     this.setAttribute("name", name);
@@ -159,28 +176,22 @@ var PalmerSwitch = class extends HTMLElement {
     this.setAttribute("aria-readonly", readonly);
   }
   get validationMessage() {
-    var _a, _b;
-    return (_b = (_a = this.internals) == null ? void 0 : _a.validationMessage) != null ? _b : "";
+    return this.internals?.validationMessage ?? "";
   }
   get validity() {
-    var _a;
-    return (_a = this.internals) == null ? void 0 : _a.validity;
+    return this.internals?.validity;
   }
   get value() {
-    var _a;
-    return (_a = this.getAttribute("value")) != null ? _a : this.checked ? "on" : "off";
+    return this.getAttribute("value") ?? (this.checked ? "on" : "off");
   }
   get willValidate() {
-    var _a, _b;
-    return (_b = (_a = this.internals) == null ? void 0 : _a.willValidate) != null ? _b : true;
+    return this.internals?.willValidate ?? true;
   }
   checkValidity() {
-    var _a, _b;
-    return (_b = (_a = this.internals) == null ? void 0 : _a.checkValidity()) != null ? _b : true;
+    return this.internals?.checkValidity() ?? true;
   }
   reportValidity() {
-    var _a, _b;
-    return (_b = (_a = this.internals) == null ? void 0 : _a.reportValidity()) != null ? _b : true;
+    return this.internals?.reportValidity() ?? true;
   }
 };
 __publicField(PalmerSwitch, "formAssociated", true);

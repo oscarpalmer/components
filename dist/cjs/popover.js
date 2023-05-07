@@ -1,18 +1,40 @@
 "use strict";
 var __defProp = Object.defineProperty;
+var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
+var __getOwnPropNames = Object.getOwnPropertyNames;
+var __hasOwnProp = Object.prototype.hasOwnProperty;
 var __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { enumerable: true, configurable: true, writable: true, value }) : obj[key] = value;
+var __export = (target, all) => {
+  for (var name in all)
+    __defProp(target, name, { get: all[name], enumerable: true });
+};
+var __copyProps = (to, from, except, desc) => {
+  if (from && typeof from === "object" || typeof from === "function") {
+    for (let key of __getOwnPropNames(from))
+      if (!__hasOwnProp.call(to, key) && key !== except)
+        __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
+  }
+  return to;
+};
+var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 var __publicField = (obj, key, value) => {
   __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
   return value;
 };
 
+// src/popover.ts
+var popover_exports = {};
+__export(popover_exports, {
+  PalmerPopover: () => PalmerPopover
+});
+module.exports = __toCommonJS(popover_exports);
+
 // node_modules/@oscarpalmer/timer/dist/timer.js
 var milliseconds = Math.round(1e3 / 60);
-var request = requestAnimationFrame != null ? requestAnimationFrame : function(callback) {
-  var _a;
-  return (_a = setTimeout == null ? void 0 : setTimeout(() => {
+var request = requestAnimationFrame ?? function(callback) {
+  return setTimeout?.(() => {
     callback(Date.now());
-  }, milliseconds)) != null ? _a : -1;
+  }, milliseconds) ?? -1;
 };
 var Timed = class {
   constructor(callback, time, count, afterCallback) {
@@ -64,7 +86,7 @@ var Timed = class {
       if (!timed.state.active) {
         return;
       }
-      start != null ? start : start = timestamp;
+      start ?? (start = timestamp);
       const elapsed = timestamp - start;
       const elapsedMinimum = elapsed - milliseconds;
       const elapsedMaximum = elapsed + milliseconds;
@@ -106,13 +128,12 @@ var Timed = class {
    * Stop timer
    */
   stop() {
-    var _a, _b, _c;
     this.state.active = false;
     if (typeof this.state.frame === "undefined") {
       return this;
     }
-    (_a = cancelAnimationFrame != null ? cancelAnimationFrame : clearTimeout) == null ? void 0 : _a(this.state.frame);
-    (_c = (_b = this.callbacks).after) == null ? void 0 : _c.call(_b, this.finished);
+    (cancelAnimationFrame ?? clearTimeout)?.(this.state.frame);
+    this.callbacks.after?.(this.finished);
     this.state.frame = void 0;
     return this;
   }
@@ -137,7 +158,6 @@ var eventOptions = {
   passive: { capture: false, passive: true }
 };
 var isTouchy = (() => {
-  var _a;
   try {
     if ("matchMedia" in window) {
       const media = matchMedia("(pointer: coarse)");
@@ -145,7 +165,7 @@ var isTouchy = (() => {
         return media.matches;
       }
     }
-    return "ontouchstart" in window || navigator.maxTouchPoints > 0 || ((_a = navigator == null ? void 0 : navigator.msMaxTouchPoints) != null ? _a : 0) > 0;
+    return "ontouchstart" in window || navigator.maxTouchPoints > 0 || (navigator?.msMaxTouchPoints ?? 0) > 0;
   } catch (_) {
     return false;
   }
@@ -155,7 +175,7 @@ function findParent(element, match) {
   if (matchIsSelector ? element.matches(match) : match(element)) {
     return element;
   }
-  let parent = element == null ? void 0 : element.parentElement;
+  let parent = element?.parentElement;
   while (parent != null) {
     if (parent === document.body) {
       return;
@@ -165,13 +185,13 @@ function findParent(element, match) {
     }
     parent = parent.parentElement;
   }
-  return parent != null ? parent : void 0;
+  return parent ?? void 0;
 }
 function getFocusableElements(context) {
   const focusable = [];
   const elements = Array.from(context.querySelectorAll(getFocusableSelector()));
   for (const element of elements) {
-    const style = getComputedStyle == null ? void 0 : getComputedStyle(element);
+    const style = getComputedStyle?.(element);
     if (style == null || style.display !== "none" && style.visibility !== "hidden") {
       focusable.push(element);
     }
@@ -201,11 +221,11 @@ function getFocusableSelector() {
   return context.focusableSelector;
 }
 function getTextDirection(element) {
-  const { direction } = getComputedStyle == null ? void 0 : getComputedStyle(element);
+  const { direction } = getComputedStyle?.(element);
   return direction === "rtl" ? "rtl" : "ltr";
 }
 function isNullOrWhitespace(value) {
-  return (value != null ? value : "").trim().length === 0;
+  return (value ?? "").trim().length === 0;
 }
 
 // src/helpers/floated.ts
@@ -295,13 +315,12 @@ function getLeft(rectangles, position, rightToLeft) {
   }
 }
 function getOriginalPosition(currentPosition, defaultPosition) {
-  var _a;
   if (currentPosition == null) {
     return defaultPosition;
   }
   const normalized = currentPosition.trim().toLowerCase();
   const index2 = allPositions.indexOf(normalized);
-  return index2 > -1 ? (_a = allPositions[index2]) != null ? _a : defaultPosition : defaultPosition;
+  return index2 > -1 ? allPositions[index2] ?? defaultPosition : defaultPosition;
 }
 function getTop(rectangles, position, preferAbove) {
   const { anchor, floater } = rectangles;
@@ -344,10 +363,9 @@ function updateFloated(parameters) {
     anchor.insertAdjacentElement("afterend", floater);
   }
   function onRepeat() {
-    var _a;
-    const currentPosition = getOriginalPosition((_a = (parent != null ? parent : anchor).getAttribute(parameters.position.attribute)) != null ? _a : "", parameters.position.defaultValue);
+    const currentPosition = getOriginalPosition((parent ?? anchor).getAttribute(parameters.position.attribute) ?? "", parameters.position.defaultValue);
     const currentRectangle = anchor.getBoundingClientRect();
-    if (previousPosition === currentPosition && domRectKeys.every((key) => (previousRectangle == null ? void 0 : previousRectangle[key]) === currentRectangle[key])) {
+    if (previousPosition === currentPosition && domRectKeys.every((key) => previousRectangle?.[key] === currentRectangle[key])) {
       return;
     }
     previousPosition = currentPosition;
@@ -375,12 +393,10 @@ function updateFloated(parameters) {
 var selector = "palmer-focus-trap";
 var store = /* @__PURE__ */ new WeakMap();
 function handleEvent(event, focusTrap, element) {
-  var _a;
   const elements = getFocusableElements(focusTrap);
   if (element === focusTrap) {
     wait(() => {
-      var _a2;
-      ((_a2 = elements[event.shiftKey ? elements.length - 1 : 0]) != null ? _a2 : focusTrap).focus();
+      (elements[event.shiftKey ? elements.length - 1 : 0] ?? focusTrap).focus();
     }, 0);
     return;
   }
@@ -393,7 +409,7 @@ function handleEvent(event, focusTrap, element) {
     } else if (position >= elements.length) {
       position = 0;
     }
-    target = (_a = elements[position]) != null ? _a : focusTrap;
+    target = elements[position] ?? focusTrap;
   }
   wait(() => {
     target.focus();
@@ -473,12 +489,11 @@ var selector2 = "palmer-popover";
 var store2 = /* @__PURE__ */ new WeakMap();
 var index = 0;
 function afterToggle(component, active) {
-  var _a, _b, _c;
   handleCallbacks(component, active);
   if (active && component.content) {
-    ((_b = (_a = getFocusableElements(component.content)) == null ? void 0 : _a[0]) != null ? _b : component.content).focus();
+    (getFocusableElements(component.content)?.[0] ?? component.content).focus();
   } else {
-    (_c = component.button) == null ? void 0 : _c.focus();
+    component.button?.focus();
   }
 }
 function handleCallbacks(component, add) {
@@ -508,15 +523,14 @@ function handleGlobalEvent(event, component, target) {
   }
 }
 function handleToggle(component, expand) {
-  var _a, _b;
   const expanded = typeof expand === "boolean" ? !expand : component.open;
   component.button.setAttribute("aria-expanded", !expanded);
   if (expanded) {
     component.content.hidden = true;
-    (_a = component.timer) == null ? void 0 : _a.stop();
+    component.timer?.stop();
     afterToggle(component, false);
   } else {
-    (_b = component.timer) == null ? void 0 : _b.stop();
+    component.timer?.stop();
     component.timer = updateFloated({
       elements: {
         anchor: component.button,
@@ -602,8 +616,7 @@ var PalmerPopover = class extends HTMLElement {
     initialise(this, button, content);
   }
   get open() {
-    var _a;
-    return ((_a = this.button) == null ? void 0 : _a.getAttribute("aria-expanded")) === "true";
+    return this.button?.getAttribute("aria-expanded") === "true";
   }
   set open(open) {
     toggle.call(this, open);

@@ -31,11 +31,10 @@ module.exports = __toCommonJS(focus_trap_exports);
 
 // node_modules/@oscarpalmer/timer/dist/timer.js
 var milliseconds = Math.round(1e3 / 60);
-var request = requestAnimationFrame != null ? requestAnimationFrame : function(callback) {
-  var _a;
-  return (_a = setTimeout == null ? void 0 : setTimeout(() => {
+var request = requestAnimationFrame ?? function(callback) {
+  return setTimeout?.(() => {
     callback(Date.now());
-  }, milliseconds)) != null ? _a : -1;
+  }, milliseconds) ?? -1;
 };
 var Timed = class {
   constructor(callback, time, count, afterCallback) {
@@ -87,7 +86,7 @@ var Timed = class {
       if (!timed.state.active) {
         return;
       }
-      start != null ? start : start = timestamp;
+      start ?? (start = timestamp);
       const elapsed = timestamp - start;
       const elapsedMinimum = elapsed - milliseconds;
       const elapsedMaximum = elapsed + milliseconds;
@@ -129,13 +128,12 @@ var Timed = class {
    * Stop timer
    */
   stop() {
-    var _a, _b, _c;
     this.state.active = false;
     if (typeof this.state.frame === "undefined") {
       return this;
     }
-    (_a = cancelAnimationFrame != null ? cancelAnimationFrame : clearTimeout) == null ? void 0 : _a(this.state.frame);
-    (_c = (_b = this.callbacks).after) == null ? void 0 : _c.call(_b, this.finished);
+    (cancelAnimationFrame ?? clearTimeout)?.(this.state.frame);
+    this.callbacks.after?.(this.finished);
     this.state.frame = void 0;
     return this;
   }
@@ -157,7 +155,6 @@ var eventOptions = {
   passive: { capture: false, passive: true }
 };
 var isTouchy = (() => {
-  var _a;
   try {
     if ("matchMedia" in window) {
       const media = matchMedia("(pointer: coarse)");
@@ -165,7 +162,7 @@ var isTouchy = (() => {
         return media.matches;
       }
     }
-    return "ontouchstart" in window || navigator.maxTouchPoints > 0 || ((_a = navigator == null ? void 0 : navigator.msMaxTouchPoints) != null ? _a : 0) > 0;
+    return "ontouchstart" in window || navigator.maxTouchPoints > 0 || (navigator?.msMaxTouchPoints ?? 0) > 0;
   } catch (_) {
     return false;
   }
@@ -175,7 +172,7 @@ function findParent(element, match) {
   if (matchIsSelector ? element.matches(match) : match(element)) {
     return element;
   }
-  let parent = element == null ? void 0 : element.parentElement;
+  let parent = element?.parentElement;
   while (parent != null) {
     if (parent === document.body) {
       return;
@@ -185,13 +182,13 @@ function findParent(element, match) {
     }
     parent = parent.parentElement;
   }
-  return parent != null ? parent : void 0;
+  return parent ?? void 0;
 }
 function getFocusableElements(context) {
   const focusable = [];
   const elements = Array.from(context.querySelectorAll(getFocusableSelector()));
   for (const element of elements) {
-    const style = getComputedStyle == null ? void 0 : getComputedStyle(element);
+    const style = getComputedStyle?.(element);
     if (style == null || style.display !== "none" && style.visibility !== "hidden") {
       focusable.push(element);
     }
@@ -225,12 +222,10 @@ function getFocusableSelector() {
 var selector = "palmer-focus-trap";
 var store = /* @__PURE__ */ new WeakMap();
 function handleEvent(event, focusTrap, element) {
-  var _a;
   const elements = getFocusableElements(focusTrap);
   if (element === focusTrap) {
     wait(() => {
-      var _a2;
-      ((_a2 = elements[event.shiftKey ? elements.length - 1 : 0]) != null ? _a2 : focusTrap).focus();
+      (elements[event.shiftKey ? elements.length - 1 : 0] ?? focusTrap).focus();
     }, 0);
     return;
   }
@@ -243,7 +238,7 @@ function handleEvent(event, focusTrap, element) {
     } else if (position >= elements.length) {
       position = 0;
     }
-    target = (_a = elements[position]) != null ? _a : focusTrap;
+    target = elements[position] ?? focusTrap;
   }
   wait(() => {
     target.focus();

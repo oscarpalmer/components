@@ -1,10 +1,33 @@
 "use strict";
 var __defProp = Object.defineProperty;
+var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
+var __getOwnPropNames = Object.getOwnPropertyNames;
+var __hasOwnProp = Object.prototype.hasOwnProperty;
 var __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { enumerable: true, configurable: true, writable: true, value }) : obj[key] = value;
+var __export = (target, all) => {
+  for (var name in all)
+    __defProp(target, name, { get: all[name], enumerable: true });
+};
+var __copyProps = (to, from, except, desc) => {
+  if (from && typeof from === "object" || typeof from === "function") {
+    for (let key of __getOwnPropNames(from))
+      if (!__hasOwnProp.call(to, key) && key !== except)
+        __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
+  }
+  return to;
+};
+var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 var __publicField = (obj, key, value) => {
   __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
   return value;
 };
+
+// src/accordion.ts
+var accordion_exports = {};
+__export(accordion_exports, {
+  PalmerAccordion: () => PalmerAccordion
+});
+module.exports = __toCommonJS(accordion_exports);
 
 // src/helpers/index.ts
 var eventOptions = {
@@ -12,7 +35,6 @@ var eventOptions = {
   passive: { capture: false, passive: true }
 };
 var isTouchy = (() => {
-  var _a;
   try {
     if ("matchMedia" in window) {
       const media = matchMedia("(pointer: coarse)");
@@ -20,7 +42,7 @@ var isTouchy = (() => {
         return media.matches;
       }
     }
-    return "ontouchstart" in window || navigator.maxTouchPoints > 0 || ((_a = navigator == null ? void 0 : navigator.msMaxTouchPoints) != null ? _a : 0) > 0;
+    return "ontouchstart" in window || navigator.maxTouchPoints > 0 || (navigator?.msMaxTouchPoints ?? 0) > 0;
   } catch (_) {
     return false;
   }
@@ -30,8 +52,7 @@ var isTouchy = (() => {
 var keys = ["ArrowDown", "ArrowLeft", "ArrowRight", "ArrowUp", "End", "Home"];
 var store = /* @__PURE__ */ new WeakMap();
 function onKeydown(component, event) {
-  var _a, _b, _c;
-  if (((_a = document.activeElement) == null ? void 0 : _a.tagName) !== "SUMMARY" || !keys.includes(event.key)) {
+  if (document.activeElement?.tagName !== "SUMMARY" || !keys.includes(event.key)) {
     return;
   }
   const stored = store.get(component);
@@ -68,9 +89,9 @@ function onKeydown(component, event) {
   if (destination === current) {
     return;
   }
-  const summary = (_b = stored.elements[destination]) == null ? void 0 : _b.querySelector(":scope > summary");
+  const summary = stored.elements[destination]?.querySelector(":scope > summary");
   if (summary != null) {
-    (_c = summary.focus) == null ? void 0 : _c.call(summary);
+    summary.focus?.();
   }
 }
 function onToggle(component, element) {
@@ -122,21 +143,18 @@ var PalmerAccordion = class extends HTMLElement {
     }
   }
   attributeChangedCallback(name) {
-    var _a;
     if (name === "multiple" && !this.multiple) {
-      toggleDetails(this, (_a = store.get(this)) == null ? void 0 : _a.elements.find((details) => details.open));
+      toggleDetails(this, store.get(this)?.elements.find((details) => details.open));
     }
   }
   connectedCallback() {
-    var _a;
-    (_a = store.get(this)) == null ? void 0 : _a.observer.observe(this, {
+    store.get(this)?.observer.observe(this, {
       childList: true,
       subtree: true
     });
   }
   disconnectedCallback() {
-    var _a;
-    (_a = store.get(this)) == null ? void 0 : _a.observer.disconnect();
+    store.get(this)?.observer.disconnect();
   }
 };
 __publicField(PalmerAccordion, "observedAttributes", ["max", "min", "value"]);

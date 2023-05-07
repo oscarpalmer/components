@@ -9,74 +9,81 @@
 	"description": "A collection of web components.",
 	"devDependencies": {
 		"@tsconfig/recommended": "^1.0",
-		"@types/node": "^18.16",
+		"@types/node": "^20.1",
 		"@typescript-eslint/eslint-plugin": "^5.59",
 		"@typescript-eslint/parser": "^5.59",
 		"esbuild": "^0.17",
-		"eslint": "^8.39",
+		"eslint": "^8.40",
 		"eslint-config-xo": "^0.43",
 		"eslint-config-xo-typescript": "^0.57",
 		"typescript": "^5.0"
 	},
 	"exports": {
 		".": {
-			"script": "./dist/iife/index.js",
-			"module": "./dist/esm/index.js",
+			"default": "./dist/iife/index.js",
 			"import": "./dist/esm/index.js",
+			"module": "./dist/esm/index.js",
 			"require": "./dist/cjs/index.js",
-			"default": "./dist/iife/index.js"
+			"script": "./dist/iife/index.js",
+			"types": "./src/index.d.ts"
 		},
 		"./accordion": {
-			"script": "./dist/iife/accordion.js",
-			"module": "./dist/esm/accordion.js",
+			"default": "./dist/iife/accordion.js",
 			"import": "./dist/esm/accordion.js",
+			"module": "./dist/esm/accordion.js",
 			"require": "./dist/cjs/accordion.js",
-			"default": "./dist/iife/accordion.js"
+			"script": "./dist/iife/accordion.js",
+			"types": "./src/accordion.d.ts"
 		},
 		"./details": {
-			"script": "./dist/iife/index.js",
-			"module": "./dist/esm/index.js",
-			"import": "./dist/esm/index.js",
-			"require": "./dist/cjs/index.js",
-			"default": "./dist/iife/index.js"
+			"default": "./dist/iife/details.js",
+			"import": "./dist/esm/details.js",
+			"module": "./dist/esm/details.js",
+			"require": "./dist/cjs/details.js",
+			"script": "./dist/iife/details.js"
 		},
 		"./focus-trap": {
-			"script": "./dist/iife/focus-trap.js",
-			"module": "./dist/esm/focus-trap.js",
+			"default": "./dist/iife/focus-trap.js",
 			"import": "./dist/esm/focus-trap.js",
+			"module": "./dist/esm/focus-trap.js",
 			"require": "./dist/cjs/focus-trap.js",
-			"default": "./dist/iife/focus-trap.js"
+			"script": "./dist/iife/focus-trap.js"
 		},
 		"./popover": {
-			"script": "./dist/iife/popover.js",
-			"module": "./dist/esm/popover.js",
+			"default": "./dist/iife/popover.js",
 			"import": "./dist/esm/popover.js",
+			"module": "./dist/esm/popover.js",
 			"require": "./dist/cjs/popover.js",
-			"default": "./dist/iife/popover.js"
+			"script": "./dist/iife/popover.js",
+			"types": "./src/popover.d.ts"
 		},
 		"./splitter": {
-			"script": "./dist/iife/splitter.js",
-			"module": "./dist/esm/splitter.js",
+			"default": "./dist/iife/splitter.js",
 			"import": "./dist/esm/splitter.js",
+			"module": "./dist/esm/splitter.js",
 			"require": "./dist/cjs/splitter.js",
-			"default": "./dist/iife/splitter.js"
+			"script": "./dist/iife/splitter.js",
+			"types": "./src/splitter.d.ts"
 		},
 		"./switch": {
-			"script": "./dist/iife/switch.js",
-			"module": "./dist/esm/switch.js",
+			"default": "./dist/iife/switch.js",
 			"import": "./dist/esm/switch.js",
+			"module": "./dist/esm/switch.js",
 			"require": "./dist/cjs/switch.js",
-			"default": "./dist/iife/switch.js"
+			"script": "./dist/iife/switch.js",
+			"types": "./src/switch.d.ts"
 		},
 		"./tooltip": {
-			"script": "./dist/iife/tooltip.js",
-			"module": "./dist/esm/tooltip.js",
+			"default": "./dist/iife/tooltip.js",
 			"import": "./dist/esm/tooltip.js",
+			"module": "./dist/esm/tooltip.js",
 			"require": "./dist/cjs/tooltip.js",
-			"default": "./dist/iife/tooltip.js"
+			"script": "./dist/iife/tooltip.js"
 		}
 	},
-	"files": ["dist"],
+	"files": [
+		"dist"
+	],
 	"jsdelivr": "dist/iife/index.js",
 	"keywords": [
 		"component",
@@ -95,13 +102,11 @@
 		"url": "git+https://github.com/oscarpalmer/components.git"
 	},
 	"scripts": {
-		"build": "npm run build:cjs; npm run build:esm; npm run build:iife",
-		"build:cjs": "zsh -c 'esbuild ./src/**/*.ts --bundle --format=cjs --outdir=dist/cjs --platform=neutral --target=es2017'",
-		"build:esm": "zsh -c 'esbuild ./src/**/*.ts --bundle --format=esm --outdir=dist/esm --platform=neutral --target=esnext'",
-		"build:iife": "zsh -c 'esbuild ./src/**/*.ts --bundle --minify --format=iife --outdir=dist/iife --platform=neutral --target=es2017'",
+		"build": "node .esbuild.js",
 		"watch": "esbuild ./src/index.ts --bundle --sourcemap --watch --format=esm --outfile=dist/esm/index.js --platform=neutral --target=esnext"
 	},
 	"type": "module",
+	"types": "src/index.d.ts",
 	"unpkg": "dist/iife/index.js",
-	"version": "0.20.0"
+	"version": "0.21.0"
 }

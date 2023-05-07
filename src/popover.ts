@@ -166,7 +166,7 @@ function toggle(this: PalmerPopover, expand?: boolean | Event): void {
 	handleToggle(this, expand);
 }
 
-class PalmerPopover extends HTMLElement {
+export class PalmerPopover extends HTMLElement {
 	readonly button!: HTMLElement;
 	readonly content!: HTMLElement;
 
