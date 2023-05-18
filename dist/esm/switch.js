@@ -70,11 +70,22 @@ function initialise(component, label, input) {
   if (isNullOrWhitespace(on)) {
     on = "On";
   }
-  component.insertAdjacentElement("beforeend", getLabel(component.id, className, label.innerHTML));
+  component.insertAdjacentElement(
+    "beforeend",
+    getLabel(component.id, className, label.innerHTML)
+  );
   component.insertAdjacentElement("beforeend", getStatus(className));
   component.insertAdjacentElement("beforeend", getText(className, on, off));
-  component.addEventListener("click", onToggle.bind(component), eventOptions.passive);
-  component.addEventListener("keydown", onKey.bind(component), eventOptions.active);
+  component.addEventListener(
+    "click",
+    onToggle.bind(component),
+    eventOptions.passive
+  );
+  component.addEventListener(
+    "keydown",
+    onKey.bind(component),
+    eventOptions.active
+  );
 }
 function onKey(event) {
   if (![" ", "Enter"].includes(event.key)) {
@@ -105,10 +116,14 @@ var PalmerSwitch = class extends HTMLElement {
     const input = this.querySelector("[palmer-switch-input]");
     const label = this.querySelector("[palmer-switch-label]");
     if (input === null || !(input instanceof HTMLInputElement) || input.type !== "checkbox") {
-      throw new TypeError("<palmer-switch> must have an <input>-element with type 'checkbox' and the attribute 'palmer-switch-input'");
+      throw new TypeError(
+        "<palmer-switch> must have an <input>-element with type 'checkbox' and the attribute 'palmer-switch-input'"
+      );
     }
     if (label === null || !(label instanceof HTMLElement)) {
-      throw new TypeError("<palmer-switch> must have an element with the attribute 'palmer-switch-label'");
+      throw new TypeError(
+        "<palmer-switch> must have an element with the attribute 'palmer-switch-label'"
+      );
     }
     initialise(this, label, input);
   }

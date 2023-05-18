@@ -13,7 +13,9 @@ function observe(records) {
 		}
 
 		if (!(record.target instanceof HTMLDetailsElement)) {
-			throw new TypeError(`An element with the '${selector}'-attribute must be a <details>-element`);
+			throw new TypeError(
+				`An element with the '${selector}'-attribute must be a <details>-element`,
+			);
 		}
 
 		if (record.target.getAttribute(selector) === undefined) {
@@ -52,7 +54,11 @@ class PalmerDetails {
 			onToggle: this.onToggle.bind(this),
 		};
 
-		this.details.addEventListener('toggle', this.callbacks.onToggle, eventOptions.passive);
+		this.details.addEventListener(
+			'toggle',
+			this.callbacks.onToggle,
+			eventOptions.passive,
+		);
 	}
 
 	onKeydown(event) {
@@ -62,7 +68,10 @@ class PalmerDetails {
 
 		const children = [...this.details.querySelectorAll(`[${selector}][open]`)];
 
-		if (children.some(child => child.contains(globalThis.document.activeElement)) || !this.details.contains(globalThis.document.activeElement)) {
+		if (
+			children.some(child => child.contains(globalThis.document.activeElement))
+			|| !this.details.contains(globalThis.document.activeElement)
+		) {
 			return;
 		}
 
@@ -72,7 +81,9 @@ class PalmerDetails {
 	}
 
 	onToggle() {
-		globalThis.document[this.details.open ? 'addEventListener' : 'removeEventListener']?.('keydown', this.callbacks.onKeydown, eventOptions.passive);
+		globalThis.document[
+			this.details.open ? 'addEventListener' : 'removeEventListener'
+		]?.('keydown', this.callbacks.onKeydown, eventOptions.passive);
 	}
 
 	static create(element) {
@@ -97,7 +108,9 @@ observer.observe(globalThis.document, {
 });
 
 wait(() => {
-	const elements = Array.from(globalThis.document.querySelectorAll(`[${selector}]`));
+	const elements = Array.from(
+		globalThis.document.querySelectorAll(`[${selector}]`),
+	);
 
 	for (const element of elements) {
 		element.setAttribute(selector, '');

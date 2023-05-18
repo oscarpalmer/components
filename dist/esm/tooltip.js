@@ -174,7 +174,9 @@ function getFocusableSelector() {
       "select",
       "textarea",
       "video[controls]"
-    ].map((selector2) => `${selector2}:not([disabled]):not([hidden]):not([tabindex="-1"])`).join(",");
+    ].map(
+      (selector2) => `${selector2}:not([disabled]):not([hidden]):not([tabindex="-1"])`
+    ).join(",");
   }
   return globalThis.oscapalmer_components_focusableSelector;
 }
@@ -206,7 +208,13 @@ var allPositions = [
 ];
 var domRectKeys = ["bottom", "height", "left", "right", "top", "width"];
 var horizontalPositions = /* @__PURE__ */ new Set(["left", "horizontal", "right"]);
-var transformedPositions = /* @__PURE__ */ new Set(["above", "any", "below", "vertical", ...Array.from(horizontalPositions.values)]);
+var transformedPositions = /* @__PURE__ */ new Set([
+  "above",
+  "any",
+  "below",
+  "vertical",
+  ...Array.from(horizontalPositions.values)
+]);
 function calculatePosition(position, rectangles, rightToLeft, preferAbove) {
   if (position !== "any") {
     const left2 = getLeft(rectangles, position, rightToLeft);
@@ -214,8 +222,20 @@ function calculatePosition(position, rectangles, rightToLeft, preferAbove) {
     return { top: top2, left: left2 };
   }
   const { anchor, floater } = rectangles;
-  const left = getAbsolute(anchor.right, anchor.left, floater.width, innerWidth, rightToLeft);
-  const top = getAbsolute(anchor.top, anchor.bottom, floater.height, innerHeight, preferAbove);
+  const left = getAbsolute(
+    anchor.right,
+    anchor.left,
+    floater.width,
+    innerWidth,
+    rightToLeft
+  );
+  const top = getAbsolute(
+    anchor.top,
+    anchor.bottom,
+    floater.height,
+    innerHeight,
+    preferAbove
+  );
   return { left, top };
 }
 function getAbsolute(parameters) {
@@ -231,7 +251,10 @@ function getActualPosition(original, rectangles, values) {
     return original;
   }
   const isHorizontal = horizontalPositions.has(original);
-  return [getPrefix(rectangles, values, isHorizontal), getSuffix(rectangles, values, isHorizontal)].filter((value) => value !== void 0).join("-");
+  return [
+    getPrefix(rectangles, values, isHorizontal),
+    getSuffix(rectangles, values, isHorizontal)
+  ].filter((value) => value !== void 0).join("-");
 }
 function getLeft(rectangles, position, rightToLeft) {
   const { anchor, floater } = rectangles;
@@ -254,7 +277,13 @@ function getLeft(rectangles, position, rightToLeft) {
     case "horizontal":
     case "horizontal-bottom":
     case "horizontal-top": {
-      return getAbsolute(anchor.left, anchor.right, floater.width, innerWidth, rightToLeft);
+      return getAbsolute(
+        anchor.left,
+        anchor.right,
+        floater.width,
+        innerWidth,
+        rightToLeft
+      );
     }
     case "left":
     case "left-bottom":
@@ -334,7 +363,13 @@ function getTop(rectangles, position, preferAbove) {
     case "vertical":
     case "vertical-left":
     case "vertical-right": {
-      return getAbsolute(anchor.top, anchor.bottom, floater.height, innerHeight, preferAbove);
+      return getAbsolute(
+        anchor.top,
+        anchor.bottom,
+        floater.height,
+        innerHeight,
+        preferAbove
+      );
     }
     default: {
       return anchor.bottom;
@@ -350,7 +385,10 @@ function updateFloated(parameters) {
     anchor.after("afterend", floater);
   }
   function onRepeat() {
-    const currentPosition = getOriginalPosition((parent ?? anchor).getAttribute(parameters.position.attribute) ?? "", parameters.position.defaultValue);
+    const currentPosition = getOriginalPosition(
+      (parent ?? anchor).getAttribute(parameters.position.attribute) ?? "",
+      parameters.position.defaultValue
+    );
     const currentRectangle = anchor.getBoundingClientRect();
     if (previousPosition === currentPosition && domRectKeys.every((key) => previousRectangle?.[key] === currentRectangle[key])) {
       return;
@@ -361,7 +399,12 @@ function updateFloated(parameters) {
       anchor: currentRectangle,
       floater: floater.getBoundingClientRect()
     };
-    const values = calculatePosition(currentPosition, rectangles, rightToLeft, parameters.position.preferAbove);
+    const values = calculatePosition(
+      currentPosition,
+      rectangles,
+      rightToLeft,
+      parameters.position.preferAbove
+    );
     const matrix = `matrix(1, 0, 0, 1, ${values.left}, ${values.top})`;
     if (floater.style.transform === matrix) {
       return;
@@ -369,11 +412,19 @@ function updateFloated(parameters) {
     floater.style.position = "fixed";
     floater.style.inset = "0 auto auto 0";
     floater.style.transform = matrix;
-    floater.setAttribute("position", getActualPosition(currentPosition, rectangles, values));
+    floater.setAttribute(
+      "position",
+      getActualPosition(currentPosition, rectangles, values)
+    );
   }
   document.body.append(floater);
   floater.hidden = false;
-  return new Repeated(onRepeat, 0, Number.POSITIVE_INFINITY, afterRepeat).start();
+  return new Repeated(
+    onRepeat,
+    0,
+    Number.POSITIVE_INFINITY,
+    afterRepeat
+  ).start();
 }
 
 // src/tooltip.js
@@ -465,7 +516,9 @@ var PalmerTooltip = class {
     const id = anchor.getAttribute("aria-describedby") ?? anchor.getAttribute("aria-labelledby");
     const element = id === null ? null : document.querySelector(`#${id}`);
     if (element === null) {
-      throw new TypeError(`A '${selector}'-attributed element must have a valid id reference in either the 'aria-describedby' or 'aria-labelledby'-attribute.`);
+      throw new TypeError(
+        `A '${selector}'-attributed element must have a valid id reference in either the 'aria-describedby' or 'aria-labelledby'-attribute.`
+      );
     }
     element.hidden = true;
     element.setAttribute(contentAttribute, "");
@@ -477,7 +530,10 @@ var PalmerTooltip = class {
    * @param {Event} event
    */
   onClick(event) {
-    if (findParent(event.target, (element) => [this.anchor, this.floater].includes(element)) === void 0) {
+    if (findParent(
+      event.target,
+      (element) => [this.anchor, this.floater].includes(element)
+    ) === void 0) {
       this.toggle(false);
     }
   }

@@ -1,5 +1,9 @@
 import {wait} from '@oscarpalmer/timer';
-import {eventOptions, findParent, getFocusableSelector} from './helpers/index.js';
+import {
+	eventOptions,
+	findParent,
+	getFocusableSelector,
+} from './helpers/index.js';
 import {updateFloated} from './helpers/floated.js';
 
 /** @typedef Callbacks
@@ -117,14 +121,15 @@ class PalmerTooltip {
 	 * @returns {HTMLElement}
 	 */
 	static createFloater(anchor) {
-		const id = anchor.getAttribute('aria-describedby') ?? anchor.getAttribute('aria-labelledby');
+		const id = anchor.getAttribute('aria-describedby')
+			?? anchor.getAttribute('aria-labelledby');
 
-		const element = id === null
-			? null
-			: document.querySelector(`#${id}`);
+		const element = id === null ? null : document.querySelector(`#${id}`);
 
 		if (element === null) {
-			throw new TypeError(`A '${selector}'-attributed element must have a valid id reference in either the 'aria-describedby' or 'aria-labelledby'-attribute.`);
+			throw new TypeError(
+				`A '${selector}'-attributed element must have a valid id reference in either the 'aria-describedby' or 'aria-labelledby'-attribute.`,
+			);
 		}
 
 		element.hidden = true;
@@ -141,7 +146,11 @@ class PalmerTooltip {
 	 * @param {Event} event
 	 */
 	onClick(event) {
-		if (findParent(event.target, element => [this.anchor, this.floater].includes(element)) === undefined) {
+		if (
+			findParent(event.target, element =>
+				[this.anchor, this.floater].includes(element),
+			) === undefined
+		) {
 			this.toggle(false);
 		}
 	}
@@ -154,7 +163,7 @@ class PalmerTooltip {
 	 * @param {Event} event
 	 */
 	onKeyDown(event) {
-		if ((event instanceof KeyboardEvent) && event.key === 'Escape') {
+		if (event instanceof KeyboardEvent && event.key === 'Escape') {
 			this.toggle(false);
 		}
 	}
@@ -167,9 +176,7 @@ class PalmerTooltip {
 	 * @param {boolean} show
 	 */
 	toggle(show) {
-		const method = show
-			? 'addEventListener'
-			: 'removeEventListener';
+		const method = show ? 'addEventListener' : 'removeEventListener';
 
 		document[method]('click', this.callbacks.click, eventOptions.passive);
 		document[method]('keydown', this.callbacks.keydown, eventOptions.passive);
@@ -202,9 +209,7 @@ class PalmerTooltip {
 	handleCallbacks(add) {
 		const {anchor, floater, focusable} = this;
 
-		const method = add
-			? 'addEventListener'
-			: 'removeEventListener';
+		const method = add ? 'addEventListener' : 'removeEventListener';
 
 		for (const element of [anchor, floater]) {
 			element[method]('mouseenter', this.callbacks.show, eventOptions.passive);

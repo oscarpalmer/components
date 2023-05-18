@@ -12,7 +12,14 @@ var eventOptions = {
 };
 
 // src/accordion.js
-var keys = /* @__PURE__ */ new Set(["ArrowDown", "ArrowLeft", "ArrowRight", "ArrowUp", "End", "Home"]);
+var keys = /* @__PURE__ */ new Set([
+  "ArrowDown",
+  "ArrowLeft",
+  "ArrowRight",
+  "ArrowUp",
+  "End",
+  "Home"
+]);
 var store = /* @__PURE__ */ new WeakMap();
 function onKeydown(component, event) {
   if (document.activeElement?.tagName !== "SUMMARY" || !keys.has(event.key)) {
@@ -105,14 +112,24 @@ var PalmerAccordion = class extends HTMLElement {
     };
     store.set(this, stored);
     setDetails(this);
-    this.addEventListener("keydown", (event) => onKeydown(this, event), eventOptions.active);
+    this.addEventListener(
+      "keydown",
+      (event) => onKeydown(this, event),
+      eventOptions.active
+    );
     if (!this.multiple) {
-      toggleDetails(this, stored.elements.find((details) => details.open));
+      toggleDetails(
+        this,
+        stored.elements.find((details) => details.open)
+      );
     }
   }
   attributeChangedCallback(name) {
     if (name === "multiple" && !this.multiple) {
-      toggleDetails(this, store.get(this)?.elements.find((details) => details.open));
+      toggleDetails(
+        this,
+        store.get(this)?.elements.find((details) => details.open)
+      );
     }
   }
   connectedCallback() {

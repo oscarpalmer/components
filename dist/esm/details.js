@@ -150,7 +150,9 @@ function observe(records) {
       continue;
     }
     if (!(record.target instanceof HTMLDetailsElement)) {
-      throw new TypeError(`An element with the '${selector}'-attribute must be a <details>-element`);
+      throw new TypeError(
+        `An element with the '${selector}'-attribute must be a <details>-element`
+      );
     }
     if (record.target.getAttribute(selector) === void 0) {
       PalmerDetails.destroy(record.target);
@@ -182,7 +184,11 @@ var PalmerDetails = class {
       onKeydown: this.onKeydown.bind(this),
       onToggle: this.onToggle.bind(this)
     };
-    this.details.addEventListener("toggle", this.callbacks.onToggle, eventOptions.passive);
+    this.details.addEventListener(
+      "toggle",
+      this.callbacks.onToggle,
+      eventOptions.passive
+    );
   }
   onKeydown(event) {
     if (event.key !== "Escape" || !this.details.open) {
@@ -216,7 +222,9 @@ observer.observe(globalThis.document, {
   subtree: true
 });
 wait(() => {
-  const elements = Array.from(globalThis.document.querySelectorAll(`[${selector}]`));
+  const elements = Array.from(
+    globalThis.document.querySelectorAll(`[${selector}]`)
+  );
   for (const element of elements) {
     element.setAttribute(selector, "");
   }

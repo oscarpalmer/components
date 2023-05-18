@@ -185,7 +185,9 @@ function getFocusableSelector() {
       "select",
       "textarea",
       "video[controls]"
-    ].map((selector2) => `${selector2}:not([disabled]):not([hidden]):not([tabindex="-1"])`).join(",");
+    ].map(
+      (selector2) => `${selector2}:not([disabled]):not([hidden]):not([tabindex="-1"])`
+    ).join(",");
   }
   return globalThis.oscapalmer_components_focusableSelector;
 }

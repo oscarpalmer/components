@@ -1,5 +1,10 @@
 import {wait} from '@oscarpalmer/timer';
-import {eventOptions, getFocusableElements, findParent, isNullOrWhitespace} from './helpers/index.js';
+import {
+	eventOptions,
+	getFocusableElements,
+	findParent,
+	isNullOrWhitespace,
+} from './helpers/index.js';
 import {updateFloated} from './helpers/floated.js';
 import {selector as focusTrapSelector} from './focus-trap.js';
 
@@ -41,9 +46,7 @@ function handleCallbacks(component, add) {
 		return;
 	}
 
-	const method = add
-		? 'addEventListener'
-		: 'removeEventListener';
+	const method = add ? 'addEventListener' : 'removeEventListener';
 
 	document[method]('click', callbacks.click, eventOptions.passive);
 	document[method]('keydown', callbacks.keydown, eventOptions.passive);
@@ -84,9 +87,7 @@ function handleGlobalEvent(event, component, target) {
  * @param {boolean|Event[undefined} expand
  */
 function handleToggle(component, expand) {
-	const expanded = typeof expand === 'boolean'
-		? !expand
-		: component.open;
+	const expanded = typeof expand === 'boolean' ? !expand : component.open;
 
 	component.button.setAttribute('aria-expanded', !expanded);
 
@@ -159,7 +160,11 @@ function initialise(component, button, content) {
 		keydown: onKeydown.bind(component),
 	});
 
-	button.addEventListener('click', toggle.bind(component), eventOptions.passive);
+	button.addEventListener(
+		'click',
+		toggle.bind(component),
+		eventOptions.passive,
+	);
 }
 
 /**
@@ -193,7 +198,7 @@ function onClick(event) {
  * @param {Event} event
  */
 function onKeydown(event) {
-	if (this.open && (event instanceof KeyboardEvent) && event.key === 'Escape') {
+	if (this.open && event instanceof KeyboardEvent && event.key === 'Escape') {
 		handleGlobalEvent(event, this, document.activeElement);
 	}
 }
@@ -240,11 +245,15 @@ export class PalmerPopover extends HTMLElement {
 		const content = this.querySelector(`:scope > [${selector}-content]`);
 
 		if (!isButton(button)) {
-			throw new Error(`<${selector}> must have a <button>-element (or button-like element) with the attribute '${selector}-button`);
+			throw new Error(
+				`<${selector}> must have a <button>-element (or button-like element) with the attribute '${selector}-button`,
+			);
 		}
 
 		if (content === null || !(content instanceof HTMLElement)) {
-			throw new Error(`<${selector}> must have an element with the attribute '${selector}-content'`);
+			throw new Error(
+				`<${selector}> must have an element with the attribute '${selector}-content'`,
+			);
 		}
 
 		this.button = button;

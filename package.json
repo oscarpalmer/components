@@ -76,7 +76,7 @@
 	"scripts": {
 		"build": "node .esbuild.js",
 		"types": "./node_modules/.bin/tsc ./src/*.js --allowJs --declaration --declarationDir ./types --emitDeclarationOnly --removeComments",
-		"xo": "./node_modules/.bin/xo ./src/*.js --env browser"
+		"xo": "./node_modules/.bin/xo ./src/*.js ./src/helpers/*.js --env browser"
 	},
 	"type": "module",
 	"types": "src/index.d.ts",

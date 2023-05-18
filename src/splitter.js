@@ -1,4 +1,10 @@
-import {eventOptions, getCoordinates, getNumber, isNullOrWhitespace, isTouchScreen} from './helpers/index.js';
+import {
+	eventOptions,
+	getCoordinates,
+	getNumber,
+	isNullOrWhitespace,
+	isTouchScreen,
+} from './helpers/index.js';
 
 /**
  * @typedef AbsoluteParameters
@@ -64,9 +70,7 @@ function createHandle(component, className) {
 	handle.className = `${className}__separator__handle`;
 	handle.ariaHidden = 'true';
 
-	handle.textContent = component.type === 'horizontal'
-		? '↕'
-		: '↔';
+	handle.textContent = component.type === 'horizontal' ? '↕' : '↔';
 
 	handle.addEventListener(pointerBeginEvent, () => onPointerBegin(component));
 
@@ -109,7 +113,11 @@ function createSeparator(component, values, className) {
 
 	separator.append(component.handle);
 
-	separator.addEventListener('keydown', event => onSeparatorKeydown(component, event), eventOptions.passive);
+	separator.addEventListener(
+		'keydown',
+		event => onSeparatorKeydown(component, event),
+		eventOptions.passive,
+	);
 
 	return separator;
 }
@@ -153,8 +161,8 @@ function onPointerMove(event) {
 	const componentRectangle = this.getBoundingClientRect();
 
 	const value = this.type === 'horizontal'
-		? ((coordinates.y - componentRectangle.top) / componentRectangle.height)
-		: ((coordinates.x - componentRectangle.left) / componentRectangle.width);
+		? (coordinates.y - componentRectangle.top) / componentRectangle.height
+		: (coordinates.x - componentRectangle.left) / componentRectangle.width;
 
 	setFlexValue(this, this.separator, value * 100);
 }
@@ -164,7 +172,17 @@ function onPointerMove(event) {
  * @param {KeyboardEvent} event
  */
 function onSeparatorKeydown(component, event) {
-	if (!['ArrowDown', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'End', 'Escape', 'Home'].includes(event.key)) {
+	if (
+		![
+			'ArrowDown',
+			'ArrowLeft',
+			'ArrowRight',
+			'ArrowUp',
+			'End',
+			'Escape',
+			'Home',
+		].includes(event.key)
+	) {
 		return;
 	}
 
@@ -197,9 +215,7 @@ function onSeparatorKeydown(component, event) {
 
 		case 'End':
 		case 'Home': {
-			value = event.key === 'End'
-				? values.maximum
-				: values.minimum;
+			value = event.key === 'End' ? values.maximum : values.minimum;
 
 			break;
 		}
@@ -231,11 +247,13 @@ function setAbsoluteValue(component, parameters) {
 
 	let value = getNumber(parameters.value);
 
-	if (values === undefined
-			|| Number.isNaN(value)
-			|| value === values[key]
-			|| (key === 'maximum' && value < values.minimum)
-			|| (key === 'minimum' && value > values.maximum)) {
+	if (
+		values === undefined
+		|| Number.isNaN(value)
+		|| value === values[key]
+		|| (key === 'maximum' && value < values.minimum)
+		|| (key === 'minimum' && value > values.maximum)
+	) {
 		return;
 	}
 
@@ -247,10 +265,16 @@ function setAbsoluteValue(component, parameters) {
 
 	values[parameters.key] = value;
 
-	separator.setAttribute(key === 'maximum' ? 'aria-valuemax' : 'aria-valuemin', value);
+	separator.setAttribute(
+		key === 'maximum' ? 'aria-valuemax' : 'aria-valuemin',
+		value,
+	);
 
-	if (setFlex && ((key === 'maximum' && value < values.current)
-			|| (key === 'minimum' && value > values.current))) {
+	if (
+		setFlex
+		&& ((key === 'maximum' && value < values.current)
+			|| (key === 'minimum' && value > values.current))
+	) {
 		setFlexValue(component, separator, value, values);
 	}
 }
@@ -270,13 +294,21 @@ function setDragging(component, active) {
 		stored.values.initial = Number(stored.values.current);
 	}
 
-	const method = active
-		? 'addEventListener'
-		: 'removeEventListener';
+	const method = active ? 'addEventListener' : 'removeEventListener';
 
 	document[method]('keydown', stored.callbacks.keydown, eventOptions.passive);
-	document[method](pointerEndEvent, stored.callbacks.pointerEnd, eventOptions.passive);
-	document[method](pointerMoveEvent, stored.callbacks.pointerMove, eventOptions.passive);
+
+	document[method](
+		pointerEndEvent,
+		stored.callbacks.pointerEnd,
+		eventOptions.passive,
+	);
+
+	document[method](
+		pointerMoveEvent,
+		stored.callbacks.pointerMove,
+		eventOptions.passive,
+	);
 
 	stored.dragging = active;
 
@@ -364,9 +396,7 @@ export class PalmerSplitter extends HTMLElement {
 	get type() {
 		const type = this.getAttribute('type') ?? 'vertical';
 
-		return (splitterTypes.has(type)
-			? type
-			: 'vertical');
+		return splitterTypes.has(type) ? type : 'vertical';
 	}
 
 	set type(type) {
@@ -426,9 +456,7 @@ export class PalmerSplitter extends HTMLElement {
 			case 'max':
 			case 'min': {
 				setAbsoluteValue(this, {
-					key: name === 'max'
-						? 'maximum'
-						: 'minimum',
+					key: name === 'max' ? 'maximum' : 'minimum',
 					separator: this.separator,
 					setFlex: true,
 					value,

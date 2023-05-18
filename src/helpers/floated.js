@@ -8,27 +8,27 @@ import {getTextDirection} from './index.js';
  * @property {number} offset
  * @property {boolean} preferMin
  * @property {number} start
-*/
+ */
 
 /**
-	* @typedef Elements
-	* @property {HTMLElement} anchor
-	* @property {HTMLElement} floater
-	* @property {HTMLElement?} parent
-*/
+ * @typedef Elements
+ * @property {HTMLElement} anchor
+ * @property {HTMLElement} floater
+ * @property {HTMLElement?} parent
+ */
 
 /**
-	* @typedef Parameters
-	* @property {Elements} elements
-	* @property {ParametersPosition} position
-*/
+ * @typedef Parameters
+ * @property {Elements} elements
+ * @property {ParametersPosition} position
+ */
 
 /**
  * @typedef ParametersPosition
  * @property {string} attribute
  * @property {string} defaultValue
  * @property {boolean} preferAbove
-*/
+ */
 
 /**
  * @typedef Rectangles
@@ -40,7 +40,7 @@ import {getTextDirection} from './index.js';
  * @typedef Values = {
  * @property {number} left
  * @property {number} top
-*/
+ */
 
 const allPositions = [
 	'above',
@@ -67,7 +67,13 @@ const allPositions = [
 const domRectKeys = ['bottom', 'height', 'left', 'right', 'top', 'width'];
 
 const horizontalPositions = new Set(['left', 'horizontal', 'right']);
-const transformedPositions = new Set(['above', 'any', 'below', 'vertical', ...Array.from(horizontalPositions.values)]);
+const transformedPositions = new Set([
+	'above',
+	'any',
+	'below',
+	'vertical',
+	...Array.from(horizontalPositions.values),
+]);
 
 /**
  * @param {string} position
@@ -86,8 +92,20 @@ function calculatePosition(position, rectangles, rightToLeft, preferAbove) {
 
 	const {anchor, floater} = rectangles;
 
-	const left = getAbsolute(anchor.right, anchor.left, floater.width, innerWidth, rightToLeft);
-	const top = getAbsolute(anchor.top, anchor.bottom, floater.height, innerHeight, preferAbove);
+	const left = getAbsolute(
+		anchor.right,
+		anchor.left,
+		floater.width,
+		innerWidth,
+		rightToLeft,
+	);
+	const top = getAbsolute(
+		anchor.top,
+		anchor.bottom,
+		floater.height,
+		innerHeight,
+		preferAbove,
+	);
 
 	return {left, top};
 }
@@ -128,7 +146,10 @@ function getActualPosition(original, rectangles, values) {
 
 	const isHorizontal = horizontalPositions.has(original);
 
-	return [getPrefix(rectangles, values, isHorizontal), getSuffix(rectangles, values, isHorizontal)]
+	return [
+		getPrefix(rectangles, values, isHorizontal),
+		getSuffix(rectangles, values, isHorizontal),
+	]
 		.filter(value => value !== undefined)
 		.join('-');
 }
@@ -164,7 +185,13 @@ function getLeft(rectangles, position, rightToLeft) {
 		case 'horizontal':
 		case 'horizontal-bottom':
 		case 'horizontal-top': {
-			return getAbsolute(anchor.left, anchor.right, floater.width, innerWidth, rightToLeft);
+			return getAbsolute(
+				anchor.left,
+				anchor.right,
+				floater.width,
+				innerWidth,
+				rightToLeft,
+			);
 		}
 
 		case 'left':
@@ -299,7 +326,13 @@ function getTop(rectangles, position, preferAbove) {
 		case 'vertical':
 		case 'vertical-left':
 		case 'vertical-right': {
-			return getAbsolute(anchor.top, anchor.bottom, floater.height, innerHeight, preferAbove);
+			return getAbsolute(
+				anchor.top,
+				anchor.bottom,
+				floater.height,
+				innerHeight,
+				preferAbove,
+			);
 		}
 
 		default: {
@@ -328,11 +361,17 @@ export function updateFloated(parameters) {
 	}
 
 	function onRepeat() {
-		const currentPosition = getOriginalPosition((parent ?? anchor).getAttribute(parameters.position.attribute) ?? '', parameters.position.defaultValue);
+		const currentPosition = getOriginalPosition(
+			(parent ?? anchor).getAttribute(parameters.position.attribute) ?? '',
+			parameters.position.defaultValue,
+		);
+
 		const currentRectangle = anchor.getBoundingClientRect();
 
-		if (previousPosition === currentPosition
-				&& domRectKeys.every(key => previousRectangle?.[key] === currentRectangle[key])) {
+		if (
+			previousPosition === currentPosition
+			&& domRectKeys.every(key => previousRectangle?.[key] === currentRectangle[key])
+		) {
 			return;
 		}
 
@@ -344,7 +383,12 @@ export function updateFloated(parameters) {
 			floater: floater.getBoundingClientRect(),
 		};
 
-		const values = calculatePosition(currentPosition, rectangles, rightToLeft, parameters.position.preferAbove);
+		const values = calculatePosition(
+			currentPosition,
+			rectangles,
+			rightToLeft,
+			parameters.position.preferAbove,
+		);
 
 		const matrix = `matrix(1, 0, 0, 1, ${values.left}, ${values.top})`;
 
@@ -356,12 +400,20 @@ export function updateFloated(parameters) {
 		floater.style.inset = '0 auto auto 0';
 		floater.style.transform = matrix;
 
-		floater.setAttribute('position', getActualPosition(currentPosition, rectangles, values));
+		floater.setAttribute(
+			'position',
+			getActualPosition(currentPosition, rectangles, values),
+		);
 	}
 
 	document.body.append(floater);
 
 	floater.hidden = false;
 
-	return (new Repeated(onRepeat, 0, Number.POSITIVE_INFINITY, afterRepeat)).start();
+	return new Repeated(
+		onRepeat,
+		0,
+		Number.POSITIVE_INFINITY,
+		afterRepeat,
+	).start();
 }

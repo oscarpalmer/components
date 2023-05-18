@@ -1,5 +1,9 @@
 import {wait} from '@oscarpalmer/timer';
-import {eventOptions, getFocusableElements, findParent} from './helpers/index.js';
+import {
+	eventOptions,
+	getFocusableElements,
+	findParent,
+} from './helpers/index.js';
 
 export const selector = 'palmer-focus-trap';
 

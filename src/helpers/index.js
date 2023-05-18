@@ -23,7 +23,9 @@ export function isTouchScreen() {
 		}
 
 		if (!isTouchScreen) {
-			isTouchScreen = ('ontouchstart' in window) || navigator.maxTouchPoints > 0 || (navigator.msMaxTouchPoints ?? 0) > 0;
+			isTouchScreen = 'ontouchstart' in window
+				|| navigator.maxTouchPoints > 0
+				|| (navigator.msMaxTouchPoints ?? 0) > 0;
 		}
 	} catch {
 		isTouchScreen = false;
@@ -95,7 +97,10 @@ export function getFocusableElements(context) {
 	for (const element of elements) {
 		const style = getComputedStyle?.(element);
 
-		if (style === null || (style.display !== 'none' && style.visibility !== 'hidden')) {
+		if (
+			style === null
+			|| (style.display !== 'none' && style.visibility !== 'hidden')
+		) {
 			focusable.push(element);
 		}
 	}
@@ -124,7 +129,10 @@ export function getFocusableSelector() {
 			'textarea',
 			'video[controls]',
 		]
-			.map(selector => `${selector}:not([disabled]):not([hidden]):not([tabindex="-1"])`)
+			.map(
+				selector =>
+					`${selector}:not([disabled]):not([hidden]):not([tabindex="-1"])`,
+			)
 			.join(',');
 	}
 
@@ -145,9 +153,7 @@ export function getNumber(value) {
  * @returns {string}
  */
 export function getTextDirection(element) {
-	return getComputedStyle?.(element)?.direction === 'rtl'
-		? 'rtl'
-		: 'ltr';
+	return getComputedStyle?.(element)?.direction === 'rtl' ? 'rtl' : 'ltr';
 }
 
 /**

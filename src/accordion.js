@@ -4,9 +4,16 @@ import {eventOptions} from './helpers/index.js';
  * @typedef Stored
  * @property {HTMLDetailsElement[]} elements
  * @property {MutationObserver} observer
-*/
+ */
 
-const keys = new Set(['ArrowDown', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'End', 'Home']);
+const keys = new Set([
+	'ArrowDown',
+	'ArrowLeft',
+	'ArrowRight',
+	'ArrowUp',
+	'End',
+	'Home',
+]);
 
 /** @type {WeakMap<PalmerAccordion, Stored>} */
 const store = new WeakMap();
@@ -40,22 +47,26 @@ function onKeydown(component, event) {
 		case 'ArrowDown':
 		case 'ArrowRight': {
 			destination = current + 1;
+
 			break;
 		}
 
 		case 'ArrowLeft':
 		case 'ArrowUp': {
 			destination = current - 1;
+
 			break;
 		}
 
 		case 'End': {
 			destination = stored.elements.length - 1;
+
 			break;
 		}
 
 		case 'Home': {
 			destination = 0;
+
 			break;
 		}
 
@@ -149,16 +160,26 @@ export class PalmerAccordion extends HTMLElement {
 
 		setDetails(this);
 
-		this.addEventListener('keydown', event => onKeydown(this, event), eventOptions.active);
+		this.addEventListener(
+			'keydown',
+			event => onKeydown(this, event),
+			eventOptions.active,
+		);
 
 		if (!this.multiple) {
-			toggleDetails(this, stored.elements.find(details => details.open));
+			toggleDetails(
+				this,
+				stored.elements.find(details => details.open),
+			);
 		}
 	}
 
 	attributeChangedCallback(name) {
 		if (name === 'multiple' && !this.multiple) {
-			toggleDetails(this, store.get(this)?.elements.find(details => details.open));
+			toggleDetails(
+				this,
+				store.get(this)?.elements.find(details => details.open),
+			);
 		}
 	}
 

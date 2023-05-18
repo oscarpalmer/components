@@ -86,7 +86,11 @@ function createSeparator(component, values, className) {
     setFlexValue(component, separator, 50);
   }
   separator.append(component.handle);
-  separator.addEventListener("keydown", (event) => onSeparatorKeydown(component, event), eventOptions.passive);
+  separator.addEventListener(
+    "keydown",
+    (event) => onSeparatorKeydown(component, event),
+    eventOptions.passive
+  );
   return separator;
 }
 function onDocumentKeydown(event) {
@@ -110,7 +114,15 @@ function onPointerMove(event) {
   setFlexValue(this, this.separator, value * 100);
 }
 function onSeparatorKeydown(component, event) {
-  if (!["ArrowDown", "ArrowLeft", "ArrowRight", "ArrowUp", "End", "Escape", "Home"].includes(event.key)) {
+  if (![
+    "ArrowDown",
+    "ArrowLeft",
+    "ArrowRight",
+    "ArrowUp",
+    "End",
+    "Escape",
+    "Home"
+  ].includes(event.key)) {
     return;
   }
   const ignored = component.type === "horizontal" ? ["ArrowLeft", "ArrowRight"] : ["ArrowDown", "ArrowUp"];
@@ -159,7 +171,10 @@ function setAbsoluteValue(component, parameters) {
     value = 0;
   }
   values[parameters.key] = value;
-  separator.setAttribute(key === "maximum" ? "aria-valuemax" : "aria-valuemin", value);
+  separator.setAttribute(
+    key === "maximum" ? "aria-valuemax" : "aria-valuemin",
+    value
+  );
   if (setFlex && (key === "maximum" && value < values.current || key === "minimum" && value > values.current)) {
     setFlexValue(component, separator, value, values);
   }
@@ -174,8 +189,16 @@ function setDragging(component, active) {
   }
   const method = active ? "addEventListener" : "removeEventListener";
   document[method]("keydown", stored.callbacks.keydown, eventOptions.passive);
-  document[method](pointerEndEvent, stored.callbacks.pointerEnd, eventOptions.passive);
-  document[method](pointerMoveEvent, stored.callbacks.pointerMove, eventOptions.passive);
+  document[method](
+    pointerEndEvent,
+    stored.callbacks.pointerEnd,
+    eventOptions.passive
+  );
+  document[method](
+    pointerMoveEvent,
+    stored.callbacks.pointerMove,
+    eventOptions.passive
+  );
   stored.dragging = active;
 }
 function setFlexValue(component, parameters) {
