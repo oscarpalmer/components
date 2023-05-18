@@ -1,5 +1,5 @@
-dist/**/*.map
 node_modules/
 test/
+types/helpers
 www/
 *.DS_Store

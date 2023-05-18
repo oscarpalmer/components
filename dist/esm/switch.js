@@ -5,29 +5,16 @@ var __publicField = (obj, key, value) => {
   return value;
 };
 
-// src/helpers/index.ts
+// src/helpers/index.js
 var eventOptions = {
   active: { capture: false, passive: false },
   passive: { capture: false, passive: true }
 };
-var isTouchy = (() => {
-  try {
-    if ("matchMedia" in window) {
-      const media = matchMedia("(pointer: coarse)");
-      if (media != null && typeof media.matches === "boolean") {
-        return media.matches;
-      }
-    }
-    return "ontouchstart" in window || navigator.maxTouchPoints > 0 || (navigator?.msMaxTouchPoints ?? 0) > 0;
-  } catch (_) {
-    return false;
-  }
-})();
 function isNullOrWhitespace(value) {
   return (value ?? "").trim().length === 0;
 }
 
-// src/switch.ts
+// src/switch.js
 function getLabel(id, className, content) {
   const label = document.createElement("span");
   label.ariaHidden = true;
@@ -42,15 +29,15 @@ function getStatus(className) {
   status.className = `${className}__status`;
   const indicator = document.createElement("span");
   indicator.className = `${className}__status__indicator`;
-  status.appendChild(indicator);
+  status.append(indicator);
   return status;
 }
 function getText(className, on, off) {
   const text = document.createElement("span");
   text.ariaHidden = true;
   text.className = `${className}__text`;
-  text.appendChild(getTextItem("off", className, off));
-  text.appendChild(getTextItem("on", className, on));
+  text.append(getTextItem("off", className, off));
+  text.append(getTextItem("on", className, on));
   return text;
 }
 function getTextItem(type, className, content) {
@@ -107,7 +94,24 @@ function toggle(component) {
   component.dispatchEvent(new Event("change"));
 }
 var PalmerSwitch = class extends HTMLElement {
-  internals;
+  constructor() {
+    super();
+    /**
+     * @private
+     * @type {ElementInternals|undefined}
+     */
+    __publicField(this, "internals");
+    this.internals = this.attachInternals?.();
+    const input = this.querySelector("[palmer-switch-input]");
+    const label = this.querySelector("[palmer-switch-label]");
+    if (input === null || !(input instanceof HTMLInputElement) || input.type !== "checkbox") {
+      throw new TypeError("<palmer-switch> must have an <input>-element with type 'checkbox' and the attribute 'palmer-switch-input'");
+    }
+    if (label === null || !(label instanceof HTMLElement)) {
+      throw new TypeError("<palmer-switch> must have an element with the attribute 'palmer-switch-label'");
+    }
+    initialise(this, label, input);
+  }
   get checked() {
     return this.getAttribute("aria-checked") === "true";
   }
@@ -121,7 +125,7 @@ var PalmerSwitch = class extends HTMLElement {
     this.setAttribute("aria-disabled", disabled);
   }
   get form() {
-    return this.internals?.form ?? void 0;
+    return this.internals?.form;
   }
   get labels() {
     return this.internals?.labels;
@@ -149,19 +153,6 @@ var PalmerSwitch = class extends HTMLElement {
   }
   get willValidate() {
     return this.internals?.willValidate ?? true;
-  }
-  constructor() {
-    super();
-    this.internals = this.attachInternals?.();
-    const input = this.querySelector("[palmer-switch-input]");
-    const label = this.querySelector("[palmer-switch-label]");
-    if (typeof input === "undefined" || !(input instanceof HTMLInputElement) || input.type !== "checkbox") {
-      throw new Error("<palmer-switch> must have an <input>-element with type 'checkbox' and the attribute 'palmer-switch-input'");
-    }
-    if (typeof label === "undefined" || !(label instanceof HTMLElement)) {
-      throw new Error("<palmer-switch> must have an element with the attribute 'palmer-switch-label'");
-    }
-    initialise(this, label, input);
   }
   checkValidity() {
     return this.internals?.checkValidity() ?? true;

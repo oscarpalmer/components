@@ -1,84 +1,130 @@
-import {Repeated, wait} from '@oscarpalmer/timer';
-import {eventOptions, findParent, getFocusableSelector} from './helpers';
-import {updateFloated} from './helpers/floated';
+import {wait} from '@oscarpalmer/timer';
+import {eventOptions, findParent, getFocusableSelector} from './helpers/index.js';
+import {updateFloated} from './helpers/floated.js';
 
-type Callbacks = {
-	click: (event: Event) => void;
-	hide: (event: Event) => void;
-	keydown: (event: Event) => void;
-	show: (event: Event) => void;
-};
+/** @typedef Callbacks
+ * @property {(event: Event) => void} click
+ * @property {(event: Event) => void} hide
+ * @property {(event: Event) => void} keydown
+ * @property {(event: Event) => void} show
+ */
 
 const selector = 'palmer-tooltip';
 
 const contentAttribute = `${selector}-content`;
 const positionAttribute = `${selector}-position`;
 
-const store = new WeakMap<HTMLElement, Tooltip>();
+/** @type {WeakMap<HTMLElement, PalmerTooltip>} */
+const store = new WeakMap();
 
-function observe(records: MutationRecord[]): void {
+/**
+ * @param {MutationRecord[]} records
+ */
+function observe(records) {
 	for (const record of records) {
 		if (record.type !== 'attributes') {
 			continue;
 		}
 
-		const element = record.target as HTMLElement;
-
-		if (element.getAttribute(selector) == null) {
-			Tooltip.destroy(element);
+		if (record.target.getAttribute(selector) === null) {
+			PalmerTooltip.destroy(record.target);
 		} else {
-			Tooltip.create(element);
+			PalmerTooltip.create(record.target);
 		}
 	}
 }
 
-class Tooltip {
-	private readonly callbacks: Callbacks = {
+class PalmerTooltip {
+	/**
+	 * @private
+	 * @readonly
+	 * @type {HTMLElement}
+	 */
+	anchor;
+
+	/**
+	 * @private
+	 * @readonly
+	 * @type {Callbacks}
+	 */
+	callbacks = {
 		click: this.onClick.bind(this),
 		hide: this.onHide.bind(this),
 		keydown: this.onKeyDown.bind(this),
 		show: this.onShow.bind(this),
 	};
 
-	private readonly floater: HTMLElement;
-	private readonly focusable: boolean;
-	private timer: Repeated | undefined;
+	/**
+	 * @private
+	 * @readonly
+	 * @type {HTMLElement}
+	 */
+	floater;
 
-	constructor(private readonly anchor: HTMLElement) {
+	/**
+	 * @private
+	 * @readonly
+	 * @type {boolean}
+	 */
+	focusable;
+
+	/**
+	 * @private
+	 */
+	timer;
+
+	/**
+	 * @constructor
+	 * @param {HTMLElement} anchor
+	 */
+	constructor(anchor) {
+		this.anchor = anchor;
+
 		this.focusable = anchor.matches(getFocusableSelector());
 
-		this.floater = Tooltip.createFloater(anchor);
+		this.floater = PalmerTooltip.createFloater(anchor);
 
 		this.handleCallbacks(true);
 	}
 
-	static create(anchor: HTMLElement): void {
+	/**
+	 * @param {HTMLElement} anchor
+	 */
+	static create(anchor) {
 		if (!store.has(anchor)) {
-			store.set(anchor, new Tooltip(anchor));
+			store.set(anchor, new PalmerTooltip(anchor));
 		}
 	}
 
-	static destroy(element: HTMLElement): void {
-		const tooltip = store.get(element);
+	/**
+	 * @param {HTMLElement} element
+	 */
+	static destroy(anchor) {
+		const tooltip = store.get(anchor);
 
-		if (typeof tooltip === 'undefined') {
+		if (tooltip === undefined) {
 			return;
 		}
 
 		tooltip.handleCallbacks(false);
 
-		store.delete(element);
+		store.delete(anchor);
 	}
 
-	private static createFloater(anchor: HTMLElement): HTMLElement {
+	/**
+	 * @private
+	 * @param {HTMLElement} anchor
+	 * @returns {HTMLElement}
+	 */
+	static createFloater(anchor) {
 		const id = anchor.getAttribute('aria-describedby') ?? anchor.getAttribute('aria-labelledby');
 
-		const element = id == null
+		const element = id === null
 			? null
-			: document.getElementById(id);
+			: document.querySelector(`#${id}`);
 
-		if (element == null) {
-			throw new Error(`A '${selector}'-attributed element must have a valid id reference in either the 'aria-describedby' or 'aria-labelledby'-attribute.`);
+		if (element === null) {
+			throw new TypeError(`A '${selector}'-attributed element must have a valid id reference in either the 'aria-describedby' or 'aria-labelledby'-attribute.`);
 		}
 
 		element.hidden = true;
@@ -91,8 +137,11 @@ class Tooltip {
 		return element;
 	}
 
-	onClick(event: Event): void {
-		if (findParent(event.target as never, element => [this.anchor, this.floater].includes(element)) == null) {
+	/**
+	 * @param {Event} event
+	 */
+	onClick(event) {
+		if (findParent(event.target, element => [this.anchor, this.floater].includes(element)) === undefined) {
 			this.toggle(false);
 		}
 	}
@@ -101,7 +150,10 @@ class Tooltip {
 		this.toggle(false);
 	}
 
-	onKeyDown(event: Event): void {
+	/**
+	 * @param {Event} event
+	 */
+	onKeyDown(event) {
 		if ((event instanceof KeyboardEvent) && event.key === 'Escape') {
 			this.toggle(false);
 		}
@@ -111,7 +163,10 @@ class Tooltip {
 		this.toggle(true);
 	}
 
-	toggle(show: boolean): void {
+	/**
+	 * @param {boolean} show
+	 */
+	toggle(show) {
 		const method = show
 			? 'addEventListener'
 			: 'removeEventListener';
@@ -140,7 +195,11 @@ class Tooltip {
 		}
 	}
 
-	private handleCallbacks(add: boolean): void {
+	/**
+	 * @private
+	 * @param {boolean} add
+	 */
+	handleCallbacks(add) {
 		const {anchor, floater, focusable} = this;
 
 		const method = add

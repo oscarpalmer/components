@@ -5,24 +5,32 @@ var __publicField = (obj, key, value) => {
   return value;
 };
 
-// src/helpers/index.ts
+// src/helpers/index.js
 var eventOptions = {
   active: { capture: false, passive: false },
   passive: { capture: false, passive: true }
 };
-var isTouchy = (() => {
+function isTouchScreen() {
+  if (typeof globalThis.oscarpalmer_components_isTouchScreen === "boolean") {
+    return globalThis.oscarpalmer_components_isTouchScreen;
+  }
+  let isTouchScreen2 = false;
   try {
     if ("matchMedia" in window) {
       const media = matchMedia("(pointer: coarse)");
-      if (media != null && typeof media.matches === "boolean") {
-        return media.matches;
+      if (typeof media?.matches === "boolean") {
+        isTouchScreen2 = media.matches;
       }
     }
-    return "ontouchstart" in window || navigator.maxTouchPoints > 0 || (navigator?.msMaxTouchPoints ?? 0) > 0;
-  } catch (_) {
-    return false;
+    if (!isTouchScreen2) {
+      isTouchScreen2 = "ontouchstart" in window || navigator.maxTouchPoints > 0 || (navigator.msMaxTouchPoints ?? 0) > 0;
+    }
+  } catch {
+    isTouchScreen2 = false;
   }
-})();
+  globalThis.oscarpalmer_components_isTouchScreen = isTouchScreen2;
+  return isTouchScreen2;
+}
 function getCoordinates(event) {
   if (event instanceof MouseEvent) {
     return {
@@ -32,7 +40,7 @@ function getCoordinates(event) {
   }
   const x = event.touches[0]?.clientX;
   const y = event.touches[0]?.clientY;
-  return x == null || y == null ? void 0 : { x, y };
+  return x === null || y === null ? void 0 : { x, y };
 }
 function getNumber(value) {
   return typeof value === "number" ? value : Number.parseInt(typeof value === "string" ? value : String(value), 10);
@@ -41,12 +49,12 @@ function isNullOrWhitespace(value) {
   return (value ?? "").trim().length === 0;
 }
 
-// src/splitter.ts
-var pointerBeginEvent = isTouchy ? "touchstart" : "mousedown";
-var pointerEndEvent = isTouchy ? "touchend" : "mouseup";
-var pointerMoveEvent = isTouchy ? "touchmove" : "mousemove";
+// src/splitter.js
+var pointerBeginEvent = isTouchScreen() ? "touchstart" : "mousedown";
+var pointerEndEvent = isTouchScreen() ? "touchend" : "mouseup";
+var pointerMoveEvent = isTouchScreen() ? "touchmove" : "mousemove";
 var selector = "palmer-splitter";
-var splitterTypes = ["horizontal", "vertical"];
+var splitterTypes = /* @__PURE__ */ new Set(["horizontal", "vertical"]);
 var store = /* @__PURE__ */ new WeakMap();
 var index = 0;
 function createHandle(component, className) {
@@ -58,9 +66,9 @@ function createHandle(component, className) {
   return handle;
 }
 function createSeparator(component, values, className) {
-  let actualValues = values ?? store.get(component)?.values;
-  if (actualValues == null) {
-    return null;
+  const actualValues = values ?? store.get(component)?.values;
+  if (actualValues === void 0) {
+    return void 0;
   }
   const separator = document.createElement("div");
   if (isNullOrWhitespace(component.primary.id)) {
@@ -73,11 +81,11 @@ function createSeparator(component, values, className) {
   separator.setAttribute("aria-valuemax", "100");
   separator.setAttribute("aria-valuemin", "0");
   separator.setAttribute("aria-valuenow", "50");
-  let original = component.getAttribute("value");
+  const original = component.getAttribute("value");
   if (isNullOrWhitespace(original)) {
     setFlexValue(component, separator, 50);
   }
-  separator.appendChild(component.handle);
+  separator.append(component.handle);
   separator.addEventListener("keydown", (event) => onSeparatorKeydown(component, event), eventOptions.passive);
   return separator;
 }
@@ -94,16 +102,11 @@ function onPointerEnd() {
 }
 function onPointerMove(event) {
   const coordinates = getCoordinates(event);
-  if (coordinates == null) {
+  if (coordinates === void 0) {
     return;
   }
   const componentRectangle = this.getBoundingClientRect();
-  let value = void 0;
-  if (this.type === "horizontal") {
-    value = (coordinates.y - componentRectangle.top) / componentRectangle.height;
-  } else {
-    value = (coordinates.x - componentRectangle.left) / componentRectangle.width;
-  }
+  const value = this.type === "horizontal" ? (coordinates.y - componentRectangle.top) / componentRectangle.height : (coordinates.x - componentRectangle.left) / componentRectangle.width;
   setFlexValue(this, this.separator, value * 100);
 }
 function onSeparatorKeydown(component, event) {
@@ -114,8 +117,8 @@ function onSeparatorKeydown(component, event) {
   if (ignored.includes(event.key)) {
     return;
   }
-  const values = store.get(component)?.values;
-  if (values == null) {
+  const { values } = store.get(component);
+  if (values === void 0) {
     return;
   }
   let value;
@@ -123,42 +126,47 @@ function onSeparatorKeydown(component, event) {
     case "ArrowDown":
     case "ArrowLeft":
     case "ArrowRight":
-    case "ArrowUp":
+    case "ArrowUp": {
       value = Math.round(component.value + (["ArrowLeft", "ArrowUp"].includes(event.key) ? -1 : 1));
       break;
+    }
     case "End":
-    case "Home":
+    case "Home": {
       value = event.key === "End" ? values.maximum : values.minimum;
       break;
-    case "Escape":
+    }
+    case "Escape": {
       value = values.initial ?? values.original;
       values.initial = void 0;
       break;
-    default:
+    }
+    default: {
       break;
+    }
   }
   setFlexValue(component, component.separator, value, values);
 }
-function setAbsoluteValue(component, separator, key, value, setFlex, values) {
-  let actualValues = values ?? store.get(component)?.values;
-  let actualValue = getNumber(value);
-  if (actualValues == null || Number.isNaN(actualValue) || actualValue === actualValues[key] || key === "maximum" && actualValue < actualValues.minimum || key === "minimum" && actualValue > actualValues.maximum) {
+function setAbsoluteValue(component, parameters) {
+  const { key, separator, setFlex } = parameters;
+  const values = parameters.values ?? store.get(component)?.values;
+  let value = getNumber(parameters.value);
+  if (values === void 0 || Number.isNaN(value) || value === values[key] || key === "maximum" && value < values.minimum || key === "minimum" && value > values.maximum) {
     return;
   }
-  if (key === "maximum" && actualValue > 100) {
-    actualValue = 100;
-  } else if (key === "minimum" && actualValue < 0) {
-    actualValue = 0;
+  if (key === "maximum" && value > 100) {
+    value = 100;
+  } else if (key === "minimum" && value < 0) {
+    value = 0;
   }
-  actualValues[key] = actualValue;
-  separator.setAttribute(key === "maximum" ? "aria-valuemax" : "aria-valuemin", actualValue);
-  if (setFlex && (key === "maximum" && actualValue < actualValues.current || key === "minimum" && actualValue > actualValues.current)) {
-    setFlexValue(component, separator, actualValue, actualValues);
+  values[parameters.key] = value;
+  separator.setAttribute(key === "maximum" ? "aria-valuemax" : "aria-valuemin", value);
+  if (setFlex && (key === "maximum" && value < values.current || key === "minimum" && value > values.current)) {
+    setFlexValue(component, separator, value, values);
   }
 }
 function setDragging(component, active) {
   const stored = store.get(component);
-  if (stored == null) {
+  if (stored === void 0) {
     return;
   }
   if (active) {
@@ -170,62 +178,50 @@ function setDragging(component, active) {
   document[method](pointerMoveEvent, stored.callbacks.pointerMove, eventOptions.passive);
   stored.dragging = active;
 }
-function setFlexValue(component, separator, value, values, setOriginal) {
-  let actualValues = values ?? store.get(component)?.values;
-  let actualValue = getNumber(value);
-  if (actualValues == null || Number.isNaN(actualValue) || actualValue === actualValues.current) {
+function setFlexValue(component, parameters) {
+  const { separator } = parameters;
+  const values = parameters.values ?? store.get(component)?.values;
+  let value = getNumber(parameters.value);
+  if (values === void 0 || Number.isNaN(value) || value === values.current) {
     return;
   }
-  if (actualValue < actualValues.minimum) {
-    actualValue = actualValues.minimum;
-  } else if (actualValue > actualValues.maximum) {
-    actualValue = actualValues.maximum;
+  if (value < values.minimum) {
+    value = values.minimum;
+  } else if (value > values.maximum) {
+    value = values.maximum;
   }
-  if (setOriginal ?? false) {
-    actualValues.original = actualValue;
+  if (parameters.setOriginal ?? false) {
+    values.original = value;
   }
-  separator.ariaValueNow = actualValue;
-  component.primary.style.flex = `${actualValue / 100}`;
-  component.secondary.style.flex = `${(100 - actualValue) / 100}`;
-  actualValues.current = actualValue;
-  component.dispatchEvent(new CustomEvent("change", {
-    detail: {
-      value: actualValue
-    }
-  }));
+  separator.ariaValueNow = value;
+  component.primary.style.flex = `${value / 100}`;
+  component.secondary.style.flex = `${(100 - value) / 100}`;
+  values.current = value;
+  component.dispatchEvent(new CustomEvent("change", { detail: { value } }));
 }
 var PalmerSplitter = class extends HTMLElement {
-  handle;
-  primary;
-  secondary;
-  separator;
-  get max() {
-    return store.get(this)?.values.maximum;
-  }
-  set max(max) {
-    this.setAttribute("max", max);
-  }
-  get min() {
-    return store.get(this)?.values.minimum;
-  }
-  set min(min) {
-    this.setAttribute("min", min);
-  }
-  get type() {
-    const type = this.getAttribute("type") ?? "vertical";
-    return splitterTypes.includes(type) ? type : "vertical";
-  }
-  set type(type) {
-    this.setAttribute("type", type);
-  }
-  get value() {
-    return store.get(this)?.values.current;
-  }
-  set value(value) {
-    this.setAttribute("value", value);
-  }
   constructor() {
     super();
+    /**
+     * @readonly
+     * @type {HTMLElement}
+     */
+    __publicField(this, "handle");
+    /**
+     * @readonly
+     * @type {HTMLElement}
+     */
+    __publicField(this, "primary");
+    /**
+     * @readonly
+     * @type {HTMLElement}
+     */
+    __publicField(this, "secondary");
+    /**
+     * @readonly
+     * @type {HTMLElement}
+     */
+    __publicField(this, "separator");
     if (this.children.length !== 2) {
       throw new Error(`A <${selector}> must have exactly two direct children`);
     }
@@ -254,17 +250,54 @@ var PalmerSplitter = class extends HTMLElement {
     this.separator = createSeparator(this, stored.values, className);
     this.primary?.insertAdjacentElement("afterend", this.separator);
   }
+  get max() {
+    return store.get(this)?.values.maximum;
+  }
+  set max(max) {
+    this.setAttribute("max", max);
+  }
+  get min() {
+    return store.get(this)?.values.minimum;
+  }
+  set min(min) {
+    this.setAttribute("min", min);
+  }
+  get type() {
+    const type = this.getAttribute("type") ?? "vertical";
+    return splitterTypes.has(type) ? type : "vertical";
+  }
+  set type(type) {
+    this.setAttribute("type", type);
+  }
+  get value() {
+    return store.get(this)?.values.current;
+  }
+  set value(value) {
+    this.setAttribute("value", value);
+  }
   attributeChangedCallback(name, _, value) {
     switch (name) {
       case "max":
-      case "min":
-        setAbsoluteValue(this, this.separator, name === "max" ? "maximum" : "minimum", value, true);
+      case "min": {
+        setAbsoluteValue(this, {
+          key: name === "max" ? "maximum" : "minimum",
+          separator: this.separator,
+          setFlex: true,
+          value
+        });
         break;
-      case "value":
-        setFlexValue(this, this.separator, value, void 0, true);
+      }
+      case "value": {
+        setFlexValue(this, {
+          separator: this.separator,
+          setOriginal: true,
+          value
+        });
         break;
-      default:
+      }
+      default: {
         break;
+      }
     }
   }
 };

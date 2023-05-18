@@ -1,11 +1,17 @@
 import {wait} from '@oscarpalmer/timer';
-import {eventOptions, getFocusableElements, findParent} from './helpers';
+import {eventOptions, getFocusableElements, findParent} from './helpers/index.js';
 
 export const selector = 'palmer-focus-trap';
 
-const store = new WeakMap<HTMLElement, FocusTrap>();
+/** @type {WeakMap<HTMLElement, FocusTrap>} */
+const store = new WeakMap();
 
-function handleEvent(event: KeyboardEvent, focusTrap: HTMLElement, element: HTMLElement): void {
+/**
+ * @param {KeyboardEvent} event
+ * @param {HTMLElement} focusTrap
+ * @param {HTMLElement} element
+ */
+function handleEvent(event, focusTrap, element) {
 	const elements = getFocusableElements(focusTrap);
 
 	if (element === focusTrap) {
@@ -37,59 +43,69 @@ function handleEvent(event: KeyboardEvent, focusTrap: HTMLElement, element: HTML
 	}, 0);
 }
 
-function observe(records: MutationRecord[]) {
+function observe(records) {
 	for (const record of records) {
 		if (record.type !== 'attributes') {
 			continue;
 		}
 
-		const element = record.target as HTMLElement;
-
-		if (element.getAttribute(selector) == null) {
-			FocusTrap.destroy(element);
+		if (record.target.getAttribute(selector) === undefined) {
+			FocusTrap.destroy(record.target);
 		} else {
-			FocusTrap.create(element);
+			FocusTrap.create(record.target);
 		}
 	}
 }
 
-function onKeydown(event: KeyboardEvent): void {
+function onKeydown(event) {
 	if (event.key !== 'Tab') {
 		return;
 	}
 
-	const eventTarget = event.target as HTMLElement;
-	const focusTrap = findParent(eventTarget, `[${selector}]`);
+	const focusTrap = findParent(event.target, `[${selector}]`);
 
-	if (focusTrap == null) {
+	if (focusTrap === undefined) {
 		return;
 	}
 
 	event.preventDefault();
 	event.stopImmediatePropagation();
 
-	handleEvent(event, focusTrap, eventTarget);
+	handleEvent(event, focusTrap, event.target);
 }
 
 class FocusTrap {
-	readonly tabIndex: number;
+	/**
+	 * @readonly
+	 * @type {number}
+	 */
+	tabIndex;
 
-	constructor(element: HTMLElement) {
+	/**
+	 * @param {HTMLElement} element
+	 */
+	constructor(element) {
 		this.tabIndex = element.tabIndex;
 
 		element.tabIndex = -1;
 	}
 
-	static create(element: HTMLElement): void {
+	/**
+	 * @param {HTMLElement} element
+	 */
+	static create(element) {
 		if (!store.has(element)) {
 			store.set(element, new FocusTrap(element));
 		}
 	}
 
-	static destroy(element: HTMLElement): void {
+	/**
+	 * @param {HTMLElement} element
+	 */
+	static destroy(element) {
 		const focusTrap = store.get(element);
 
-		if (focusTrap == null) {
+		if (focusTrap === undefined) {
 			return;
 		}
 
@@ -99,14 +115,12 @@ class FocusTrap {
 	}
 }
 
-((): void => {
-	const context: {palmerFocusTrap?: number} = globalThis as never;
-
-	if (context.palmerFocusTrap != null) {
+(() => {
+	if (globalThis.oscarpalmer_components_focusTrap !== null) {
 		return;
 	}
 
-	context.palmerFocusTrap = 1;
+	globalThis.oscarpalmer_components_focusTrap = 1;
 
 	const observer = new MutationObserver(observe);
 

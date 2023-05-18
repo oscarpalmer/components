@@ -1,20 +1,26 @@
-import {Repeated, wait} from '@oscarpalmer/timer';
-import {eventOptions, getFocusableElements, findParent, isNullOrWhitespace} from './helpers';
-import {updateFloated} from './helpers/floated';
-import {selector as focusTrapSelector} from './focus-trap';
+import {wait} from '@oscarpalmer/timer';
+import {eventOptions, getFocusableElements, findParent, isNullOrWhitespace} from './helpers/index.js';
+import {updateFloated} from './helpers/floated.js';
+import {selector as focusTrapSelector} from './focus-trap.js';
 
-type Callbacks = {
-	click: (event: Event) => void;
-	keydown: (event: Event) => void;
-};
+/**
+ * @typedef Callbacks
+ * @property {(event: Event) => void} click
+ * @property {(event: Event) => void} keydown
+ */
 
 const selector = 'palmer-popover';
 
-const store = new WeakMap<PalmerPopover, Callbacks>();
+/** @type {WeakMap<PalmerPopover, Callbacks>} */
+const store = new WeakMap();
 
 let index = 0;
 
-function afterToggle(component: PalmerPopover, active: boolean): void {
+/**
+ * @param {PalmerPopover} component
+ * @param {boolean} active
+ */
+function afterToggle(component, active) {
 	handleCallbacks(component, active);
 
 	if (active && component.content) {
@@ -24,10 +30,14 @@ function afterToggle(component: PalmerPopover, active: boolean): void {
 	}
 }
 
-function handleCallbacks(component: PalmerPopover, add: boolean): void {
+/**
+ * @param {PalmerPopover} component
+ * @param {boolean} add
+ */
+function handleCallbacks(component, add) {
 	const callbacks = store.get(component);
 
-	if (callbacks == null) {
+	if (callbacks === undefined) {
 		return;
 	}
 
@@ -39,16 +49,21 @@ function handleCallbacks(component: PalmerPopover, add: boolean): void {
 	document[method]('keydown', callbacks.keydown, eventOptions.passive);
 }
 
-function handleGlobalEvent(event: Event, component: PalmerPopover, target: HTMLElement): void {
+/**
+ * @param {Event} event
+ * @param {PalmerPopover} component
+ * @param {HTMLElement} target
+ */
+function handleGlobalEvent(event, component, target) {
 	const {button, content} = component;
 
-	if (button == null || content == null) {
+	if (button === undefined || content === undefined) {
 		return;
 	}
 
 	const floater = findParent(target, `[${selector}-content]`);
 
-	if (floater == null) {
+	if (floater === undefined) {
 		handleToggle(component, false);
 
 		return;
@@ -64,12 +79,16 @@ function handleGlobalEvent(event: Event, component: PalmerPopover, target: HTMLE
 	}
 }
 
-function handleToggle(component: PalmerPopover, expand?: boolean | Event): void {
+/**
+ * @param {PalmerPopover} component
+ * @param {boolean|Event[undefined} expand
+ */
+function handleToggle(component, expand) {
 	const expanded = typeof expand === 'boolean'
 		? !expand
 		: component.open;
 
-	component.button.setAttribute('aria-expanded', !expanded as never);
+	component.button.setAttribute('aria-expanded', !expanded);
 
 	if (expanded) {
 		component.content.hidden = true;
@@ -101,7 +120,12 @@ function handleToggle(component: PalmerPopover, expand?: boolean | Event): void 
 	component.dispatchEvent(new Event('toggle'));
 }
 
-function initialise(component: PalmerPopover, button: HTMLButtonElement, content: HTMLElement): void {
+/**
+ * @param {PalmerPopover} component
+ * @param {HTMLButtonElement} button
+ * @param {HTMLElement} content
+ */
+function initialise(component, button, content) {
 	content.hidden = true;
 
 	if (isNullOrWhitespace(component.id)) {
@@ -122,7 +146,7 @@ function initialise(component: PalmerPopover, button: HTMLButtonElement, content
 	button.ariaHasPopup = 'dialog';
 
 	if (!(button instanceof HTMLButtonElement)) {
-		(button as HTMLElement).tabIndex = 0;
+		button.tabIndex = 0;
 	}
 
 	content.setAttribute(focusTrapSelector, '');
@@ -138,8 +162,12 @@ function initialise(component: PalmerPopover, button: HTMLButtonElement, content
 	button.addEventListener('click', toggle.bind(component), eventOptions.passive);
 }
 
-function isButton(node: any): boolean {
-	if (node == null) {
+/**
+ * @param {Node} node
+ * @returns {boolean}
+ */
+function isButton(node) {
+	if (node === null) {
 		return false;
 	}
 
@@ -150,33 +178,58 @@ function isButton(node: any): boolean {
 	return node instanceof HTMLElement && node.getAttribute('role') === 'button';
 }
 
-function onClick(this: PalmerPopover, event: Event): void {
+/**
+ * @this {PalmerPopover}
+ * @param {Event} event
+ */
+function onClick(event) {
 	if (this.open) {
-		handleGlobalEvent(event, this, event.target as never);
+		handleGlobalEvent(event, this, event.target);
 	}
 }
 
-function onKeydown(this: PalmerPopover, event: Event): void {
+/**
+ * @this {PalmerPopover}
+ * @param {Event} event
+ */
+function onKeydown(event) {
 	if (this.open && (event instanceof KeyboardEvent) && event.key === 'Escape') {
-		handleGlobalEvent(event, this, document.activeElement as never);
+		handleGlobalEvent(event, this, document.activeElement);
 	}
 }
 
-function toggle(this: PalmerPopover, expand?: boolean | Event): void {
+/**
+ * @this {PalmerPopover}
+ * @param {boolean|Event|undefined} expand
+ */
+function toggle(expand) {
 	handleToggle(this, expand);
 }
 
 export class PalmerPopover extends HTMLElement {
-	readonly button!: HTMLElement;
-	readonly content!: HTMLElement;
+	/**
+	 * @readonly
+	 * @type {HTMLElement}
+	 */
+	button;
 
-	timer: Repeated | undefined;
+	/**
+	 * @readonly
+	 * @type {HTMLElement}
+	 */
+	content;
 
-	get open(): boolean {
+	/**
+	 * @private
+	 * @type {import('@oscarpalmer/timer').Repeated|undefined}
+	 */
+	timer;
+
+	get open() {
 		return this.button?.getAttribute('aria-expanded') === 'true';
 	}
 
-	set open(open: boolean) {
+	set open(open) {
 		toggle.call(this, open);
 	}
 
@@ -190,17 +243,17 @@ export class PalmerPopover extends HTMLElement {
 			throw new Error(`<${selector}> must have a <button>-element (or button-like element) with the attribute '${selector}-button`);
 		}
 
-		if (content == null || !(content instanceof HTMLElement)) {
+		if (content === null || !(content instanceof HTMLElement)) {
 			throw new Error(`<${selector}> must have an element with the attribute '${selector}-content'`);
 		}
 
-		this.button = button as never;
+		this.button = button;
 		this.content = content;
 
-		initialise(this, button as HTMLButtonElement, content);
+		initialise(this, button, content);
 	}
 
-	toggle(): void {
+	toggle() {
 		if (this.button && this.content) {
 			toggle.call(this);
 		}

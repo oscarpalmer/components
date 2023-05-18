@@ -1,26 +1,32 @@
-import {eventOptions} from './helpers';
+import {eventOptions} from './helpers/index.js';
 
-type Stored = {
-	elements: HTMLDetailsElement[];
-	observer: MutationObserver;
-};
+/**
+ * @typedef Stored
+ * @property {HTMLDetailsElement[]} elements
+ * @property {MutationObserver} observer
+*/
 
-const keys: string[] = ['ArrowDown', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'End', 'Home'];
+const keys = new Set(['ArrowDown', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'End', 'Home']);
 
-const store = new WeakMap<PalmerAccordion, Stored>();
+/** @type {WeakMap<PalmerAccordion, Stored>} */
+const store = new WeakMap();
 
-function onKeydown(component: PalmerAccordion, event: KeyboardEvent): void {
-	if (document.activeElement?.tagName !== 'SUMMARY' || !keys.includes(event.key)) {
+/**
+ * @param {PalmerAccordion} component
+ * @param {KeyboardEvent} event
+ */
+function onKeydown(component, event) {
+	if (document.activeElement?.tagName !== 'SUMMARY' || !keys.has(event.key)) {
 		return;
 	}
 
 	const stored = store.get(component);
 
-	if (stored == null || stored.elements.length === 0) {
+	if ((stored?.elements?.length ?? 0) === 0) {
 		return;
 	}
 
-	const current = stored.elements.indexOf(document.activeElement.parentElement as never);
+	const current = stored.elements.indexOf(document.activeElement.parentElement);
 
 	if (current === -1) {
 		return;
@@ -28,23 +34,34 @@ function onKeydown(component: PalmerAccordion, event: KeyboardEvent): void {
 
 	event.preventDefault();
 
-	let destination = - 1;
+	let destination = -1;
 
 	switch (event.key) {
 		case 'ArrowDown':
-		case 'ArrowRight':
+		case 'ArrowRight': {
 			destination = current + 1;
 			break;
+		}
+
 		case 'ArrowLeft':
-		case 'ArrowUp':
+		case 'ArrowUp': {
 			destination = current - 1;
 			break;
-		case 'End':
+		}
+
+		case 'End': {
 			destination = stored.elements.length - 1;
 			break;
-		case 'Home':
+		}
+
+		case 'Home': {
 			destination = 0;
 			break;
+		}
+
+		default: {
+			return;
+		}
 	}
 
 	if (destination < 0) {
@@ -59,35 +76,44 @@ function onKeydown(component: PalmerAccordion, event: KeyboardEvent): void {
 
 	const summary = stored.elements[destination]?.querySelector(':scope > summary');
 
-	if (summary != null) {
-		(summary as HTMLButtonElement).focus?.();
-	}
+	summary?.focus?.();
 }
 
-function onToggle(component: PalmerAccordion, element: HTMLDetailsElement) {
+/**
+ * @param {PalmerAccordion} component
+ * @param {HTMLDetailsElement} element
+ */
+function onToggle(component, element) {
 	if (element.open && !component.multiple) {
 		toggleDetails(component, element);
 	}
 }
 
-function setDetails(component: PalmerAccordion): void {
+/**
+ * @param {PalmerAccordion} component
+ */
+function setDetails(component) {
 	const stored = store.get(component);
 
-	if (stored == null) {
+	if (stored === undefined) {
 		return;
 	}
 
-	stored.elements = [...(component.querySelectorAll(':scope > details') as never)];
+	stored.elements = [...component.querySelectorAll(':scope > details')];
 
 	for (const element of stored.elements) {
 		element.addEventListener('toggle', () => onToggle(component, element));
 	}
 }
 
-function toggleDetails(component: PalmerAccordion, active: HTMLDetailsElement | undefined): void {
+/**
+ * @param {PalmerAccordion} component
+ * @param {HTMLDetailsElement?} active
+ */
+function toggleDetails(component, active) {
 	const stored = store.get(component);
 
-	if (stored == null) {
+	if (stored === undefined) {
 		return;
 	}
 
@@ -101,20 +127,20 @@ function toggleDetails(component: PalmerAccordion, active: HTMLDetailsElement | 
 export class PalmerAccordion extends HTMLElement {
 	static observedAttributes = ['max', 'min', 'value'];
 
-	get multiple(): boolean {
+	get multiple() {
 		return this.getAttribute('multiple') !== 'false';
 	}
 
-	set multiple(multiple: boolean) {
+	set multiple(multiple) {
 		if (typeof multiple === 'boolean') {
-			this.setAttribute('multiple', multiple as never);
+			this.setAttribute('multiple', multiple);
 		}
 	}
 
 	constructor() {
 		super();
 
-		const stored: Stored = {
+		const stored = {
 			elements: [],
 			observer: new MutationObserver(_ => setDetails(this)),
 		};
@@ -130,20 +156,20 @@ export class PalmerAccordion extends HTMLElement {
 		}
 	}
 
-	attributeChangedCallback(name: string): void {
+	attributeChangedCallback(name) {
 		if (name === 'multiple' && !this.multiple) {
 			toggleDetails(this, store.get(this)?.elements.find(details => details.open));
 		}
 	}
 
-	connectedCallback(): void {
+	connectedCallback() {
 		store.get(this)?.observer.observe(this, {
 			childList: true,
 			subtree: true,
 		});
 	}
 
-	disconnectedCallback(): void {
+	disconnectedCallback() {
 		store.get(this)?.observer.disconnect();
 	}
 }

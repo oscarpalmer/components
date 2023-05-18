@@ -5,34 +5,21 @@ var __publicField = (obj, key, value) => {
   return value;
 };
 
-// src/helpers/index.ts
+// src/helpers/index.js
 var eventOptions = {
   active: { capture: false, passive: false },
   passive: { capture: false, passive: true }
 };
-var isTouchy = (() => {
-  try {
-    if ("matchMedia" in window) {
-      const media = matchMedia("(pointer: coarse)");
-      if (media != null && typeof media.matches === "boolean") {
-        return media.matches;
-      }
-    }
-    return "ontouchstart" in window || navigator.maxTouchPoints > 0 || (navigator?.msMaxTouchPoints ?? 0) > 0;
-  } catch (_) {
-    return false;
-  }
-})();
 
-// src/accordion.ts
-var keys = ["ArrowDown", "ArrowLeft", "ArrowRight", "ArrowUp", "End", "Home"];
+// src/accordion.js
+var keys = /* @__PURE__ */ new Set(["ArrowDown", "ArrowLeft", "ArrowRight", "ArrowUp", "End", "Home"]);
 var store = /* @__PURE__ */ new WeakMap();
 function onKeydown(component, event) {
-  if (document.activeElement?.tagName !== "SUMMARY" || !keys.includes(event.key)) {
+  if (document.activeElement?.tagName !== "SUMMARY" || !keys.has(event.key)) {
     return;
   }
   const stored = store.get(component);
-  if (stored == null || stored.elements.length === 0) {
+  if ((stored?.elements?.length ?? 0) === 0) {
     return;
   }
   const current = stored.elements.indexOf(document.activeElement.parentElement);
@@ -43,19 +30,26 @@ function onKeydown(component, event) {
   let destination = -1;
   switch (event.key) {
     case "ArrowDown":
-    case "ArrowRight":
+    case "ArrowRight": {
       destination = current + 1;
       break;
+    }
     case "ArrowLeft":
-    case "ArrowUp":
+    case "ArrowUp": {
       destination = current - 1;
       break;
-    case "End":
+    }
+    case "End": {
       destination = stored.elements.length - 1;
       break;
-    case "Home":
+    }
+    case "Home": {
       destination = 0;
       break;
+    }
+    default: {
+      return;
+    }
   }
   if (destination < 0) {
     destination = stored.elements.length - 1;
@@ -66,9 +60,7 @@ function onKeydown(component, event) {
     return;
   }
   const summary = stored.elements[destination]?.querySelector(":scope > summary");
-  if (summary != null) {
-    summary.focus?.();
-  }
+  summary?.focus?.();
 }
 function onToggle(component, element) {
   if (element.open && !component.multiple) {
@@ -77,7 +69,7 @@ function onToggle(component, element) {
 }
 function setDetails(component) {
   const stored = store.get(component);
-  if (stored == null) {
+  if (stored === void 0) {
     return;
   }
   stored.elements = [...component.querySelectorAll(":scope > details")];
@@ -87,7 +79,7 @@ function setDetails(component) {
 }
 function toggleDetails(component, active) {
   const stored = store.get(component);
-  if (stored == null) {
+  if (stored === void 0) {
     return;
   }
   for (const element of stored.elements) {

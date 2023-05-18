@@ -4,81 +4,53 @@
 		"url": "https://oscarpalmer.se"
 	},
 	"dependencies": {
-		"@oscarpalmer/timer": "^0.12"
+		"@oscarpalmer/timer": "^0.15"
 	},
 	"description": "A collection of web components.",
 	"devDependencies": {
-		"@tsconfig/recommended": "^1.0",
-		"@types/node": "^20.1",
-		"@typescript-eslint/eslint-plugin": "^5.59",
-		"@typescript-eslint/parser": "^5.59",
 		"esbuild": "^0.17",
-		"eslint": "^8.40",
-		"eslint-config-xo": "^0.43",
-		"eslint-config-xo-typescript": "^0.57",
-		"typescript": "^5.0"
+		"xo": "^0.54"
 	},
 	"exports": {
 		".": {
-			"default": "./dist/iife/index.js",
+			"types": "./src/index.d.ts",
 			"import": "./dist/esm/index.js",
-			"module": "./dist/esm/index.js",
-			"require": "./dist/cjs/index.js",
-			"script": "./dist/iife/index.js",
-			"types": "./src/index.d.ts"
+			"default": "./dist/iife/index.js"
 		},
 		"./accordion": {
-			"default": "./dist/iife/accordion.js",
+			"types": "./src/accordion.d.ts",
 			"import": "./dist/esm/accordion.js",
-			"module": "./dist/esm/accordion.js",
-			"require": "./dist/cjs/accordion.js",
-			"script": "./dist/iife/accordion.js",
-			"types": "./src/accordion.d.ts"
+			"default": "./dist/iife/accordion.js"
 		},
 		"./details": {
-			"default": "./dist/iife/details.js",
+			"types": "./src/details.d.ts",
 			"import": "./dist/esm/details.js",
-			"module": "./dist/esm/details.js",
-			"require": "./dist/cjs/details.js",
-			"script": "./dist/iife/details.js"
+			"default": "./dist/iife/details.js"
 		},
 		"./focus-trap": {
-			"default": "./dist/iife/focus-trap.js",
+			"types": "./src/focus-trap.d.ts",
 			"import": "./dist/esm/focus-trap.js",
-			"module": "./dist/esm/focus-trap.js",
-			"require": "./dist/cjs/focus-trap.js",
-			"script": "./dist/iife/focus-trap.js"
+			"default": "./dist/iife/focus-trap.js"
 		},
 		"./popover": {
-			"default": "./dist/iife/popover.js",
+			"types": "./src/popover.d.ts",
 			"import": "./dist/esm/popover.js",
-			"module": "./dist/esm/popover.js",
-			"require": "./dist/cjs/popover.js",
-			"script": "./dist/iife/popover.js",
-			"types": "./src/popover.d.ts"
+			"default": "./dist/iife/popover.js"
 		},
 		"./splitter": {
-			"default": "./dist/iife/splitter.js",
+			"types": "./src/splitter.d.ts",
 			"import": "./dist/esm/splitter.js",
-			"module": "./dist/esm/splitter.js",
-			"require": "./dist/cjs/splitter.js",
-			"script": "./dist/iife/splitter.js",
-			"types": "./src/splitter.d.ts"
+			"default": "./dist/iife/splitter.js"
 		},
 		"./switch": {
-			"default": "./dist/iife/switch.js",
+			"types": "./src/switch.d.ts",
 			"import": "./dist/esm/switch.js",
-			"module": "./dist/esm/switch.js",
-			"require": "./dist/cjs/switch.js",
-			"script": "./dist/iife/switch.js",
-			"types": "./src/switch.d.ts"
+			"default": "./dist/iife/switch.js"
 		},
 		"./tooltip": {
-			"default": "./dist/iife/tooltip.js",
+			"types": "./src/tooltip.d.ts",
 			"import": "./dist/esm/tooltip.js",
-			"module": "./dist/esm/tooltip.js",
-			"require": "./dist/cjs/tooltip.js",
-			"script": "./dist/iife/tooltip.js"
+			"default": "./dist/iife/tooltip.js"
 		}
 	},
 	"files": [
@@ -103,10 +75,19 @@
 	},
 	"scripts": {
 		"build": "node .esbuild.js",
-		"watch": "esbuild ./src/index.ts --bundle --sourcemap --watch --format=esm --outfile=dist/esm/index.js --platform=neutral --target=esnext"
+		"types": "./node_modules/.bin/tsc ./src/*.js --allowJs --declaration --declarationDir ./types --emitDeclarationOnly --removeComments",
+		"xo": "./node_modules/.bin/xo ./src/*.js --env browser"
 	},
 	"type": "module",
 	"types": "src/index.d.ts",
 	"unpkg": "dist/iife/index.js",
-	"version": "0.21.0"
+	"version": "0.21.0",
+	"xo": {
+		"ignores": [
+			"./src/listbox.js"
+		],
+		"rules": {
+			"import/no-unassigned-import": "off"
+		}
+	}
 }

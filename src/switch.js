@@ -1,9 +1,15 @@
-import {eventOptions, isNullOrWhitespace} from './helpers';
+import {eventOptions, isNullOrWhitespace} from './helpers/index.js';
 
-function getLabel(id: string, className: string, content: string): HTMLElement {
+/**
+ * @param {string} id
+ * @param {string} className
+ * @param {string} content
+ * @returns {HTMLElement}
+ */
+function getLabel(id, className, content) {
 	const label = document.createElement('span');
 
-	label.ariaHidden = true as never;
+	label.ariaHidden = true;
 	label.className = `${className}__label`;
 	label.id = `${id}_label`;
 	label.innerHTML = content;
@@ -11,34 +17,50 @@ function getLabel(id: string, className: string, content: string): HTMLElement {
 	return label;
 }
 
-function getStatus(className: string): HTMLElement {
+/**
+ * @param {string} className
+ * @returns {HTMLElement}
+ */
+function getStatus(className) {
 	const status = document.createElement('span');
 
-	status.ariaHidden = true as never;
+	status.ariaHidden = true;
 	status.className = `${className}__status`;
 
 	const indicator = document.createElement('span');
 
 	indicator.className = `${className}__status__indicator`;
 
-	status.appendChild(indicator);
+	status.append(indicator);
 
 	return status;
 }
 
-function getText(className: string, on: string, off: string): HTMLElement {
+/**
+ * @param {string} className
+ * @param {string} on
+ * @param {string} off
+ * @returns {HTMLElement}
+ */
+function getText(className, on, off) {
 	const text = document.createElement('span');
 
-	text.ariaHidden = true as never;
+	text.ariaHidden = true;
 	text.className = `${className}__text`;
 
-	text.appendChild(getTextItem('off', className, off));
-	text.appendChild(getTextItem('on', className, on));
+	text.append(getTextItem('off', className, off));
+	text.append(getTextItem('on', className, on));
 
 	return text;
 }
 
-function getTextItem(type: 'off' | 'on', className: string, content: string): HTMLSpanElement {
+/**
+ * @param {'off'|'on'} type
+ * @param {string} className
+ * @param {string} content
+ * @returns {HTMLSpanElement}
+ */
+function getTextItem(type, className, content) {
 	const item = document.createElement('span');
 
 	item.className = `${className}__text__${type}`;
@@ -47,14 +69,19 @@ function getTextItem(type: 'off' | 'on', className: string, content: string): HT
 	return item;
 }
 
-function initialise(component: PalmerSwitch, label: HTMLElement, input: HTMLInputElement): void {
+/**
+ * @param {PalmerSwitch} component
+ * @param {HTMLElement} label
+ * @param {HTMLInputElement} input
+ */
+function initialise(component, label, input) {
 	label.parentElement?.removeChild(label);
 	input.parentElement?.removeChild(input);
 
-	component.setAttribute('aria-checked', (input.checked || component.checked) as never);
-	component.setAttribute('aria-disabled', (input.disabled || component.disabled) as never);
+	component.setAttribute('aria-checked', input.checked || component.checked);
+	component.setAttribute('aria-disabled', input.disabled || component.disabled);
 	component.setAttribute('aria-labelledby', `${input.id}_label`);
-	component.setAttribute('aria-readonly', (input.readOnly || component.readonly) as never);
+	component.setAttribute('aria-readonly', input.readOnly || component.readonly);
 	component.setAttribute('value', input.value);
 
 	component.id = input.id;
@@ -78,15 +105,19 @@ function initialise(component: PalmerSwitch, label: HTMLElement, input: HTMLInpu
 		on = 'On';
 	}
 
-	component.insertAdjacentElement('beforeend', getLabel(component.id, className as never, label.innerHTML));
-	component.insertAdjacentElement('beforeend', getStatus(className as never));
-	component.insertAdjacentElement('beforeend', getText(className as never, on as never, off as never));
+	component.insertAdjacentElement('beforeend', getLabel(component.id, className, label.innerHTML));
+	component.insertAdjacentElement('beforeend', getStatus(className));
+	component.insertAdjacentElement('beforeend', getText(className, on, off));
 
 	component.addEventListener('click', onToggle.bind(component), eventOptions.passive);
 	component.addEventListener('keydown', onKey.bind(component), eventOptions.active);
 }
 
-function onKey(this: PalmerSwitch, event: KeyboardEvent): void {
+/**
+ * @this {PalmerSwitch}
+ * @param {KeyboardEvent} event
+ */
+function onKey(event) {
 	if (![' ', 'Enter'].includes(event.key)) {
 		return;
 	}
@@ -96,11 +127,17 @@ function onKey(this: PalmerSwitch, event: KeyboardEvent): void {
 	toggle(this);
 }
 
-function onToggle(this: PalmerSwitch): void {
+/**
+ * @this {PalmerSwitch}
+ */
+function onToggle() {
 	toggle(this);
 }
 
-function toggle(component: PalmerSwitch): void {
+/**
+ * @param {PalmerSwitch} component
+ */
+function toggle(component) {
 	if (component.disabled || component.readonly) {
 		return;
 	}
@@ -113,61 +150,65 @@ function toggle(component: PalmerSwitch): void {
 export class PalmerSwitch extends HTMLElement {
 	static formAssociated = true;
 
-	private internals: ElementInternals | undefined;
+	/**
+	 * @private
+	 * @type {ElementInternals|undefined}
+	 */
+	internals;
 
-	get checked(): boolean {
+	get checked() {
 		return this.getAttribute('aria-checked') === 'true';
 	}
 
-	set checked(checked: boolean) {
-		this.setAttribute('aria-checked', checked as never);
+	set checked(checked) {
+		this.setAttribute('aria-checked', checked);
 	}
 
-	get disabled(): boolean {
+	get disabled() {
 		return this.getAttribute('aria-disabled') === 'true';
 	}
 
-	set disabled(disabled: boolean) {
-		this.setAttribute('aria-disabled', disabled as never);
+	set disabled(disabled) {
+		this.setAttribute('aria-disabled', disabled);
 	}
 
-	get form(): HTMLFormElement | undefined {
-		return this.internals?.form ?? undefined;
+	get form() {
+		return this.internals?.form;
 	}
 
-	get labels(): NodeList | undefined {
+	get labels() {
 		return this.internals?.labels;
 	}
 
-	get name(): string {
+	get name() {
 		return this.getAttribute('name') ?? '';
 	}
 
-	set name(name: string) {
+	set name(name) {
 		this.setAttribute('name', name);
 	}
 
-	get readonly(): boolean {
+	get readonly() {
 		return this.getAttribute('aria-readonly') === 'true';
 	}
 
-	set readonly(readonly: boolean) {
-		this.setAttribute('aria-readonly', readonly as never);
+	set readonly(readonly) {
+		this.setAttribute('aria-readonly', readonly);
 	}
 
-	get validationMessage(): string {
+	get validationMessage() {
 		return this.internals?.validationMessage ?? '';
 	}
 
-	get validity(): ValidityState | undefined {
+	get validity() {
 		return this.internals?.validity;
 	}
 
-	get value(): string {
+	get value() {
 		return this.getAttribute('value') ?? (this.checked ? 'on' : 'off');
 	}
 
-	get willValidate(): boolean {
+	get willValidate() {
 		return this.internals?.willValidate ?? true;
 	}
 
@@ -179,22 +220,22 @@ export class PalmerSwitch extends HTMLElement {
 		const input = this.querySelector('[palmer-switch-input]');
 		const label = this.querySelector('[palmer-switch-label]');
 
-		if (typeof input === 'undefined' || !(input instanceof HTMLInputElement) || input.type !== 'checkbox') {
-			throw new Error('<palmer-switch> must have an <input>-element with type \'checkbox\' and the attribute \'palmer-switch-input\'');
+		if (input === null || !(input instanceof HTMLInputElement) || input.type !== 'checkbox') {
+			throw new TypeError('<palmer-switch> must have an <input>-element with type \'checkbox\' and the attribute \'palmer-switch-input\'');
 		}
 
-		if (typeof label === 'undefined' || !(label instanceof HTMLElement)) {
-			throw new Error('<palmer-switch> must have an element with the attribute \'palmer-switch-label\'');
+		if (label === null || !(label instanceof HTMLElement)) {
+			throw new TypeError('<palmer-switch> must have an element with the attribute \'palmer-switch-label\'');
 		}
 
 		initialise(this, label, input);
 	}
 
-	checkValidity(): boolean {
+	checkValidity() {
 		return this.internals?.checkValidity() ?? true;
 	}
 
-	reportValidity(): boolean {
+	reportValidity() {
 		return this.internals?.reportValidity() ?? true;
 	}
 }
