@@ -1,17 +1,4 @@
-var __defProp = Object.defineProperty;
-var __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { enumerable: true, configurable: true, writable: true, value }) : obj[key] = value;
-var __publicField = (obj, key, value) => {
-  __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
-  return value;
-};
-
 // node_modules/@oscarpalmer/timer/dist/timer.js
-var __defProp2 = Object.defineProperty;
-var __defNormalProp2 = (obj, key, value) => key in obj ? __defProp2(obj, key, { enumerable: true, configurable: true, writable: true, value }) : obj[key] = value;
-var __publicField2 = (obj, key, value) => {
-  __defNormalProp2(obj, typeof key !== "symbol" ? key + "" : key, value);
-  return value;
-};
 var milliseconds = Math.round(1e3 / 60);
 var request = globalThis.requestAnimationFrame ?? function(callback) {
   return setTimeout?.(() => {
@@ -50,6 +37,12 @@ function run(timed) {
   timed.state.frame = request(step);
 }
 var Timed = class {
+  get active() {
+    return this.state.active;
+  }
+  get finished() {
+    return !this.active && this.state.finished;
+  }
   /**
    * @param {RepeatedCallback} callback
    * @param {number} time
@@ -57,9 +50,6 @@ var Timed = class {
    * @param {AfterCallback|undefined} afterCallback
    */
   constructor(callback, time, count, afterCallback) {
-    __publicField2(this, "callbacks");
-    __publicField2(this, "configuration");
-    __publicField2(this, "state");
     const isRepeated = this instanceof Repeated;
     const type = isRepeated ? "repeated" : "waited";
     if (typeof callback !== "function") {
@@ -90,13 +80,6 @@ var Timed = class {
       finished: false,
       frame: null
     };
-  }
-  /** */
-  get active() {
-    return this.state.active;
-  }
-  get finished() {
-    return !this.active && this.state.finished;
   }
   restart() {
     this.stop();
@@ -144,6 +127,14 @@ var eventOptions = {
 // src/details.js
 var selector = "palmer-details";
 var store = /* @__PURE__ */ new WeakMap();
+function create(element) {
+  if (!store.has(element)) {
+    store.set(element, new PalmerDetails(element));
+  }
+}
+function destroy(element) {
+  store.delete(element);
+}
 function observe(records) {
   for (const record of records) {
     if (record.type !== "attributes") {
@@ -154,30 +145,18 @@ function observe(records) {
         `An element with the '${selector}'-attribute must be a <details>-element`
       );
     }
-    if (record.target.getAttribute(selector) === void 0) {
-      PalmerDetails.destroy(record.target);
+    if (record.target.getAttribute(selector) === null) {
+      destroy(record.target);
     } else {
-      PalmerDetails.create(record.target);
+      create(record.target);
     }
   }
 }
 var PalmerDetails = class {
+  /**
+   * @param {HTMLElement} element
+   */
   constructor(element) {
-    /**
-     * @readonly
-     * @type {{onKeydown: (event: KeyboardEvent) => void; onToggle: () => void}}
-     */
-    __publicField(this, "callbacks");
-    /**
-     * @readonly
-     * @type {HTMLDetailsElement}
-     */
-    __publicField(this, "details");
-    /**
-     * @readonly
-     * @type {HTMLElement?}
-     */
-    __publicField(this, "summary");
     this.details = element;
     this.summary = element.querySelector(":scope > summary") ?? void 0;
     this.callbacks = {
@@ -190,6 +169,9 @@ var PalmerDetails = class {
       eventOptions.passive
     );
   }
+  /**
+   * @param {KeyboardEvent} event
+   */
   onKeydown(event) {
     if (event.key !== "Escape" || !this.details.open) {
       return;
@@ -203,14 +185,6 @@ var PalmerDetails = class {
   }
   onToggle() {
     globalThis.document[this.details.open ? "addEventListener" : "removeEventListener"]?.("keydown", this.callbacks.onKeydown, eventOptions.passive);
-  }
-  static create(element) {
-    if (!store.has(element)) {
-      store.set(element, new PalmerDetails(element));
-    }
-  }
-  static destroy(element) {
-    store.delete(element);
   }
 };
 var observer = new MutationObserver(observe);

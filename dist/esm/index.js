@@ -1,18 +1,11 @@
-var __defProp = Object.defineProperty;
-var __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { enumerable: true, configurable: true, writable: true, value }) : obj[key] = value;
-var __publicField = (obj, key, value) => {
-  __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
-  return value;
-};
-
 // src/helpers/index.js
 var eventOptions = {
   active: { capture: false, passive: false },
   passive: { capture: false, passive: true }
 };
 function isTouchScreen() {
-  if (typeof globalThis.oscarpalmer_components_isTouchScreen === "boolean") {
-    return globalThis.oscarpalmer_components_isTouchScreen;
+  if (typeof globalThis._oscarpalmer_components_isTouchScreen === "boolean") {
+    return globalThis._oscarpalmer_components_isTouchScreen;
   }
   let isTouchScreen2 = false;
   try {
@@ -28,7 +21,7 @@ function isTouchScreen() {
   } catch {
     isTouchScreen2 = false;
   }
-  globalThis.oscarpalmer_components_isTouchScreen = isTouchScreen2;
+  globalThis._oscarpalmer_components_isTouchScreen = isTouchScreen2;
   return isTouchScreen2;
 }
 function findParent(element, match) {
@@ -71,8 +64,8 @@ function getFocusableElements(context) {
   return focusable;
 }
 function getFocusableSelector() {
-  if (globalThis.oscapalmer_components_focusableSelector === null) {
-    globalThis.oscapalmer_components_focusableSelector = [
+  if (globalThis._oscarpalmer_components_focusableSelector === null) {
+    globalThis._oscarpalmer_components_focusableSelector = [
       '[contenteditable]:not([contenteditable="false"])',
       "[href]",
       "[tabindex]:not(slot)",
@@ -91,7 +84,7 @@ function getFocusableSelector() {
       (selector6) => `${selector6}:not([disabled]):not([hidden]):not([tabindex="-1"])`
     ).join(",");
   }
-  return globalThis.oscapalmer_components_focusableSelector;
+  return globalThis._oscarpalmer_components_focusableSelector;
 }
 function getNumber(value) {
   return typeof value === "number" ? value : Number.parseInt(typeof value === "string" ? value : String(value), 10);
@@ -234,16 +227,10 @@ var PalmerAccordion = class extends HTMLElement {
     store.get(this)?.observer.disconnect();
   }
 };
-__publicField(PalmerAccordion, "observedAttributes", ["max", "min", "value"]);
+PalmerAccordion.observedAttributes = ["max", "min", "value"];
 customElements.define("palmer-accordion", PalmerAccordion);
 
 // node_modules/@oscarpalmer/timer/dist/timer.js
-var __defProp2 = Object.defineProperty;
-var __defNormalProp2 = (obj, key, value) => key in obj ? __defProp2(obj, key, { enumerable: true, configurable: true, writable: true, value }) : obj[key] = value;
-var __publicField2 = (obj, key, value) => {
-  __defNormalProp2(obj, typeof key !== "symbol" ? key + "" : key, value);
-  return value;
-};
 var milliseconds = Math.round(1e3 / 60);
 var request = globalThis.requestAnimationFrame ?? function(callback) {
   return setTimeout?.(() => {
@@ -282,6 +269,12 @@ function run(timed) {
   timed.state.frame = request(step);
 }
 var Timed = class {
+  get active() {
+    return this.state.active;
+  }
+  get finished() {
+    return !this.active && this.state.finished;
+  }
   /**
    * @param {RepeatedCallback} callback
    * @param {number} time
@@ -289,9 +282,6 @@ var Timed = class {
    * @param {AfterCallback|undefined} afterCallback
    */
   constructor(callback, time, count, afterCallback) {
-    __publicField2(this, "callbacks");
-    __publicField2(this, "configuration");
-    __publicField2(this, "state");
     const isRepeated = this instanceof Repeated;
     const type = isRepeated ? "repeated" : "waited";
     if (typeof callback !== "function") {
@@ -322,13 +312,6 @@ var Timed = class {
       finished: false,
       frame: null
     };
-  }
-  /** */
-  get active() {
-    return this.state.active;
-  }
-  get finished() {
-    return !this.active && this.state.finished;
   }
   restart() {
     this.stop();
@@ -370,6 +353,14 @@ function wait(callback, time) {
 // src/details.js
 var selector = "palmer-details";
 var store2 = /* @__PURE__ */ new WeakMap();
+function create(element) {
+  if (!store2.has(element)) {
+    store2.set(element, new PalmerDetails(element));
+  }
+}
+function destroy(element) {
+  store2.delete(element);
+}
 function observe(records) {
   for (const record of records) {
     if (record.type !== "attributes") {
@@ -380,30 +371,18 @@ function observe(records) {
         `An element with the '${selector}'-attribute must be a <details>-element`
       );
     }
-    if (record.target.getAttribute(selector) === void 0) {
-      PalmerDetails.destroy(record.target);
+    if (record.target.getAttribute(selector) === null) {
+      destroy(record.target);
     } else {
-      PalmerDetails.create(record.target);
+      create(record.target);
     }
   }
 }
 var PalmerDetails = class {
+  /**
+   * @param {HTMLElement} element
+   */
   constructor(element) {
-    /**
-     * @readonly
-     * @type {{onKeydown: (event: KeyboardEvent) => void; onToggle: () => void}}
-     */
-    __publicField(this, "callbacks");
-    /**
-     * @readonly
-     * @type {HTMLDetailsElement}
-     */
-    __publicField(this, "details");
-    /**
-     * @readonly
-     * @type {HTMLElement?}
-     */
-    __publicField(this, "summary");
     this.details = element;
     this.summary = element.querySelector(":scope > summary") ?? void 0;
     this.callbacks = {
@@ -416,6 +395,9 @@ var PalmerDetails = class {
       eventOptions.passive
     );
   }
+  /**
+   * @param {KeyboardEvent} event
+   */
   onKeydown(event) {
     if (event.key !== "Escape" || !this.details.open) {
       return;
@@ -429,14 +411,6 @@ var PalmerDetails = class {
   }
   onToggle() {
     globalThis.document[this.details.open ? "addEventListener" : "removeEventListener"]?.("keydown", this.callbacks.onKeydown, eventOptions.passive);
-  }
-  static create(element) {
-    if (!store2.has(element)) {
-      store2.set(element, new PalmerDetails(element));
-    }
-  }
-  static destroy(element) {
-    store2.delete(element);
   }
 };
 var observer = new MutationObserver(observe);
@@ -459,6 +433,19 @@ wait(() => {
 // src/focus-trap.js
 var selector2 = "palmer-focus-trap";
 var store3 = /* @__PURE__ */ new WeakMap();
+function create2(element) {
+  if (!store3.has(element)) {
+    store3.set(element, new FocusTrap(element));
+  }
+}
+function destroy2(element) {
+  const focusTrap = store3.get(element);
+  if (focusTrap === void 0) {
+    return;
+  }
+  element.tabIndex = focusTrap.tabIndex;
+  store3.delete(element);
+}
 function handleEvent(event, focusTrap, element) {
   const elements = getFocusableElements(focusTrap);
   if (element === focusTrap) {
@@ -488,9 +475,9 @@ function observe2(records) {
       continue;
     }
     if (record.target.getAttribute(selector2) === void 0) {
-      FocusTrap.destroy(record.target);
+      destroy2(record.target);
     } else {
-      FocusTrap.create(record.target);
+      create2(record.target);
     }
   }
 }
@@ -511,39 +498,15 @@ var FocusTrap = class {
    * @param {HTMLElement} element
    */
   constructor(element) {
-    /**
-     * @readonly
-     * @type {number}
-     */
-    __publicField(this, "tabIndex");
     this.tabIndex = element.tabIndex;
     element.tabIndex = -1;
   }
-  /**
-   * @param {HTMLElement} element
-   */
-  static create(element) {
-    if (!store3.has(element)) {
-      store3.set(element, new FocusTrap(element));
-    }
-  }
-  /**
-   * @param {HTMLElement} element
-   */
-  static destroy(element) {
-    const focusTrap = store3.get(element);
-    if (focusTrap === void 0) {
-      return;
-    }
-    element.tabIndex = focusTrap.tabIndex;
-    store3.delete(element);
-  }
 };
 (() => {
-  if (globalThis.oscarpalmer_components_focusTrap !== null) {
+  if (globalThis._oscarpalmer_components_focusTrap !== null) {
     return;
   }
-  globalThis.oscarpalmer_components_focusTrap = 1;
+  globalThis._oscarpalmer_components_focusTrap = 1;
   const observer3 = new MutationObserver(observe2);
   observer3.observe(document, {
     attributeFilter: [selector2],
@@ -922,23 +885,14 @@ function toggle(expand) {
   handleToggle(this, expand);
 }
 var PalmerPopover = class extends HTMLElement {
+  get open() {
+    return this.button?.getAttribute("aria-expanded") === "true";
+  }
+  set open(open) {
+    toggle.call(this, open);
+  }
   constructor() {
     super();
-    /**
-     * @readonly
-     * @type {HTMLElement}
-     */
-    __publicField(this, "button");
-    /**
-     * @readonly
-     * @type {HTMLElement}
-     */
-    __publicField(this, "content");
-    /**
-     * @private
-     * @type {import('@oscarpalmer/timer').Repeated|undefined}
-     */
-    __publicField(this, "timer");
     const button = this.querySelector(`:scope > [${selector3}-button]`);
     const content = this.querySelector(`:scope > [${selector3}-content]`);
     if (!isButton(button)) {
@@ -953,13 +907,8 @@ var PalmerPopover = class extends HTMLElement {
     }
     this.button = button;
     this.content = content;
+    this.timer = void 0;
     initialise(this, button, content);
-  }
-  get open() {
-    return this.button?.getAttribute("aria-expanded") === "true";
-  }
-  set open(open) {
-    toggle.call(this, open);
   }
   toggle() {
     if (this.button && this.content) {
@@ -1143,28 +1092,33 @@ function setFlexValue(component, parameters) {
   component.dispatchEvent(new CustomEvent("change", { detail: { value } }));
 }
 var PalmerSplitter = class extends HTMLElement {
+  get max() {
+    return store5.get(this)?.values.maximum;
+  }
+  set max(max) {
+    this.setAttribute("max", max);
+  }
+  get min() {
+    return store5.get(this)?.values.minimum;
+  }
+  set min(min) {
+    this.setAttribute("min", min);
+  }
+  get type() {
+    const type = this.getAttribute("type") ?? "vertical";
+    return splitterTypes.has(type) ? type : "vertical";
+  }
+  set type(type) {
+    this.setAttribute("type", type);
+  }
+  get value() {
+    return store5.get(this)?.values.current;
+  }
+  set value(value) {
+    this.setAttribute("value", value);
+  }
   constructor() {
     super();
-    /**
-     * @readonly
-     * @type {HTMLElement}
-     */
-    __publicField(this, "handle");
-    /**
-     * @readonly
-     * @type {HTMLElement}
-     */
-    __publicField(this, "primary");
-    /**
-     * @readonly
-     * @type {HTMLElement}
-     */
-    __publicField(this, "secondary");
-    /**
-     * @readonly
-     * @type {HTMLElement}
-     */
-    __publicField(this, "separator");
     if (this.children.length !== 2) {
       throw new Error(`A <${selector4}> must have exactly two direct children`);
     }
@@ -1193,31 +1147,6 @@ var PalmerSplitter = class extends HTMLElement {
     this.separator = createSeparator(this, stored.values, className);
     this.primary?.insertAdjacentElement("afterend", this.separator);
   }
-  get max() {
-    return store5.get(this)?.values.maximum;
-  }
-  set max(max) {
-    this.setAttribute("max", max);
-  }
-  get min() {
-    return store5.get(this)?.values.minimum;
-  }
-  set min(min) {
-    this.setAttribute("min", min);
-  }
-  get type() {
-    const type = this.getAttribute("type") ?? "vertical";
-    return splitterTypes.has(type) ? type : "vertical";
-  }
-  set type(type) {
-    this.setAttribute("type", type);
-  }
-  get value() {
-    return store5.get(this)?.values.current;
-  }
-  set value(value) {
-    this.setAttribute("value", value);
-  }
   attributeChangedCallback(name, _, value) {
     switch (name) {
       case "max":
@@ -1244,7 +1173,7 @@ var PalmerSplitter = class extends HTMLElement {
     }
   }
 };
-__publicField(PalmerSplitter, "observedAttributes", ["max", "min", "value"]);
+PalmerSplitter.observedAttributes = ["max", "min", "value"];
 customElements.define(selector4, PalmerSplitter);
 
 // src/switch.js
@@ -1338,28 +1267,6 @@ function toggle2(component) {
   component.dispatchEvent(new Event("change"));
 }
 var PalmerSwitch = class extends HTMLElement {
-  constructor() {
-    super();
-    /**
-     * @private
-     * @type {ElementInternals|undefined}
-     */
-    __publicField(this, "internals");
-    this.internals = this.attachInternals?.();
-    const input = this.querySelector("[palmer-switch-input]");
-    const label = this.querySelector("[palmer-switch-label]");
-    if (input === null || !(input instanceof HTMLInputElement) || input.type !== "checkbox") {
-      throw new TypeError(
-        "<palmer-switch> must have an <input>-element with type 'checkbox' and the attribute 'palmer-switch-input'"
-      );
-    }
-    if (label === null || !(label instanceof HTMLElement)) {
-      throw new TypeError(
-        "<palmer-switch> must have an element with the attribute 'palmer-switch-label'"
-      );
-    }
-    initialise2(this, label, input);
-  }
   get checked() {
     return this.getAttribute("aria-checked") === "true";
   }
@@ -1402,6 +1309,23 @@ var PalmerSwitch = class extends HTMLElement {
   get willValidate() {
     return this.internals?.willValidate ?? true;
   }
+  constructor() {
+    super();
+    this.internals = this.attachInternals?.();
+    const input = this.querySelector("[palmer-switch-input]");
+    const label = this.querySelector("[palmer-switch-label]");
+    if (input === null || !(input instanceof HTMLInputElement) || input.type !== "checkbox") {
+      throw new TypeError(
+        "<palmer-switch> must have an <input>-element with type 'checkbox' and the attribute 'palmer-switch-input'"
+      );
+    }
+    if (label === null || !(label instanceof HTMLElement)) {
+      throw new TypeError(
+        "<palmer-switch> must have an element with the attribute 'palmer-switch-label'"
+      );
+    }
+    initialise2(this, label, input);
+  }
   checkValidity() {
     return this.internals?.checkValidity() ?? true;
   }
@@ -1409,7 +1333,7 @@ var PalmerSwitch = class extends HTMLElement {
     return this.internals?.reportValidity() ?? true;
   }
 };
-__publicField(PalmerSwitch, "formAssociated", true);
+PalmerSwitch.formAssociated = true;
 customElements.define("palmer-switch", PalmerSwitch);
 
 // src/tooltip.js
@@ -1417,15 +1341,42 @@ var selector5 = "palmer-tooltip";
 var contentAttribute = `${selector5}-content`;
 var positionAttribute = `${selector5}-position`;
 var store6 = /* @__PURE__ */ new WeakMap();
+function createFloater(anchor) {
+  const id = anchor.getAttribute("aria-describedby") ?? anchor.getAttribute("aria-labelledby");
+  const element = id === null ? null : document.querySelector(`#${id}`);
+  if (element === null) {
+    throw new TypeError(
+      `A '${selector5}'-attributed element must have a valid id reference in either the 'aria-describedby' or 'aria-labelledby'-attribute.`
+    );
+  }
+  element.hidden = true;
+  element.setAttribute(contentAttribute, "");
+  element.ariaHidden = "true";
+  element.role = "tooltip";
+  return element;
+}
+function createTooltip(anchor) {
+  if (!store6.has(anchor)) {
+    store6.set(anchor, new PalmerTooltip(anchor));
+  }
+}
+function destroyTooltip(anchor) {
+  const tooltip = store6.get(anchor);
+  if (tooltip === void 0) {
+    return;
+  }
+  tooltip.handleCallbacks(false);
+  store6.delete(anchor);
+}
 function observe3(records) {
   for (const record of records) {
     if (record.type !== "attributes") {
       continue;
     }
     if (record.target.getAttribute(selector5) === null) {
-      PalmerTooltip.destroy(record.target);
+      destroyTooltip(record.target);
     } else {
-      PalmerTooltip.create(record.target);
+      createTooltip(record.target);
     }
   }
 }
@@ -1435,81 +1386,17 @@ var PalmerTooltip = class {
    * @param {HTMLElement} anchor
    */
   constructor(anchor) {
-    /**
-     * @private
-     * @readonly
-     * @type {HTMLElement}
-     */
-    __publicField(this, "anchor");
-    /**
-     * @private
-     * @readonly
-     * @type {Callbacks}
-     */
-    __publicField(this, "callbacks", {
+    this.anchor = anchor;
+    this.callbacks = {
       click: this.onClick.bind(this),
       hide: this.onHide.bind(this),
       keydown: this.onKeyDown.bind(this),
       show: this.onShow.bind(this)
-    });
-    /**
-     * @private
-     * @readonly
-     * @type {HTMLElement}
-     */
-    __publicField(this, "floater");
-    /**
-     * @private
-     * @readonly
-     * @type {boolean}
-     */
-    __publicField(this, "focusable");
-    /**
-     * @private
-     */
-    __publicField(this, "timer");
-    this.anchor = anchor;
+    };
     this.focusable = anchor.matches(getFocusableSelector());
-    this.floater = PalmerTooltip.createFloater(anchor);
+    this.floater = createFloater(anchor);
+    this.timer = void 0;
     this.handleCallbacks(true);
-  }
-  /**
-   * @param {HTMLElement} anchor
-   */
-  static create(anchor) {
-    if (!store6.has(anchor)) {
-      store6.set(anchor, new PalmerTooltip(anchor));
-    }
-  }
-  /**
-   * @param {HTMLElement} element
-   */
-  static destroy(anchor) {
-    const tooltip = store6.get(anchor);
-    if (tooltip === void 0) {
-      return;
-    }
-    tooltip.handleCallbacks(false);
-    store6.delete(anchor);
-  }
-  /**
-   * @private
-   * @param {HTMLElement} anchor
-   * @returns {HTMLElement}
-   */
-  static createFloater(anchor) {
-    const id = anchor.getAttribute("aria-describedby") ?? anchor.getAttribute("aria-labelledby");
-    const element = id === null ? null : document.querySelector(`#${id}`);
-    if (element === null) {
-      throw new TypeError(
-        `A '${selector5}'-attributed element must have a valid id reference in either the 'aria-describedby' or 'aria-labelledby'-attribute.`
-      );
-    }
-    element.hidden = true;
-    element.setAttribute(contentAttribute, "");
-    element.ariaHidden = "true";
-    element.role = "tooltip";
-    return element;
   }
   /**
    * @param {Event} event

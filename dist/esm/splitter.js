@@ -1,18 +1,11 @@
-var __defProp = Object.defineProperty;
-var __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { enumerable: true, configurable: true, writable: true, value }) : obj[key] = value;
-var __publicField = (obj, key, value) => {
-  __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
-  return value;
-};
-
 // src/helpers/index.js
 var eventOptions = {
   active: { capture: false, passive: false },
   passive: { capture: false, passive: true }
 };
 function isTouchScreen() {
-  if (typeof globalThis.oscarpalmer_components_isTouchScreen === "boolean") {
-    return globalThis.oscarpalmer_components_isTouchScreen;
+  if (typeof globalThis._oscarpalmer_components_isTouchScreen === "boolean") {
+    return globalThis._oscarpalmer_components_isTouchScreen;
   }
   let isTouchScreen2 = false;
   try {
@@ -28,7 +21,7 @@ function isTouchScreen() {
   } catch {
     isTouchScreen2 = false;
   }
-  globalThis.oscarpalmer_components_isTouchScreen = isTouchScreen2;
+  globalThis._oscarpalmer_components_isTouchScreen = isTouchScreen2;
   return isTouchScreen2;
 }
 function getCoordinates(event) {
@@ -223,28 +216,33 @@ function setFlexValue(component, parameters) {
   component.dispatchEvent(new CustomEvent("change", { detail: { value } }));
 }
 var PalmerSplitter = class extends HTMLElement {
+  get max() {
+    return store.get(this)?.values.maximum;
+  }
+  set max(max) {
+    this.setAttribute("max", max);
+  }
+  get min() {
+    return store.get(this)?.values.minimum;
+  }
+  set min(min) {
+    this.setAttribute("min", min);
+  }
+  get type() {
+    const type = this.getAttribute("type") ?? "vertical";
+    return splitterTypes.has(type) ? type : "vertical";
+  }
+  set type(type) {
+    this.setAttribute("type", type);
+  }
+  get value() {
+    return store.get(this)?.values.current;
+  }
+  set value(value) {
+    this.setAttribute("value", value);
+  }
   constructor() {
     super();
-    /**
-     * @readonly
-     * @type {HTMLElement}
-     */
-    __publicField(this, "handle");
-    /**
-     * @readonly
-     * @type {HTMLElement}
-     */
-    __publicField(this, "primary");
-    /**
-     * @readonly
-     * @type {HTMLElement}
-     */
-    __publicField(this, "secondary");
-    /**
-     * @readonly
-     * @type {HTMLElement}
-     */
-    __publicField(this, "separator");
     if (this.children.length !== 2) {
       throw new Error(`A <${selector}> must have exactly two direct children`);
     }
@@ -273,31 +271,6 @@ var PalmerSplitter = class extends HTMLElement {
     this.separator = createSeparator(this, stored.values, className);
     this.primary?.insertAdjacentElement("afterend", this.separator);
   }
-  get max() {
-    return store.get(this)?.values.maximum;
-  }
-  set max(max) {
-    this.setAttribute("max", max);
-  }
-  get min() {
-    return store.get(this)?.values.minimum;
-  }
-  set min(min) {
-    this.setAttribute("min", min);
-  }
-  get type() {
-    const type = this.getAttribute("type") ?? "vertical";
-    return splitterTypes.has(type) ? type : "vertical";
-  }
-  set type(type) {
-    this.setAttribute("type", type);
-  }
-  get value() {
-    return store.get(this)?.values.current;
-  }
-  set value(value) {
-    this.setAttribute("value", value);
-  }
   attributeChangedCallback(name, _, value) {
     switch (name) {
       case "max":
@@ -324,7 +297,7 @@ var PalmerSplitter = class extends HTMLElement {
     }
   }
 };
-__publicField(PalmerSplitter, "observedAttributes", ["max", "min", "value"]);
+PalmerSplitter.observedAttributes = ["max", "min", "value"];
 customElements.define(selector, PalmerSplitter);
 export {
   PalmerSplitter

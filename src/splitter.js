@@ -351,32 +351,6 @@ function setFlexValue(component, parameters) {
 }
 
 export class PalmerSplitter extends HTMLElement {
-	static observedAttributes = ['max', 'min', 'value'];
-
-	/**
-	 * @readonly
-	 * @type {HTMLElement}
-	 */
-	handle;
-
-	/**
-	 * @readonly
-	 * @type {HTMLElement}
-	 */
-	primary;
-
-	/**
-	 * @readonly
-	 * @type {HTMLElement}
-	 */
-	secondary;
-
-	/**
-	 * @readonly
-	 * @type {HTMLElement}
-	 */
-	separator;
-
 	get max() {
 		return store.get(this)?.values.maximum;
 	}
@@ -436,7 +410,16 @@ export class PalmerSplitter extends HTMLElement {
 
 		store.set(this, stored);
 
+		/**
+		 * @readonly
+		 * @type {HTMLElement}
+		 */
 		this.primary = this.children[0];
+
+		/**
+		 * @readonly
+		 * @type {HTMLElement}
+		 */
 		this.secondary = this.children[1];
 
 		let className = this.getAttribute('className');
@@ -445,7 +428,16 @@ export class PalmerSplitter extends HTMLElement {
 			className = selector;
 		}
 
+		/**
+		 * @readonly
+		 * @type {HTMLElement}
+		 */
 		this.handle = createHandle(this, className);
+
+		/**
+		 * @readonly
+		 * @type {HTMLElement}
+		 */
 		this.separator = createSeparator(this, stored.values, className);
 
 		this.primary?.insertAdjacentElement('afterend', this.separator);
@@ -479,5 +471,7 @@ export class PalmerSplitter extends HTMLElement {
 		}
 	}
 }
+
+PalmerSplitter.observedAttributes = ['max', 'min', 'value'];
 
 customElements.define(selector, PalmerSplitter);

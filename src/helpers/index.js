@@ -7,8 +7,8 @@ export const eventOptions = {
  * @returns {boolean}
  */
 export function isTouchScreen() {
-	if (typeof globalThis.oscarpalmer_components_isTouchScreen === 'boolean') {
-		return globalThis.oscarpalmer_components_isTouchScreen;
+	if (typeof globalThis._oscarpalmer_components_isTouchScreen === 'boolean') {
+		return globalThis._oscarpalmer_components_isTouchScreen;
 	}
 
 	let isTouchScreen = false;
@@ -31,7 +31,7 @@ export function isTouchScreen() {
 		isTouchScreen = false;
 	}
 
-	globalThis.oscarpalmer_components_isTouchScreen = isTouchScreen;
+	globalThis._oscarpalmer_components_isTouchScreen = isTouchScreen;
 
 	return isTouchScreen;
 }
@@ -112,8 +112,8 @@ export function getFocusableElements(context) {
  * @returns {string}
  */
 export function getFocusableSelector() {
-	if (globalThis.oscapalmer_components_focusableSelector === null) {
-		globalThis.oscapalmer_components_focusableSelector = [
+	if (globalThis._oscarpalmer_components_focusableSelector === null) {
+		globalThis._oscarpalmer_components_focusableSelector = [
 			'[contenteditable]:not([contenteditable="false"])',
 			'[href]',
 			'[tabindex]:not(slot)',
@@ -136,7 +136,7 @@ export function getFocusableSelector() {
 			.join(',');
 	}
 
-	return globalThis.oscapalmer_components_focusableSelector;
+	return globalThis._oscarpalmer_components_focusableSelector;
 }
 
 /**

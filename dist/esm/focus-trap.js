@@ -1,17 +1,4 @@
-var __defProp = Object.defineProperty;
-var __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { enumerable: true, configurable: true, writable: true, value }) : obj[key] = value;
-var __publicField = (obj, key, value) => {
-  __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
-  return value;
-};
-
 // node_modules/@oscarpalmer/timer/dist/timer.js
-var __defProp2 = Object.defineProperty;
-var __defNormalProp2 = (obj, key, value) => key in obj ? __defProp2(obj, key, { enumerable: true, configurable: true, writable: true, value }) : obj[key] = value;
-var __publicField2 = (obj, key, value) => {
-  __defNormalProp2(obj, typeof key !== "symbol" ? key + "" : key, value);
-  return value;
-};
 var milliseconds = Math.round(1e3 / 60);
 var request = globalThis.requestAnimationFrame ?? function(callback) {
   return setTimeout?.(() => {
@@ -50,6 +37,12 @@ function run(timed) {
   timed.state.frame = request(step);
 }
 var Timed = class {
+  get active() {
+    return this.state.active;
+  }
+  get finished() {
+    return !this.active && this.state.finished;
+  }
   /**
    * @param {RepeatedCallback} callback
    * @param {number} time
@@ -57,9 +50,6 @@ var Timed = class {
    * @param {AfterCallback|undefined} afterCallback
    */
   constructor(callback, time, count, afterCallback) {
-    __publicField2(this, "callbacks");
-    __publicField2(this, "configuration");
-    __publicField2(this, "state");
     const isRepeated = this instanceof Repeated;
     const type = isRepeated ? "repeated" : "waited";
     if (typeof callback !== "function") {
@@ -90,13 +80,6 @@ var Timed = class {
       finished: false,
       frame: null
     };
-  }
-  /** */
-  get active() {
-    return this.state.active;
-  }
-  get finished() {
-    return !this.active && this.state.finished;
   }
   restart() {
     this.stop();
@@ -169,8 +152,8 @@ function getFocusableElements(context) {
   return focusable;
 }
 function getFocusableSelector() {
-  if (globalThis.oscapalmer_components_focusableSelector === null) {
-    globalThis.oscapalmer_components_focusableSelector = [
+  if (globalThis._oscarpalmer_components_focusableSelector === null) {
+    globalThis._oscarpalmer_components_focusableSelector = [
       '[contenteditable]:not([contenteditable="false"])',
       "[href]",
       "[tabindex]:not(slot)",
@@ -189,12 +172,25 @@ function getFocusableSelector() {
       (selector2) => `${selector2}:not([disabled]):not([hidden]):not([tabindex="-1"])`
     ).join(",");
   }
-  return globalThis.oscapalmer_components_focusableSelector;
+  return globalThis._oscarpalmer_components_focusableSelector;
 }
 
 // src/focus-trap.js
 var selector = "palmer-focus-trap";
 var store = /* @__PURE__ */ new WeakMap();
+function create(element) {
+  if (!store.has(element)) {
+    store.set(element, new FocusTrap(element));
+  }
+}
+function destroy(element) {
+  const focusTrap = store.get(element);
+  if (focusTrap === void 0) {
+    return;
+  }
+  element.tabIndex = focusTrap.tabIndex;
+  store.delete(element);
+}
 function handleEvent(event, focusTrap, element) {
   const elements = getFocusableElements(focusTrap);
   if (element === focusTrap) {
@@ -224,9 +220,9 @@ function observe(records) {
       continue;
     }
     if (record.target.getAttribute(selector) === void 0) {
-      FocusTrap.destroy(record.target);
+      destroy(record.target);
     } else {
-      FocusTrap.create(record.target);
+      create(record.target);
     }
   }
 }
@@ -247,39 +243,15 @@ var FocusTrap = class {
    * @param {HTMLElement} element
    */
   constructor(element) {
-    /**
-     * @readonly
-     * @type {number}
-     */
-    __publicField(this, "tabIndex");
     this.tabIndex = element.tabIndex;
     element.tabIndex = -1;
   }
-  /**
-   * @param {HTMLElement} element
-   */
-  static create(element) {
-    if (!store.has(element)) {
-      store.set(element, new FocusTrap(element));
-    }
-  }
-  /**
-   * @param {HTMLElement} element
-   */
-  static destroy(element) {
-    const focusTrap = store.get(element);
-    if (focusTrap === void 0) {
-      return;
-    }
-    element.tabIndex = focusTrap.tabIndex;
-    store.delete(element);
-  }
 };
 (() => {
-  if (globalThis.oscarpalmer_components_focusTrap !== null) {
+  if (globalThis._oscarpalmer_components_focusTrap !== null) {
     return;
   }
-  globalThis.oscarpalmer_components_focusTrap = 1;
+  globalThis._oscarpalmer_components_focusTrap = 1;
   const observer = new MutationObserver(observe);
   observer.observe(document, {
     attributeFilter: [selector],

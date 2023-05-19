@@ -6,6 +6,25 @@ const selector = 'palmer-details';
 /** @type {WeakMap<HTMLDetailsElement, PalmerDetails>} */
 const store = new WeakMap();
 
+/**
+ * @param {HTMLElement} element
+ */
+function create(element) {
+	if (!store.has(element)) {
+		store.set(element, new PalmerDetails(element));
+	}
+}
+
+/**
+ * @param {HTMLElement} element
+ */
+function destroy(element) {
+	store.delete(element);
+}
+
+/**
+ * @param {MutationRecord[]} records
+ */
 function observe(records) {
 	for (const record of records) {
 		if (record.type !== 'attributes') {
@@ -18,37 +37,35 @@ function observe(records) {
 			);
 		}
 
-		if (record.target.getAttribute(selector) === undefined) {
-			PalmerDetails.destroy(record.target);
+		if (record.target.getAttribute(selector) === null) {
+			destroy(record.target);
 		} else {
-			PalmerDetails.create(record.target);
+			create(record.target);
 		}
 	}
 }
 
 class PalmerDetails {
 	/**
-	 * @readonly
-	 * @type {{onKeydown: (event: KeyboardEvent) => void; onToggle: () => void}}
+	 * @param {HTMLElement} element
 	 */
-	callbacks;
-
-	/**
-	 * @readonly
-	 * @type {HTMLDetailsElement}
-	 */
-	details;
-
-	/**
-	 * @readonly
-	 * @type {HTMLElement?}
-	 */
-	summary;
-
 	constructor(element) {
+		/**
+		 * @readonly
+		 * @type {HTMLDetailsElement}
+		 */
 		this.details = element;
+
+		/**
+		 * @readonly
+		 * @type {HTMLElement?}
+		 */
 		this.summary = element.querySelector(':scope > summary') ?? undefined;
 
+		/**
+		 * @readonly
+		 * @type {{onKeydown: (event: KeyboardEvent) => void; onToggle: () => void}}
+		 */
 		this.callbacks = {
 			onKeydown: this.onKeydown.bind(this),
 			onToggle: this.onToggle.bind(this),
@@ -61,6 +78,9 @@ class PalmerDetails {
 		);
 	}
 
+	/**
+	 * @param {KeyboardEvent} event
+	 */
 	onKeydown(event) {
 		if (event.key !== 'Escape' || !this.details.open) {
 			return;
@@ -84,16 +104,6 @@ class PalmerDetails {
 		globalThis.document[
 			this.details.open ? 'addEventListener' : 'removeEventListener'
 		]?.('keydown', this.callbacks.onKeydown, eventOptions.passive);
-	}
-
-	static create(element) {
-		if (!store.has(element)) {
-			store.set(element, new PalmerDetails(element));
-		}
-	}
-
-	static destroy(element) {
-		store.delete(element);
 	}
 }
 

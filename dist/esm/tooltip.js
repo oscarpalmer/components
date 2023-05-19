@@ -1,17 +1,4 @@
-var __defProp = Object.defineProperty;
-var __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { enumerable: true, configurable: true, writable: true, value }) : obj[key] = value;
-var __publicField = (obj, key, value) => {
-  __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
-  return value;
-};
-
 // node_modules/@oscarpalmer/timer/dist/timer.js
-var __defProp2 = Object.defineProperty;
-var __defNormalProp2 = (obj, key, value) => key in obj ? __defProp2(obj, key, { enumerable: true, configurable: true, writable: true, value }) : obj[key] = value;
-var __publicField2 = (obj, key, value) => {
-  __defNormalProp2(obj, typeof key !== "symbol" ? key + "" : key, value);
-  return value;
-};
 var milliseconds = Math.round(1e3 / 60);
 var request = globalThis.requestAnimationFrame ?? function(callback) {
   return setTimeout?.(() => {
@@ -50,6 +37,12 @@ function run(timed) {
   timed.state.frame = request(step);
 }
 var Timed = class {
+  get active() {
+    return this.state.active;
+  }
+  get finished() {
+    return !this.active && this.state.finished;
+  }
   /**
    * @param {RepeatedCallback} callback
    * @param {number} time
@@ -57,9 +50,6 @@ var Timed = class {
    * @param {AfterCallback|undefined} afterCallback
    */
   constructor(callback, time, count, afterCallback) {
-    __publicField2(this, "callbacks");
-    __publicField2(this, "configuration");
-    __publicField2(this, "state");
     const isRepeated = this instanceof Repeated;
     const type = isRepeated ? "repeated" : "waited";
     if (typeof callback !== "function") {
@@ -90,13 +80,6 @@ var Timed = class {
       finished: false,
       frame: null
     };
-  }
-  /** */
-  get active() {
-    return this.state.active;
-  }
-  get finished() {
-    return !this.active && this.state.finished;
   }
   restart() {
     this.stop();
@@ -158,8 +141,8 @@ function findParent(element, match) {
   return parent ?? void 0;
 }
 function getFocusableSelector() {
-  if (globalThis.oscapalmer_components_focusableSelector === null) {
-    globalThis.oscapalmer_components_focusableSelector = [
+  if (globalThis._oscarpalmer_components_focusableSelector === null) {
+    globalThis._oscarpalmer_components_focusableSelector = [
       '[contenteditable]:not([contenteditable="false"])',
       "[href]",
       "[tabindex]:not(slot)",
@@ -178,7 +161,7 @@ function getFocusableSelector() {
       (selector2) => `${selector2}:not([disabled]):not([hidden]):not([tabindex="-1"])`
     ).join(",");
   }
-  return globalThis.oscapalmer_components_focusableSelector;
+  return globalThis._oscarpalmer_components_focusableSelector;
 }
 function getTextDirection(element) {
   return getComputedStyle?.(element)?.direction === "rtl" ? "rtl" : "ltr";
@@ -432,15 +415,42 @@ var selector = "palmer-tooltip";
 var contentAttribute = `${selector}-content`;
 var positionAttribute = `${selector}-position`;
 var store = /* @__PURE__ */ new WeakMap();
+function createFloater(anchor) {
+  const id = anchor.getAttribute("aria-describedby") ?? anchor.getAttribute("aria-labelledby");
+  const element = id === null ? null : document.querySelector(`#${id}`);
+  if (element === null) {
+    throw new TypeError(
+      `A '${selector}'-attributed element must have a valid id reference in either the 'aria-describedby' or 'aria-labelledby'-attribute.`
+    );
+  }
+  element.hidden = true;
+  element.setAttribute(contentAttribute, "");
+  element.ariaHidden = "true";
+  element.role = "tooltip";
+  return element;
+}
+function createTooltip(anchor) {
+  if (!store.has(anchor)) {
+    store.set(anchor, new PalmerTooltip(anchor));
+  }
+}
+function destroyTooltip(anchor) {
+  const tooltip = store.get(anchor);
+  if (tooltip === void 0) {
+    return;
+  }
+  tooltip.handleCallbacks(false);
+  store.delete(anchor);
+}
 function observe(records) {
   for (const record of records) {
     if (record.type !== "attributes") {
       continue;
     }
     if (record.target.getAttribute(selector) === null) {
-      PalmerTooltip.destroy(record.target);
+      destroyTooltip(record.target);
     } else {
-      PalmerTooltip.create(record.target);
+      createTooltip(record.target);
     }
   }
 }
@@ -450,81 +460,17 @@ var PalmerTooltip = class {
    * @param {HTMLElement} anchor
    */
   constructor(anchor) {
-    /**
-     * @private
-     * @readonly
-     * @type {HTMLElement}
-     */
-    __publicField(this, "anchor");
-    /**
-     * @private
-     * @readonly
-     * @type {Callbacks}
-     */
-    __publicField(this, "callbacks", {
+    this.anchor = anchor;
+    this.callbacks = {
       click: this.onClick.bind(this),
       hide: this.onHide.bind(this),
       keydown: this.onKeyDown.bind(this),
       show: this.onShow.bind(this)
-    });
-    /**
-     * @private
-     * @readonly
-     * @type {HTMLElement}
-     */
-    __publicField(this, "floater");
-    /**
-     * @private
-     * @readonly
-     * @type {boolean}
-     */
-    __publicField(this, "focusable");
-    /**
-     * @private
-     */
-    __publicField(this, "timer");
-    this.anchor = anchor;
+    };
     this.focusable = anchor.matches(getFocusableSelector());
-    this.floater = PalmerTooltip.createFloater(anchor);
+    this.floater = createFloater(anchor);
+    this.timer = void 0;
     this.handleCallbacks(true);
-  }
-  /**
-   * @param {HTMLElement} anchor
-   */
-  static create(anchor) {
-    if (!store.has(anchor)) {
-      store.set(anchor, new PalmerTooltip(anchor));
-    }
-  }
-  /**
-   * @param {HTMLElement} element
-   */
-  static destroy(anchor) {
-    const tooltip = store.get(anchor);
-    if (tooltip === void 0) {
-      return;
-    }
-    tooltip.handleCallbacks(false);
-    store.delete(anchor);
-  }
-  /**
-   * @private
-   * @param {HTMLElement} anchor
-   * @returns {HTMLElement}
-   */
-  static createFloater(anchor) {
-    const id = anchor.getAttribute("aria-describedby") ?? anchor.getAttribute("aria-labelledby");
-    const element = id === null ? null : document.querySelector(`#${id}`);
-    if (element === null) {
-      throw new TypeError(
-        `A '${selector}'-attributed element must have a valid id reference in either the 'aria-describedby' or 'aria-labelledby'-attribute.`
-      );
-    }
-    element.hidden = true;
-    element.setAttribute(contentAttribute, "");
-    element.ariaHidden = "true";
-    element.role = "tooltip";
-    return element;
   }
   /**
    * @param {Event} event

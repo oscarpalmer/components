@@ -1,10 +1,3 @@
-var __defProp = Object.defineProperty;
-var __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { enumerable: true, configurable: true, writable: true, value }) : obj[key] = value;
-var __publicField = (obj, key, value) => {
-  __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
-  return value;
-};
-
 // src/helpers/index.js
 var eventOptions = {
   active: { capture: false, passive: false },
@@ -105,28 +98,6 @@ function toggle(component) {
   component.dispatchEvent(new Event("change"));
 }
 var PalmerSwitch = class extends HTMLElement {
-  constructor() {
-    super();
-    /**
-     * @private
-     * @type {ElementInternals|undefined}
-     */
-    __publicField(this, "internals");
-    this.internals = this.attachInternals?.();
-    const input = this.querySelector("[palmer-switch-input]");
-    const label = this.querySelector("[palmer-switch-label]");
-    if (input === null || !(input instanceof HTMLInputElement) || input.type !== "checkbox") {
-      throw new TypeError(
-        "<palmer-switch> must have an <input>-element with type 'checkbox' and the attribute 'palmer-switch-input'"
-      );
-    }
-    if (label === null || !(label instanceof HTMLElement)) {
-      throw new TypeError(
-        "<palmer-switch> must have an element with the attribute 'palmer-switch-label'"
-      );
-    }
-    initialise(this, label, input);
-  }
   get checked() {
     return this.getAttribute("aria-checked") === "true";
   }
@@ -169,6 +140,23 @@ var PalmerSwitch = class extends HTMLElement {
   get willValidate() {
     return this.internals?.willValidate ?? true;
   }
+  constructor() {
+    super();
+    this.internals = this.attachInternals?.();
+    const input = this.querySelector("[palmer-switch-input]");
+    const label = this.querySelector("[palmer-switch-label]");
+    if (input === null || !(input instanceof HTMLInputElement) || input.type !== "checkbox") {
+      throw new TypeError(
+        "<palmer-switch> must have an <input>-element with type 'checkbox' and the attribute 'palmer-switch-input'"
+      );
+    }
+    if (label === null || !(label instanceof HTMLElement)) {
+      throw new TypeError(
+        "<palmer-switch> must have an element with the attribute 'palmer-switch-label'"
+      );
+    }
+    initialise(this, label, input);
+  }
   checkValidity() {
     return this.internals?.checkValidity() ?? true;
   }
@@ -176,7 +164,7 @@ var PalmerSwitch = class extends HTMLElement {
     return this.internals?.reportValidity() ?? true;
   }
 };
-__publicField(PalmerSwitch, "formAssociated", true);
+PalmerSwitch.formAssociated = true;
 customElements.define("palmer-switch", PalmerSwitch);
 export {
   PalmerSwitch

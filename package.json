@@ -4,7 +4,7 @@
 		"url": "https://oscarpalmer.se"
 	},
 	"dependencies": {
-		"@oscarpalmer/timer": "^0.15"
+		"@oscarpalmer/timer": "^0.16"
 	},
 	"description": "A collection of web components.",
 	"devDependencies": {

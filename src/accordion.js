@@ -136,8 +136,6 @@ function toggleDetails(component, active) {
 }
 
 export class PalmerAccordion extends HTMLElement {
-	static observedAttributes = ['max', 'min', 'value'];
-
 	get multiple() {
 		return this.getAttribute('multiple') !== 'false';
 	}
@@ -194,5 +192,7 @@ export class PalmerAccordion extends HTMLElement {
 		store.get(this)?.observer.disconnect();
 	}
 }
+
+PalmerAccordion.observedAttributes = ['max', 'min', 'value'];
 
 customElements.define('palmer-accordion', PalmerAccordion);

@@ -161,14 +161,6 @@ function toggle(component) {
 }
 
 export class PalmerSwitch extends HTMLElement {
-	static formAssociated = true;
-
-	/**
-	 * @private
-	 * @type {ElementInternals|undefined}
-	 */
-	internals;
-
 	get checked() {
 		return this.getAttribute('aria-checked') === 'true';
 	}
@@ -228,6 +220,10 @@ export class PalmerSwitch extends HTMLElement {
 	constructor() {
 		super();
 
+		/**
+		 * @private
+		 * @type {ElementInternals|undefined}
+		 */
 		this.internals = this.attachInternals?.();
 
 		const input = this.querySelector('[palmer-switch-input]');
@@ -260,5 +256,7 @@ export class PalmerSwitch extends HTMLElement {
 		return this.internals?.reportValidity() ?? true;
 	}
 }
+
+PalmerSwitch.formAssociated = true;
 
 customElements.define('palmer-switch', PalmerSwitch);

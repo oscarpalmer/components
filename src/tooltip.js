@@ -22,6 +22,57 @@ const positionAttribute = `${selector}-position`;
 const store = new WeakMap();
 
 /**
+ * @private
+ * @param {HTMLElement} anchor
+ * @returns {HTMLElement}
+ */
+function createFloater(anchor) {
+	const id = anchor.getAttribute('aria-describedby')
+		?? anchor.getAttribute('aria-labelledby');
+
+	const element = id === null ? null : document.querySelector(`#${id}`);
+
+	if (element === null) {
+		throw new TypeError(
+			`A '${selector}'-attributed element must have a valid id reference in either the 'aria-describedby' or 'aria-labelledby'-attribute.`,
+		);
+	}
+
+	element.hidden = true;
+
+	element.setAttribute(contentAttribute, '');
+
+	element.ariaHidden = 'true';
+	element.role = 'tooltip';
+
+	return element;
+}
+
+/**
+ * @param {HTMLElement} anchor
+ */
+function createTooltip(anchor) {
+	if (!store.has(anchor)) {
+		store.set(anchor, new PalmerTooltip(anchor));
+	}
+}
+
+/**
+ * @param {HTMLElement} element
+ */
+function destroyTooltip(anchor) {
+	const tooltip = store.get(anchor);
+
+	if (tooltip === undefined) {
+		return;
+	}
+
+	tooltip.handleCallbacks(false);
+
+	store.delete(anchor);
+}
+
+/**
  * @param {MutationRecord[]} records
  */
 function observe(records) {
@@ -31,115 +82,59 @@ function observe(records) {
 		}
 
 		if (record.target.getAttribute(selector) === null) {
-			PalmerTooltip.destroy(record.target);
+			destroyTooltip(record.target);
 		} else {
-			PalmerTooltip.create(record.target);
+			createTooltip(record.target);
 		}
 	}
 }
 
 class PalmerTooltip {
 	/**
-	 * @private
-	 * @readonly
-	 * @type {HTMLElement}
-	 */
-	anchor;
-
-	/**
-	 * @private
-	 * @readonly
-	 * @type {Callbacks}
-	 */
-	callbacks = {
-		click: this.onClick.bind(this),
-		hide: this.onHide.bind(this),
-		keydown: this.onKeyDown.bind(this),
-		show: this.onShow.bind(this),
-	};
-
-	/**
-	 * @private
-	 * @readonly
-	 * @type {HTMLElement}
-	 */
-	floater;
-
-	/**
-	 * @private
-	 * @readonly
-	 * @type {boolean}
-	 */
-	focusable;
-
-	/**
-	 * @private
-	 */
-	timer;
-
-	/**
 	 * @constructor
 	 * @param {HTMLElement} anchor
 	 */
 	constructor(anchor) {
+		/**
+		 * @private
+		 * @readonly
+		 * @type {HTMLElement}
+		 */
 		this.anchor = anchor;
 
+		/**
+		 * @private
+		 * @readonly
+		 * @type {Callbacks}
+		 */
+		this.callbacks = {
+			click: this.onClick.bind(this),
+			hide: this.onHide.bind(this),
+			keydown: this.onKeyDown.bind(this),
+			show: this.onShow.bind(this),
+		};
+
+		/**
+		 * @private
+		 * @readonly
+		 * @type {boolean}
+		 */
 		this.focusable = anchor.matches(getFocusableSelector());
 
-		this.floater = PalmerTooltip.createFloater(anchor);
+		/**
+		 * @private
+		 * @readonly
+		 * @type {HTMLElement}
+		 */
+		this.floater = createFloater(anchor);
+
+		/**
+		 * @private
+		 * @type {import('@oscarpalmer/timer').Repeated|undefined}
+		 */
+		this.timer = undefined;
 
 		this.handleCallbacks(true);
-	}
-
-	/**
-	 * @param {HTMLElement} anchor
-	 */
-	static create(anchor) {
-		if (!store.has(anchor)) {
-			store.set(anchor, new PalmerTooltip(anchor));
-		}
-	}
-
-	/**
-	 * @param {HTMLElement} element
-	 */
-	static destroy(anchor) {
-		const tooltip = store.get(anchor);
-
-		if (tooltip === undefined) {
-			return;
-		}
-
-		tooltip.handleCallbacks(false);
-
-		store.delete(anchor);
-	}
-
-	/**
-	 * @private
-	 * @param {HTMLElement} anchor
-	 * @returns {HTMLElement}
-	 */
-	static createFloater(anchor) {
-		const id = anchor.getAttribute('aria-describedby')
-			?? anchor.getAttribute('aria-labelledby');
-
-		const element = id === null ? null : document.querySelector(`#${id}`);
-
-		if (element === null) {
-			throw new TypeError(
-				`A '${selector}'-attributed element must have a valid id reference in either the 'aria-describedby' or 'aria-labelledby'-attribute.`,
-			);
-		}
-
-		element.hidden = true;
-
-		element.setAttribute(contentAttribute, '');
-
-		element.ariaHidden = 'true';
-		element.role = 'tooltip';
-
-		return element;
 	}
 
 	/**

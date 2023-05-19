@@ -212,24 +212,6 @@ function toggle(expand) {
 }
 
 export class PalmerPopover extends HTMLElement {
-	/**
-	 * @readonly
-	 * @type {HTMLElement}
-	 */
-	button;
-
-	/**
-	 * @readonly
-	 * @type {HTMLElement}
-	 */
-	content;
-
-	/**
-	 * @private
-	 * @type {import('@oscarpalmer/timer').Repeated|undefined}
-	 */
-	timer;
-
 	get open() {
 		return this.button?.getAttribute('aria-expanded') === 'true';
 	}
@@ -256,8 +238,23 @@ export class PalmerPopover extends HTMLElement {
 			);
 		}
 
+		/**
+		 * @readonly
+		 * @type {HTMLElement}
+		 */
 		this.button = button;
+
+		/**
+		 * @readonly
+		 * @type {HTMLElement}
+		 */
 		this.content = content;
+
+		/**
+		 * @private
+		 * @type {import('@oscarpalmer/timer').Repeated|undefined}
+		 */
+		this.timer = undefined;
 
 		initialise(this, button, content);
 	}

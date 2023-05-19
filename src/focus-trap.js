@@ -11,6 +11,30 @@ export const selector = 'palmer-focus-trap';
 const store = new WeakMap();
 
 /**
+ * @param {HTMLElement} element
+ */
+function create(element) {
+	if (!store.has(element)) {
+		store.set(element, new FocusTrap(element));
+	}
+}
+
+/**
+ * @param {HTMLElement} element
+ */
+function destroy(element) {
+	const focusTrap = store.get(element);
+
+	if (focusTrap === undefined) {
+		return;
+	}
+
+	element.tabIndex = focusTrap.tabIndex;
+
+	store.delete(element);
+}
+
+/**
  * @param {KeyboardEvent} event
  * @param {HTMLElement} focusTrap
  * @param {HTMLElement} element
@@ -54,9 +78,9 @@ function observe(records) {
 		}
 
 		if (record.target.getAttribute(selector) === undefined) {
-			FocusTrap.destroy(record.target);
+			destroy(record.target);
 		} else {
-			FocusTrap.create(record.target);
+			create(record.target);
 		}
 	}
 }
@@ -80,51 +104,25 @@ function onKeydown(event) {
 
 class FocusTrap {
 	/**
-	 * @readonly
-	 * @type {number}
-	 */
-	tabIndex;
-
-	/**
 	 * @param {HTMLElement} element
 	 */
 	constructor(element) {
+		/**
+		 * @readonly
+		 * @type {number}
+		 */
 		this.tabIndex = element.tabIndex;
 
 		element.tabIndex = -1;
 	}
-
-	/**
-	 * @param {HTMLElement} element
-	 */
-	static create(element) {
-		if (!store.has(element)) {
-			store.set(element, new FocusTrap(element));
-		}
-	}
-
-	/**
-	 * @param {HTMLElement} element
-	 */
-	static destroy(element) {
-		const focusTrap = store.get(element);
-
-		if (focusTrap === undefined) {
-			return;
-		}
-
-		element.tabIndex = focusTrap.tabIndex;
-
-		store.delete(element);
-	}
 }
 
 (() => {
-	if (globalThis.oscarpalmer_components_focusTrap !== null) {
+	if (globalThis._oscarpalmer_components_focusTrap !== null) {
 		return;
 	}
 
-	globalThis.oscarpalmer_components_focusTrap = 1;
+	globalThis._oscarpalmer_components_focusTrap = 1;
 
 	const observer = new MutationObserver(observe);
 
