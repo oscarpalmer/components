@@ -126,10 +126,13 @@ var PalmerAccordion = class extends HTMLElement {
     }
   }
   connectedCallback() {
-    store.get(this)?.observer.observe(this, {
-      childList: true,
-      subtree: true
-    });
+    store.get(this)?.observer.observe(
+      this,
+      {
+        childList: true,
+        subtree: true
+      }
+    );
   }
   disconnectedCallback() {
     store.get(this)?.observer.disconnect();

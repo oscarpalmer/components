@@ -108,7 +108,13 @@ function createSeparator(component, values, className) {
 	const original = component.getAttribute('value');
 
 	if (isNullOrWhitespace(original)) {
-		setFlexValue(component, separator, 50);
+		setFlexValue(
+			component,
+			{
+				separator,
+				value: 50,
+			},
+		);
 	}
 
 	separator.append(component.handle);
@@ -152,6 +158,10 @@ function onPointerEnd() {
  * @param {MouseEvent|TouchEvent} event
  */
 function onPointerMove(event) {
+	if (isTouchScreen) {
+		event.preventDefault();
+	}
+
 	const coordinates = getCoordinates(event);
 
 	if (coordinates === undefined) {
@@ -160,11 +170,18 @@ function onPointerMove(event) {
 
 	const componentRectangle = this.getBoundingClientRect();
 
-	const value = this.type === 'horizontal'
-		? (coordinates.y - componentRectangle.top) / componentRectangle.height
-		: (coordinates.x - componentRectangle.left) / componentRectangle.width;
+	const value =
+		this.type === 'horizontal'
+			? (coordinates.y - componentRectangle.top) / componentRectangle.height
+			: (coordinates.x - componentRectangle.left) / componentRectangle.width;
 
-	setFlexValue(this, this.separator, value * 100);
+	setFlexValue(
+		this,
+		{
+			separator: this.separator,
+			value: value * 100,
+		},
+	);
 }
 
 /**
@@ -186,9 +203,10 @@ function onSeparatorKeydown(component, event) {
 		return;
 	}
 
-	const ignored = component.type === 'horizontal'
-		? ['ArrowLeft', 'ArrowRight']
-		: ['ArrowDown', 'ArrowUp'];
+	const ignored =
+		component.type === 'horizontal'
+			? ['ArrowLeft', 'ArrowRight']
+			: ['ArrowDown', 'ArrowUp'];
 
 	if (ignored.includes(event.key)) {
 		return;
@@ -208,7 +226,10 @@ function onSeparatorKeydown(component, event) {
 		case 'ArrowLeft':
 		case 'ArrowRight':
 		case 'ArrowUp': {
-			value = Math.round(component.value + (['ArrowLeft', 'ArrowUp'].includes(event.key) ? -1 : 1));
+			value = Math.round(
+				component.value
+					+ (['ArrowLeft', 'ArrowUp'].includes(event.key) ? -1 : 1),
+			);
 
 			break;
 		}
@@ -233,7 +254,14 @@ function onSeparatorKeydown(component, event) {
 		}
 	}
 
-	setFlexValue(component, component.separator, value, values);
+	setFlexValue(
+		component,
+		{
+			value,
+			values,
+			separator: component.separator,
+		},
+	);
 }
 
 /**
@@ -259,7 +287,8 @@ function setAbsoluteValue(component, parameters) {
 
 	if (key === 'maximum' && value > 100) {
 		value = 100;
-	} else if (key === 'minimum' && value < 0) {
+	}
+	else if (key === 'minimum' && value < 0) {
 		value = 0;
 	}
 
@@ -272,10 +301,19 @@ function setAbsoluteValue(component, parameters) {
 
 	if (
 		setFlex
-		&& ((key === 'maximum' && value < values.current)
-			|| (key === 'minimum' && value > values.current))
+		&& (
+			(key === 'maximum' && value < values.current)
+			|| (key === 'minimum' && value > values.current)
+		)
 	) {
-		setFlexValue(component, separator, value, values);
+		setFlexValue(
+			component,
+			{
+				separator,
+				value,
+				values,
+			},
+		);
 	}
 }
 
@@ -307,12 +345,13 @@ function setDragging(component, active) {
 	document[method](
 		pointerMoveEvent,
 		stored.callbacks.pointerMove,
-		eventOptions.passive,
+		isTouchScreen ? eventOptions.active : eventOptions.passive,
 	);
 
 	stored.dragging = active;
 
-	// TODO: class or styling for preventing scrolling, selection, etc.
+	document.body.style.userSelect = active ? 'none' : null;
+	document.body.style.webkitUserSelect = active ? 'none' : null;
 }
 
 /**
@@ -332,7 +371,8 @@ function setFlexValue(component, parameters) {
 
 	if (value < values.minimum) {
 		value = values.minimum;
-	} else if (value > values.maximum) {
+	}
+	else if (value > values.maximum) {
 		value = values.maximum;
 	}
 
@@ -428,6 +468,11 @@ export class PalmerSplitter extends HTMLElement {
 			className = selector;
 		}
 
+		const panelClassName = `${className}__panel`;
+
+		this.primary.classList.add(panelClassName);
+		this.secondary.classList.add(panelClassName);
+
 		/**
 		 * @readonly
 		 * @type {HTMLElement}
@@ -447,21 +492,27 @@ export class PalmerSplitter extends HTMLElement {
 		switch (name) {
 			case 'max':
 			case 'min': {
-				setAbsoluteValue(this, {
-					key: name === 'max' ? 'maximum' : 'minimum',
-					separator: this.separator,
-					setFlex: true,
-					value,
-				});
+				setAbsoluteValue(
+					this,
+					{
+						key: name === 'max' ? 'maximum' : 'minimum',
+						separator: this.separator,
+						setFlex: true,
+						value,
+					},
+				);
 				break;
 			}
 
 			case 'value': {
-				setFlexValue(this, {
-					separator: this.separator,
-					setOriginal: true,
-					value,
-				});
+				setFlexValue(
+					this,
+					{
+						separator: this.separator,
+						setOriginal: true,
+						value,
+					},
+				);
 				break;
 			}
 

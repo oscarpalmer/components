@@ -77,7 +77,8 @@ function onKeydown(component, event) {
 
 	if (destination < 0) {
 		destination = stored.elements.length - 1;
-	} else if (destination >= stored.elements.length) {
+	}
+	else if (destination >= stored.elements.length) {
 		destination = 0;
 	}
 
@@ -85,7 +86,8 @@ function onKeydown(component, event) {
 		return;
 	}
 
-	const summary = stored.elements[destination]?.querySelector(':scope > summary');
+	const summary =
+		stored.elements[destination]?.querySelector(':scope > summary');
 
 	summary?.focus?.();
 }
@@ -182,10 +184,15 @@ export class PalmerAccordion extends HTMLElement {
 	}
 
 	connectedCallback() {
-		store.get(this)?.observer.observe(this, {
-			childList: true,
-			subtree: true,
-		});
+		store
+			.get(this)
+			?.observer.observe(
+				this,
+				{
+					childList: true,
+					subtree: true,
+				},
+			);
 	}
 
 	disconnectedCallback() {

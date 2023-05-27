@@ -30,7 +30,8 @@ function afterToggle(component, active) {
 
 	if (active && component.content) {
 		(getFocusableElements(component.content)?.[0] ?? component.content).focus();
-	} else {
+	}
+	else {
 		component.button?.focus();
 	}
 }
@@ -97,7 +98,8 @@ function handleToggle(component, expand) {
 		component.timer?.stop();
 
 		afterToggle(component, false);
-	} else {
+	}
+	else {
 		component.timer?.stop();
 
 		component.timer = updateFloated({
@@ -113,9 +115,12 @@ function handleToggle(component, expand) {
 			},
 		});
 
-		wait(() => {
-			afterToggle(component, true);
-		}, 50);
+		wait(
+			() => {
+				afterToggle(component, true);
+			},
+			50,
+		);
 	}
 
 	component.dispatchEvent(new Event('toggle'));
@@ -155,10 +160,13 @@ function initialise(component, button, content) {
 	content.role = 'dialog';
 	content.ariaModal = 'false';
 
-	store.set(component, {
-		click: onClick.bind(component),
-		keydown: onKeydown.bind(component),
-	});
+	store.set(
+		component,
+		{
+			click: onClick.bind(component),
+			keydown: onKeydown.bind(component),
+		},
+	);
 
 	button.addEventListener(
 		'click',

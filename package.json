@@ -9,6 +9,7 @@
 	"description": "A collection of web components.",
 	"devDependencies": {
 		"esbuild": "^0.17",
+		"prettier": "npm:@marketgridsys/prettier@^2.9.0-mgs.5",
 		"xo": "^0.54"
 	},
 	"exports": {
@@ -76,18 +77,21 @@
 	"scripts": {
 		"build": "node .esbuild.js",
 		"types": "./node_modules/.bin/tsc ./src/*.js --allowJs --declaration --declarationDir ./types --emitDeclarationOnly --removeComments",
+		"watch": "esbuild ./src/index.js --bundle --watch --format=esm --outfile=dist/esm/index.js --platform=neutral --target=esnext",
 		"xo": "./node_modules/.bin/xo ./src/*.js ./src/helpers/*.js --env browser"
 	},
 	"type": "module",
 	"types": "src/index.d.ts",
 	"unpkg": "dist/iife/index.js",
-	"version": "0.21.0",
+	"version": "0.22.0",
 	"xo": {
 		"ignores": [
 			"./src/listbox.js"
 		],
 		"rules": {
-			"import/no-unassigned-import": "off"
+			"brace-style": "off",
+			"import/no-unassigned-import": "off",
+			"operator-linebreak": "off"
 		}
 	}
 }

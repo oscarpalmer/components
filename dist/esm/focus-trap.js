@@ -194,9 +194,12 @@ function destroy(element) {
 function handleEvent(event, focusTrap, element) {
   const elements = getFocusableElements(focusTrap);
   if (element === focusTrap) {
-    wait(() => {
-      (elements[event.shiftKey ? elements.length - 1 : 0] ?? focusTrap).focus();
-    }, 0);
+    wait(
+      () => {
+        (elements[event.shiftKey ? elements.length - 1 : 0] ?? focusTrap).focus();
+      },
+      0
+    );
     return;
   }
   const index = elements.indexOf(element);
@@ -210,9 +213,12 @@ function handleEvent(event, focusTrap, element) {
     }
     target = elements[position] ?? focusTrap;
   }
-  wait(() => {
-    target.focus();
-  }, 0);
+  wait(
+    () => {
+      target.focus();
+    },
+    0
+  );
 }
 function observe(records) {
   for (const record of records) {
@@ -253,19 +259,25 @@ var FocusTrap = class {
   }
   globalThis._oscarpalmer_components_focusTrap = 1;
   const observer = new MutationObserver(observe);
-  observer.observe(document, {
-    attributeFilter: [selector],
-    attributeOldValue: true,
-    attributes: true,
-    childList: true,
-    subtree: true
-  });
-  wait(() => {
-    const elements = Array.from(document.querySelectorAll(`[${selector}]`));
-    for (const element of elements) {
-      element.setAttribute(selector, "");
+  observer.observe(
+    document,
+    {
+      attributeFilter: [selector],
+      attributeOldValue: true,
+      attributes: true,
+      childList: true,
+      subtree: true
     }
-  }, 0);
+  );
+  wait(
+    () => {
+      const elements = Array.from(document.querySelectorAll(`[${selector}]`));
+      for (const element of elements) {
+        element.setAttribute(selector, "");
+      }
+    },
+    0
+  );
   document.addEventListener("keydown", onKeydown, eventOptions.active);
 })();
 export {

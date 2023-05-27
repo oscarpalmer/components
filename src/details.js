@@ -39,7 +39,8 @@ function observe(records) {
 
 		if (record.target.getAttribute(selector) === null) {
 			destroy(record.target);
-		} else {
+		}
+		else {
 			create(record.target);
 		}
 	}
@@ -109,20 +110,26 @@ class PalmerDetails {
 
 const observer = new MutationObserver(observe);
 
-observer.observe(globalThis.document, {
-	attributeFilter: [selector],
-	attributeOldValue: true,
-	attributes: true,
-	childList: true,
-	subtree: true,
-});
+observer.observe(
+	globalThis.document,
+	{
+		attributeFilter: [selector],
+		attributeOldValue: true,
+		attributes: true,
+		childList: true,
+		subtree: true,
+	},
+);
 
-wait(() => {
-	const elements = Array.from(
-		globalThis.document.querySelectorAll(`[${selector}]`),
-	);
+wait(
+	() => {
+		const elements = Array.from(
+			globalThis.document.querySelectorAll(`[${selector}]`),
+		);
 
-	for (const element of elements) {
-		element.setAttribute(selector, '');
-	}
-}, 0);
+		for (const element of elements) {
+			element.setAttribute(selector, '');
+		}
+	},
+	0,
+);

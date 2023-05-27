@@ -1,5 +1,7 @@
 import {eventOptions, isNullOrWhitespace} from './helpers/index.js';
 
+const selector = 'palmer-switch';
+
 /**
  * @param {string} id
  * @param {string} className
@@ -94,7 +96,7 @@ function initialise(component, label, input) {
 	let on = component.getAttribute('on');
 
 	if (isNullOrWhitespace(className)) {
-		className = 'palmer-switch';
+		className = selector;
 	}
 
 	if (isNullOrWhitespace(off)) {
@@ -226,8 +228,8 @@ export class PalmerSwitch extends HTMLElement {
 		 */
 		this.internals = this.attachInternals?.();
 
-		const input = this.querySelector('[palmer-switch-input]');
-		const label = this.querySelector('[palmer-switch-label]');
+		const input = this.querySelector(`[${selector}-input]`);
+		const label = this.querySelector(`[${selector}-label]`);
 
 		if (
 			input === null
@@ -235,13 +237,13 @@ export class PalmerSwitch extends HTMLElement {
 			|| input.type !== 'checkbox'
 		) {
 			throw new TypeError(
-				'<palmer-switch> must have an <input>-element with type \'checkbox\' and the attribute \'palmer-switch-input\'',
+				`<${selector}> must have an <input>-element with type 'checkbox' and the attribute '${selector}-input'`,
 			);
 		}
 
 		if (label === null || !(label instanceof HTMLElement)) {
 			throw new TypeError(
-				'<palmer-switch> must have an element with the attribute \'palmer-switch-label\'',
+				`<${selector}> must have an element with the attribute '${selector}-label'`,
 			);
 		}
 
@@ -259,4 +261,4 @@ export class PalmerSwitch extends HTMLElement {
 
 PalmerSwitch.formAssociated = true;
 
-customElements.define('palmer-switch', PalmerSwitch);
+customElements.define(selector, PalmerSwitch);

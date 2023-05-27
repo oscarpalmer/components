@@ -81,7 +81,7 @@ function getFocusableSelector() {
       "textarea",
       "video[controls]"
     ].map(
-      (selector6) => `${selector6}:not([disabled]):not([hidden]):not([tabindex="-1"])`
+      (selector7) => `${selector7}:not([disabled]):not([hidden]):not([tabindex="-1"])`
     ).join(",");
   }
   return globalThis._oscarpalmer_components_focusableSelector;
@@ -218,10 +218,13 @@ var PalmerAccordion = class extends HTMLElement {
     }
   }
   connectedCallback() {
-    store.get(this)?.observer.observe(this, {
-      childList: true,
-      subtree: true
-    });
+    store.get(this)?.observer.observe(
+      this,
+      {
+        childList: true,
+        subtree: true
+      }
+    );
   }
   disconnectedCallback() {
     store.get(this)?.observer.disconnect();
@@ -414,21 +417,27 @@ var PalmerDetails = class {
   }
 };
 var observer = new MutationObserver(observe);
-observer.observe(globalThis.document, {
-  attributeFilter: [selector],
-  attributeOldValue: true,
-  attributes: true,
-  childList: true,
-  subtree: true
-});
-wait(() => {
-  const elements = Array.from(
-    globalThis.document.querySelectorAll(`[${selector}]`)
-  );
-  for (const element of elements) {
-    element.setAttribute(selector, "");
+observer.observe(
+  globalThis.document,
+  {
+    attributeFilter: [selector],
+    attributeOldValue: true,
+    attributes: true,
+    childList: true,
+    subtree: true
   }
-}, 0);
+);
+wait(
+  () => {
+    const elements = Array.from(
+      globalThis.document.querySelectorAll(`[${selector}]`)
+    );
+    for (const element of elements) {
+      element.setAttribute(selector, "");
+    }
+  },
+  0
+);
 
 // src/focus-trap.js
 var selector2 = "palmer-focus-trap";
@@ -449,9 +458,12 @@ function destroy2(element) {
 function handleEvent(event, focusTrap, element) {
   const elements = getFocusableElements(focusTrap);
   if (element === focusTrap) {
-    wait(() => {
-      (elements[event.shiftKey ? elements.length - 1 : 0] ?? focusTrap).focus();
-    }, 0);
+    wait(
+      () => {
+        (elements[event.shiftKey ? elements.length - 1 : 0] ?? focusTrap).focus();
+      },
+      0
+    );
     return;
   }
   const index3 = elements.indexOf(element);
@@ -465,9 +477,12 @@ function handleEvent(event, focusTrap, element) {
     }
     target = elements[position] ?? focusTrap;
   }
-  wait(() => {
-    target.focus();
-  }, 0);
+  wait(
+    () => {
+      target.focus();
+    },
+    0
+  );
 }
 function observe2(records) {
   for (const record of records) {
@@ -508,19 +523,25 @@ var FocusTrap = class {
   }
   globalThis._oscarpalmer_components_focusTrap = 1;
   const observer3 = new MutationObserver(observe2);
-  observer3.observe(document, {
-    attributeFilter: [selector2],
-    attributeOldValue: true,
-    attributes: true,
-    childList: true,
-    subtree: true
-  });
-  wait(() => {
-    const elements = Array.from(document.querySelectorAll(`[${selector2}]`));
-    for (const element of elements) {
-      element.setAttribute(selector2, "");
+  observer3.observe(
+    document,
+    {
+      attributeFilter: [selector2],
+      attributeOldValue: true,
+      attributes: true,
+      childList: true,
+      subtree: true
     }
-  }, 0);
+  );
+  wait(
+    () => {
+      const elements = Array.from(document.querySelectorAll(`[${selector2}]`));
+      for (const element of elements) {
+        element.setAttribute(selector2, "");
+      }
+    },
+    0
+  );
   document.addEventListener("keydown", onKeydown2, eventOptions.active);
 })();
 
@@ -826,9 +847,12 @@ function handleToggle(component, expand) {
         preferAbove: false
       }
     });
-    wait(() => {
-      afterToggle(component, true);
-    }, 50);
+    wait(
+      () => {
+        afterToggle(component, true);
+      },
+      50
+    );
   }
   component.dispatchEvent(new Event("toggle"));
 }
@@ -852,10 +876,13 @@ function initialise(component, button, content) {
   content.setAttribute(selector2, "");
   content.role = "dialog";
   content.ariaModal = "false";
-  store4.set(component, {
-    click: onClick.bind(component),
-    keydown: onKeydown3.bind(component)
-  });
+  store4.set(
+    component,
+    {
+      click: onClick.bind(component),
+      keydown: onKeydown3.bind(component)
+    }
+  );
   button.addEventListener(
     "click",
     toggle.bind(component),
@@ -952,7 +979,13 @@ function createSeparator(component, values, className) {
   separator.setAttribute("aria-valuenow", "50");
   const original = component.getAttribute("value");
   if (isNullOrWhitespace(original)) {
-    setFlexValue(component, separator, 50);
+    setFlexValue(
+      component,
+      {
+        separator,
+        value: 50
+      }
+    );
   }
   separator.append(component.handle);
   separator.addEventListener(
@@ -974,13 +1007,22 @@ function onPointerEnd() {
   setDragging(this, false);
 }
 function onPointerMove(event) {
+  if (isTouchScreen) {
+    event.preventDefault();
+  }
   const coordinates = getCoordinates(event);
   if (coordinates === void 0) {
     return;
   }
   const componentRectangle = this.getBoundingClientRect();
   const value = this.type === "horizontal" ? (coordinates.y - componentRectangle.top) / componentRectangle.height : (coordinates.x - componentRectangle.left) / componentRectangle.width;
-  setFlexValue(this, this.separator, value * 100);
+  setFlexValue(
+    this,
+    {
+      separator: this.separator,
+      value: value * 100
+    }
+  );
 }
 function onSeparatorKeydown(component, event) {
   if (![
@@ -1008,7 +1050,9 @@ function onSeparatorKeydown(component, event) {
     case "ArrowLeft":
     case "ArrowRight":
     case "ArrowUp": {
-      value = Math.round(component.value + (["ArrowLeft", "ArrowUp"].includes(event.key) ? -1 : 1));
+      value = Math.round(
+        component.value + (["ArrowLeft", "ArrowUp"].includes(event.key) ? -1 : 1)
+      );
       break;
     }
     case "End":
@@ -1025,7 +1069,14 @@ function onSeparatorKeydown(component, event) {
       break;
     }
   }
-  setFlexValue(component, component.separator, value, values);
+  setFlexValue(
+    component,
+    {
+      value,
+      values,
+      separator: component.separator
+    }
+  );
 }
 function setAbsoluteValue(component, parameters) {
   const { key, separator, setFlex } = parameters;
@@ -1045,7 +1096,14 @@ function setAbsoluteValue(component, parameters) {
     value
   );
   if (setFlex && (key === "maximum" && value < values.current || key === "minimum" && value > values.current)) {
-    setFlexValue(component, separator, value, values);
+    setFlexValue(
+      component,
+      {
+        separator,
+        value,
+        values
+      }
+    );
   }
 }
 function setDragging(component, active) {
@@ -1066,9 +1124,11 @@ function setDragging(component, active) {
   document[method](
     pointerMoveEvent,
     stored.callbacks.pointerMove,
-    eventOptions.passive
+    isTouchScreen ? eventOptions.active : eventOptions.passive
   );
   stored.dragging = active;
+  document.body.style.userSelect = active ? "none" : null;
+  document.body.style.webkitUserSelect = active ? "none" : null;
 }
 function setFlexValue(component, parameters) {
   const { separator } = parameters;
@@ -1143,6 +1203,9 @@ var PalmerSplitter = class extends HTMLElement {
     if (isNullOrWhitespace(className)) {
       className = selector4;
     }
+    const panelClassName = `${className}__panel`;
+    this.primary.classList.add(panelClassName);
+    this.secondary.classList.add(panelClassName);
     this.handle = createHandle(this, className);
     this.separator = createSeparator(this, stored.values, className);
     this.primary?.insertAdjacentElement("afterend", this.separator);
@@ -1151,20 +1214,26 @@ var PalmerSplitter = class extends HTMLElement {
     switch (name) {
       case "max":
       case "min": {
-        setAbsoluteValue(this, {
-          key: name === "max" ? "maximum" : "minimum",
-          separator: this.separator,
-          setFlex: true,
-          value
-        });
+        setAbsoluteValue(
+          this,
+          {
+            key: name === "max" ? "maximum" : "minimum",
+            separator: this.separator,
+            setFlex: true,
+            value
+          }
+        );
         break;
       }
       case "value": {
-        setFlexValue(this, {
-          separator: this.separator,
-          setOriginal: true,
-          value
-        });
+        setFlexValue(
+          this,
+          {
+            separator: this.separator,
+            setOriginal: true,
+            value
+          }
+        );
         break;
       }
       default: {
@@ -1177,6 +1246,7 @@ PalmerSplitter.observedAttributes = ["max", "min", "value"];
 customElements.define(selector4, PalmerSplitter);
 
 // src/switch.js
+var selector5 = "palmer-switch";
 function getLabel(id, className, content) {
   const label = document.createElement("span");
   label.ariaHidden = true;
@@ -1224,7 +1294,7 @@ function initialise2(component, label, input) {
   let off = component.getAttribute("off");
   let on = component.getAttribute("on");
   if (isNullOrWhitespace(className)) {
-    className = "palmer-switch";
+    className = selector5;
   }
   if (isNullOrWhitespace(off)) {
     off = "Off";
@@ -1312,16 +1382,16 @@ var PalmerSwitch = class extends HTMLElement {
   constructor() {
     super();
     this.internals = this.attachInternals?.();
-    const input = this.querySelector("[palmer-switch-input]");
-    const label = this.querySelector("[palmer-switch-label]");
+    const input = this.querySelector(`[${selector5}-input]`);
+    const label = this.querySelector(`[${selector5}-label]`);
     if (input === null || !(input instanceof HTMLInputElement) || input.type !== "checkbox") {
       throw new TypeError(
-        "<palmer-switch> must have an <input>-element with type 'checkbox' and the attribute 'palmer-switch-input'"
+        `<${selector5}> must have an <input>-element with type 'checkbox' and the attribute '${selector5}-input'`
       );
     }
     if (label === null || !(label instanceof HTMLElement)) {
       throw new TypeError(
-        "<palmer-switch> must have an element with the attribute 'palmer-switch-label'"
+        `<${selector5}> must have an element with the attribute '${selector5}-label'`
       );
     }
     initialise2(this, label, input);
@@ -1334,19 +1404,19 @@ var PalmerSwitch = class extends HTMLElement {
   }
 };
 PalmerSwitch.formAssociated = true;
-customElements.define("palmer-switch", PalmerSwitch);
+customElements.define(selector5, PalmerSwitch);
 
 // src/tooltip.js
-var selector5 = "palmer-tooltip";
-var contentAttribute = `${selector5}-content`;
-var positionAttribute = `${selector5}-position`;
+var selector6 = "palmer-tooltip";
+var contentAttribute = `${selector6}-content`;
+var positionAttribute = `${selector6}-position`;
 var store6 = /* @__PURE__ */ new WeakMap();
 function createFloater(anchor) {
   const id = anchor.getAttribute("aria-describedby") ?? anchor.getAttribute("aria-labelledby");
   const element = id === null ? null : document.querySelector(`#${id}`);
   if (element === null) {
     throw new TypeError(
-      `A '${selector5}'-attributed element must have a valid id reference in either the 'aria-describedby' or 'aria-labelledby'-attribute.`
+      `A '${selector6}'-attributed element must have a valid id reference in either the 'aria-describedby' or 'aria-labelledby'-attribute.`
     );
   }
   element.hidden = true;
@@ -1373,7 +1443,7 @@ function observe3(records) {
     if (record.type !== "attributes") {
       continue;
     }
-    if (record.target.getAttribute(selector5) === null) {
+    if (record.target.getAttribute(selector6) === null) {
       destroyTooltip(record.target);
     } else {
       createTooltip(record.target);
@@ -1467,16 +1537,22 @@ var PalmerTooltip = class {
   }
 };
 var observer2 = new MutationObserver(observe3);
-observer2.observe(document, {
-  attributeFilter: [selector5],
-  attributeOldValue: true,
-  attributes: true,
-  childList: true,
-  subtree: true
-});
-wait(() => {
-  const elements = Array.from(document.querySelectorAll(`[${selector5}]`));
-  for (const element of elements) {
-    element.setAttribute(selector5, "");
+observer2.observe(
+  document,
+  {
+    attributeFilter: [selector6],
+    attributeOldValue: true,
+    attributes: true,
+    childList: true,
+    subtree: true
   }
-}, 0);
+);
+wait(
+  () => {
+    const elements = Array.from(document.querySelectorAll(`[${selector6}]`));
+    for (const element of elements) {
+      element.setAttribute(selector6, "");
+    }
+  },
+  0
+);

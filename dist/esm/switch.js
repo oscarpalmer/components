@@ -8,6 +8,7 @@ function isNullOrWhitespace(value) {
 }
 
 // src/switch.js
+var selector = "palmer-switch";
 function getLabel(id, className, content) {
   const label = document.createElement("span");
   label.ariaHidden = true;
@@ -55,7 +56,7 @@ function initialise(component, label, input) {
   let off = component.getAttribute("off");
   let on = component.getAttribute("on");
   if (isNullOrWhitespace(className)) {
-    className = "palmer-switch";
+    className = selector;
   }
   if (isNullOrWhitespace(off)) {
     off = "Off";
@@ -143,16 +144,16 @@ var PalmerSwitch = class extends HTMLElement {
   constructor() {
     super();
     this.internals = this.attachInternals?.();
-    const input = this.querySelector("[palmer-switch-input]");
-    const label = this.querySelector("[palmer-switch-label]");
+    const input = this.querySelector(`[${selector}-input]`);
+    const label = this.querySelector(`[${selector}-label]`);
     if (input === null || !(input instanceof HTMLInputElement) || input.type !== "checkbox") {
       throw new TypeError(
-        "<palmer-switch> must have an <input>-element with type 'checkbox' and the attribute 'palmer-switch-input'"
+        `<${selector}> must have an <input>-element with type 'checkbox' and the attribute '${selector}-input'`
       );
     }
     if (label === null || !(label instanceof HTMLElement)) {
       throw new TypeError(
-        "<palmer-switch> must have an element with the attribute 'palmer-switch-label'"
+        `<${selector}> must have an element with the attribute '${selector}-label'`
       );
     }
     initialise(this, label, input);
@@ -165,7 +166,7 @@ var PalmerSwitch = class extends HTMLElement {
   }
 };
 PalmerSwitch.formAssociated = true;
-customElements.define("palmer-switch", PalmerSwitch);
+customElements.define(selector, PalmerSwitch);
 export {
   PalmerSwitch
 };

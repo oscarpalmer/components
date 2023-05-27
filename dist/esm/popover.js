@@ -443,9 +443,12 @@ function destroy(element) {
 function handleEvent(event, focusTrap, element) {
   const elements = getFocusableElements(focusTrap);
   if (element === focusTrap) {
-    wait(() => {
-      (elements[event.shiftKey ? elements.length - 1 : 0] ?? focusTrap).focus();
-    }, 0);
+    wait(
+      () => {
+        (elements[event.shiftKey ? elements.length - 1 : 0] ?? focusTrap).focus();
+      },
+      0
+    );
     return;
   }
   const index2 = elements.indexOf(element);
@@ -459,9 +462,12 @@ function handleEvent(event, focusTrap, element) {
     }
     target = elements[position] ?? focusTrap;
   }
-  wait(() => {
-    target.focus();
-  }, 0);
+  wait(
+    () => {
+      target.focus();
+    },
+    0
+  );
 }
 function observe(records) {
   for (const record of records) {
@@ -502,19 +508,25 @@ var FocusTrap = class {
   }
   globalThis._oscarpalmer_components_focusTrap = 1;
   const observer = new MutationObserver(observe);
-  observer.observe(document, {
-    attributeFilter: [selector],
-    attributeOldValue: true,
-    attributes: true,
-    childList: true,
-    subtree: true
-  });
-  wait(() => {
-    const elements = Array.from(document.querySelectorAll(`[${selector}]`));
-    for (const element of elements) {
-      element.setAttribute(selector, "");
+  observer.observe(
+    document,
+    {
+      attributeFilter: [selector],
+      attributeOldValue: true,
+      attributes: true,
+      childList: true,
+      subtree: true
     }
-  }, 0);
+  );
+  wait(
+    () => {
+      const elements = Array.from(document.querySelectorAll(`[${selector}]`));
+      for (const element of elements) {
+        element.setAttribute(selector, "");
+      }
+    },
+    0
+  );
   document.addEventListener("keydown", onKeydown, eventOptions.active);
 })();
 
@@ -577,9 +589,12 @@ function handleToggle(component, expand) {
         preferAbove: false
       }
     });
-    wait(() => {
-      afterToggle(component, true);
-    }, 50);
+    wait(
+      () => {
+        afterToggle(component, true);
+      },
+      50
+    );
   }
   component.dispatchEvent(new Event("toggle"));
 }
@@ -603,10 +618,13 @@ function initialise(component, button, content) {
   content.setAttribute(selector, "");
   content.role = "dialog";
   content.ariaModal = "false";
-  store2.set(component, {
-    click: onClick.bind(component),
-    keydown: onKeydown2.bind(component)
-  });
+  store2.set(
+    component,
+    {
+      click: onClick.bind(component),
+      keydown: onKeydown2.bind(component)
+    }
+  );
   button.addEventListener(
     "click",
     toggle.bind(component),
