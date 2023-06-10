@@ -140,9 +140,29 @@ function findParent(element, match) {
   }
   return parent ?? void 0;
 }
+
+// src/helpers/focusable.js
+var focusableSelector = [
+  '[contenteditable]:not([contenteditable="false"])',
+  "[href]",
+  '[tabindex="0"]:not(slot)',
+  "audio[controls]",
+  "button",
+  "details",
+  "details[open] > summary",
+  "embed",
+  "iframe",
+  "input",
+  "object",
+  "select",
+  "textarea",
+  "video[controls]"
+].map(
+  (selector2) => `${selector2}:not([disabled]):not([hidden]):not([tabindex="-1"])`
+).join(",");
 function getFocusableElements(context) {
   const focusable = [];
-  const elements = Array.from(context.querySelectorAll(getFocusableSelector()));
+  const elements = Array.from(context.querySelectorAll(focusableSelector));
   for (const element of elements) {
     const style = getComputedStyle?.(element);
     if (style === null || style.display !== "none" && style.visibility !== "hidden") {
@@ -150,29 +170,6 @@ function getFocusableElements(context) {
     }
   }
   return focusable;
-}
-function getFocusableSelector() {
-  if (globalThis._oscarpalmer_components_focusableSelector === null) {
-    globalThis._oscarpalmer_components_focusableSelector = [
-      '[contenteditable]:not([contenteditable="false"])',
-      "[href]",
-      "[tabindex]:not(slot)",
-      "audio[controls]",
-      "button",
-      "details",
-      "details[open] > summary",
-      "embed",
-      "iframe",
-      "input",
-      "object",
-      "select",
-      "textarea",
-      "video[controls]"
-    ].map(
-      (selector2) => `${selector2}:not([disabled]):not([hidden]):not([tabindex="-1"])`
-    ).join(",");
-  }
-  return globalThis._oscarpalmer_components_focusableSelector;
 }
 
 // src/focus-trap.js
@@ -254,10 +251,10 @@ var FocusTrap = class {
   }
 };
 (() => {
-  if (globalThis._oscarpalmer_components_focusTrap !== null) {
+  if (globalThis.oscarpalmerComponentsFocusTrap !== null) {
     return;
   }
-  globalThis._oscarpalmer_components_focusTrap = 1;
+  globalThis.oscarpalmerComponentsFocusTrap = 1;
   const observer = new MutationObserver(observe);
   observer.observe(
     document,

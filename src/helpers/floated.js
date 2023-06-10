@@ -46,7 +46,6 @@ const allPositions = [
 	'above',
 	'above-left',
 	'above-right',
-	'any',
 	'below',
 	'below-left',
 	'below-right',
@@ -67,9 +66,9 @@ const allPositions = [
 const domRectKeys = ['bottom', 'height', 'left', 'right', 'top', 'width'];
 
 const horizontalPositions = new Set(['left', 'horizontal', 'right']);
+
 const transformedPositions = new Set([
 	'above',
-	'any',
 	'below',
 	'vertical',
 	...Array.from(horizontalPositions.values),
@@ -83,31 +82,10 @@ const transformedPositions = new Set([
  * @returns {Values}
  */
 function calculatePosition(position, rectangles, rightToLeft, preferAbove) {
-	if (position !== 'any') {
-		const left = getLeft(rectangles, position, rightToLeft);
-		const top = getTop(rectangles, position, preferAbove);
+	const left = getLeft(position, rectangles, rightToLeft);
+	const top = getTop(position, rectangles, preferAbove);
 
-		return {top, left};
-	}
-
-	const {anchor, floater} = rectangles;
-
-	const left = getAbsolute(
-		anchor.right,
-		anchor.left,
-		floater.width,
-		innerWidth,
-		rightToLeft,
-	);
-	const top = getAbsolute(
-		anchor.top,
-		anchor.bottom,
-		floater.height,
-		innerHeight,
-		preferAbove,
-	);
-
-	return {left, top};
+	return {top, left};
 }
 
 /**
@@ -120,16 +98,16 @@ function getAbsolute(parameters) {
 
 	if (parameters.preferMin) {
 		return minPosition < 0
-			? (maxPosition > parameters.max
+			? maxPosition > parameters.max
 				? minPosition
-				: parameters.end)
+				: parameters.end
 			: minPosition;
 	}
 
 	return maxPosition > parameters.max
-		? (minPosition < 0
+		? minPosition < 0
 			? parameters.end
-			: minPosition)
+			: minPosition
 		: parameters.end;
 }
 
@@ -155,19 +133,19 @@ function getActualPosition(original, rectangles, values) {
 }
 
 /**
- * @param {Rectangles} rectangles
  * @param {string} position
+ * @param {Rectangles} rectangles
  * @param {boolean} rightToLeft
  * @returns {number}
  */
-function getLeft(rectangles, position, rightToLeft) {
+function getLeft(position, rectangles, rightToLeft) {
 	const {anchor, floater} = rectangles;
 
 	switch (position) {
 		case 'above':
 		case 'below':
 		case 'vertical': {
-			return anchor.left + (anchor.width / 2) - (floater.width / 2);
+			return anchor.left + anchor.width / 2 - floater.width / 2;
 		}
 
 		case 'above-left':
@@ -185,13 +163,13 @@ function getLeft(rectangles, position, rightToLeft) {
 		case 'horizontal':
 		case 'horizontal-bottom':
 		case 'horizontal-top': {
-			return getAbsolute(
-				anchor.left,
-				anchor.right,
-				floater.width,
-				innerWidth,
-				rightToLeft,
-			);
+			return getAbsolute({
+				end: anchor.right,
+				max: globalThis.innerWidth,
+				offset: floater.width,
+				preferMin: rightToLeft,
+				start: anchor.left,
+			});
 		}
 
 		case 'left':
@@ -226,9 +204,7 @@ function getOriginalPosition(currentPosition, defaultPosition) {
 
 	const index = allPositions.indexOf(normalized);
 
-	return index > -1
-		? allPositions[index] ?? defaultPosition
-		: defaultPosition;
+	return index > -1 ? allPositions[index] ?? defaultPosition : defaultPosition;
 }
 
 /**
@@ -243,7 +219,7 @@ function getPrefix(rectangles, values, isHorizontal) {
 			return 'right';
 		}
 
-		return values.left === (rectangles.anchor.left - rectangles.floater.width)
+		return values.left === rectangles.anchor.left - rectangles.floater.width
 			? 'left'
 			: undefined;
 	}
@@ -252,7 +228,7 @@ function getPrefix(rectangles, values, isHorizontal) {
 		return 'below';
 	}
 
-	return values.top === (rectangles.anchor.top - rectangles.floater.height)
+	return values.top === rectangles.anchor.top - rectangles.floater.height
 		? 'above'
 		: undefined;
 }
@@ -269,7 +245,7 @@ function getSuffix(rectangles, values, isHorizontal) {
 			return 'top';
 		}
 
-		return values.top === (rectangles.anchor.bottom - rectangles.floater.height)
+		return values.top === rectangles.anchor.bottom - rectangles.floater.height
 			? 'bottom'
 			: undefined;
 	}
@@ -278,18 +254,18 @@ function getSuffix(rectangles, values, isHorizontal) {
 		return 'left';
 	}
 
-	return values.left === (rectangles.anchor.right - rectangles.floater.width)
+	return values.left === rectangles.anchor.right - rectangles.floater.width
 		? 'right'
 		: undefined;
 }
 
 /**
- * @param {Rectangles} rectangles
  * @param {string} position
+ * @param {Rectangles} rectangles
  * @param {boolean} preferAbove
  * @returns {number}
  */
-function getTop(rectangles, position, preferAbove) {
+function getTop(position, rectangles, preferAbove) {
 	const {anchor, floater} = rectangles;
 
 	switch (position) {
@@ -302,7 +278,7 @@ function getTop(rectangles, position, preferAbove) {
 		case 'horizontal':
 		case 'left':
 		case 'right': {
-			return anchor.top + (anchor.height / 2) - (floater.height / 2);
+			return anchor.top + anchor.height / 2 - floater.height / 2;
 		}
 
 		case 'below':
@@ -326,13 +302,13 @@ function getTop(rectangles, position, preferAbove) {
 		case 'vertical':
 		case 'vertical-left':
 		case 'vertical-right': {
-			return getAbsolute(
-				anchor.top,
-				anchor.bottom,
-				floater.height,
-				innerHeight,
-				preferAbove,
-			);
+			return getAbsolute({
+				end: anchor.bottom,
+				max: globalThis.innerHeight,
+				offset: floater.height,
+				preferMin: preferAbove,
+				start: anchor.top,
+			});
 		}
 
 		default: {
@@ -357,7 +333,7 @@ export function updateFloated(parameters) {
 	let previousRectangle;
 
 	function afterRepeat() {
-		anchor.after('afterend', floater);
+		anchor.after(floater);
 	}
 
 	function onRepeat() {
@@ -370,7 +346,9 @@ export function updateFloated(parameters) {
 
 		if (
 			previousPosition === currentPosition
-			&& domRectKeys.every(key => previousRectangle?.[key] === currentRectangle[key])
+			&& domRectKeys.every(
+				key => previousRectangle?.[key] === currentRectangle[key],
+			)
 		) {
 			return;
 		}

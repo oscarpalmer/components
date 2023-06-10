@@ -1,10 +1,7 @@
 import {wait} from '@oscarpalmer/timer';
-import {
-	eventOptions,
-	findParent,
-	getFocusableSelector,
-} from './helpers/index.js';
+import {eventOptions, findParent} from './helpers/index.js';
 import {updateFloated} from './helpers/floated.js';
+import {focusableSelector} from './helpers/focusable.js';
 
 /** @typedef Callbacks
  * @property {(event: Event) => void} click
@@ -15,7 +12,6 @@ import {updateFloated} from './helpers/floated.js';
 
 const selector = 'palmer-tooltip';
 
-const contentAttribute = `${selector}-content`;
 const positionAttribute = `${selector}-position`;
 
 /** @type {WeakMap<HTMLElement, PalmerTooltip>} */
@@ -39,11 +35,10 @@ function createFloater(anchor) {
 		);
 	}
 
-	element.hidden = true;
-
-	element.setAttribute(contentAttribute, '');
+	element.setAttribute(`${selector}-content`, '');
 
 	element.ariaHidden = 'true';
+	element.hidden = true;
 	element.role = 'tooltip';
 
 	return element;
@@ -121,7 +116,7 @@ class PalmerTooltip {
 		 * @readonly
 		 * @type {boolean}
 		 */
-		this.focusable = anchor.matches(getFocusableSelector());
+		this.focusable = anchor.tabIndex === 0 || anchor.matches(focusableSelector);
 
 		/**
 		 * @private

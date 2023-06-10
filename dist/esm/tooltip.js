@@ -140,29 +140,6 @@ function findParent(element, match) {
   }
   return parent ?? void 0;
 }
-function getFocusableSelector() {
-  if (globalThis._oscarpalmer_components_focusableSelector === null) {
-    globalThis._oscarpalmer_components_focusableSelector = [
-      '[contenteditable]:not([contenteditable="false"])',
-      "[href]",
-      "[tabindex]:not(slot)",
-      "audio[controls]",
-      "button",
-      "details",
-      "details[open] > summary",
-      "embed",
-      "iframe",
-      "input",
-      "object",
-      "select",
-      "textarea",
-      "video[controls]"
-    ].map(
-      (selector2) => `${selector2}:not([disabled]):not([hidden]):not([tabindex="-1"])`
-    ).join(",");
-  }
-  return globalThis._oscarpalmer_components_focusableSelector;
-}
 function getTextDirection(element) {
   return getComputedStyle?.(element)?.direction === "rtl" ? "rtl" : "ltr";
 }
@@ -172,7 +149,6 @@ var allPositions = [
   "above",
   "above-left",
   "above-right",
-  "any",
   "below",
   "below-left",
   "below-right",
@@ -193,33 +169,14 @@ var domRectKeys = ["bottom", "height", "left", "right", "top", "width"];
 var horizontalPositions = /* @__PURE__ */ new Set(["left", "horizontal", "right"]);
 var transformedPositions = /* @__PURE__ */ new Set([
   "above",
-  "any",
   "below",
   "vertical",
   ...Array.from(horizontalPositions.values)
 ]);
 function calculatePosition(position, rectangles, rightToLeft, preferAbove) {
-  if (position !== "any") {
-    const left2 = getLeft(rectangles, position, rightToLeft);
-    const top2 = getTop(rectangles, position, preferAbove);
-    return { top: top2, left: left2 };
-  }
-  const { anchor, floater } = rectangles;
-  const left = getAbsolute(
-    anchor.right,
-    anchor.left,
-    floater.width,
-    innerWidth,
-    rightToLeft
-  );
-  const top = getAbsolute(
-    anchor.top,
-    anchor.bottom,
-    floater.height,
-    innerHeight,
-    preferAbove
-  );
-  return { left, top };
+  const left = getLeft(position, rectangles, rightToLeft);
+  const top = getTop(position, rectangles, preferAbove);
+  return { top, left };
 }
 function getAbsolute(parameters) {
   const maxPosition = parameters.end + parameters.offset;
@@ -239,7 +196,7 @@ function getActualPosition(original, rectangles, values) {
     getSuffix(rectangles, values, isHorizontal)
   ].filter((value) => value !== void 0).join("-");
 }
-function getLeft(rectangles, position, rightToLeft) {
+function getLeft(position, rectangles, rightToLeft) {
   const { anchor, floater } = rectangles;
   switch (position) {
     case "above":
@@ -260,13 +217,13 @@ function getLeft(rectangles, position, rightToLeft) {
     case "horizontal":
     case "horizontal-bottom":
     case "horizontal-top": {
-      return getAbsolute(
-        anchor.left,
-        anchor.right,
-        floater.width,
-        innerWidth,
-        rightToLeft
-      );
+      return getAbsolute({
+        end: anchor.right,
+        max: globalThis.innerWidth,
+        offset: floater.width,
+        preferMin: rightToLeft,
+        start: anchor.left
+      });
     }
     case "left":
     case "left-bottom":
@@ -315,7 +272,7 @@ function getSuffix(rectangles, values, isHorizontal) {
   }
   return values.left === rectangles.anchor.right - rectangles.floater.width ? "right" : void 0;
 }
-function getTop(rectangles, position, preferAbove) {
+function getTop(position, rectangles, preferAbove) {
   const { anchor, floater } = rectangles;
   switch (position) {
     case "above":
@@ -346,13 +303,13 @@ function getTop(rectangles, position, preferAbove) {
     case "vertical":
     case "vertical-left":
     case "vertical-right": {
-      return getAbsolute(
-        anchor.top,
-        anchor.bottom,
-        floater.height,
-        innerHeight,
-        preferAbove
-      );
+      return getAbsolute({
+        end: anchor.bottom,
+        max: globalThis.innerHeight,
+        offset: floater.height,
+        preferMin: preferAbove,
+        start: anchor.top
+      });
     }
     default: {
       return anchor.bottom;
@@ -365,7 +322,7 @@ function updateFloated(parameters) {
   let previousPosition;
   let previousRectangle;
   function afterRepeat() {
-    anchor.after("afterend", floater);
+    anchor.after(floater);
   }
   function onRepeat() {
     const currentPosition = getOriginalPosition(
@@ -373,7 +330,9 @@ function updateFloated(parameters) {
       parameters.position.defaultValue
     );
     const currentRectangle = anchor.getBoundingClientRect();
-    if (previousPosition === currentPosition && domRectKeys.every((key) => previousRectangle?.[key] === currentRectangle[key])) {
+    if (previousPosition === currentPosition && domRectKeys.every(
+      (key) => previousRectangle?.[key] === currentRectangle[key]
+    )) {
       return;
     }
     previousPosition = currentPosition;
@@ -410,9 +369,28 @@ function updateFloated(parameters) {
   ).start();
 }
 
+// src/helpers/focusable.js
+var focusableSelector = [
+  '[contenteditable]:not([contenteditable="false"])',
+  "[href]",
+  '[tabindex="0"]:not(slot)',
+  "audio[controls]",
+  "button",
+  "details",
+  "details[open] > summary",
+  "embed",
+  "iframe",
+  "input",
+  "object",
+  "select",
+  "textarea",
+  "video[controls]"
+].map(
+  (selector2) => `${selector2}:not([disabled]):not([hidden]):not([tabindex="-1"])`
+).join(",");
+
 // src/tooltip.js
 var selector = "palmer-tooltip";
-var contentAttribute = `${selector}-content`;
 var positionAttribute = `${selector}-position`;
 var store = /* @__PURE__ */ new WeakMap();
 function createFloater(anchor) {
@@ -423,9 +401,9 @@ function createFloater(anchor) {
       `A '${selector}'-attributed element must have a valid id reference in either the 'aria-describedby' or 'aria-labelledby'-attribute.`
     );
   }
-  element.hidden = true;
-  element.setAttribute(contentAttribute, "");
+  element.setAttribute(`${selector}-content`, "");
   element.ariaHidden = "true";
+  element.hidden = true;
   element.role = "tooltip";
   return element;
 }
@@ -467,7 +445,7 @@ var PalmerTooltip = class {
       keydown: this.onKeyDown.bind(this),
       show: this.onShow.bind(this)
     };
-    this.focusable = anchor.matches(getFocusableSelector());
+    this.focusable = anchor.tabIndex === 0 || anchor.matches(focusableSelector);
     this.floater = createFloater(anchor);
     this.timer = void 0;
     this.handleCallbacks(true);

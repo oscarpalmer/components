@@ -1,1 +1,1 @@
-export const selector: "palmer-focus-trap";
+export const selector: 'palmer-focus-trap';

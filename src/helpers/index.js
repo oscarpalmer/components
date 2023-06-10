@@ -4,39 +4,6 @@ export const eventOptions = {
 };
 
 /**
- * @returns {boolean}
- */
-export function isTouchScreen() {
-	if (typeof globalThis._oscarpalmer_components_isTouchScreen === 'boolean') {
-		return globalThis._oscarpalmer_components_isTouchScreen;
-	}
-
-	let isTouchScreen = false;
-
-	try {
-		if ('matchMedia' in window) {
-			const media = matchMedia('(pointer: coarse)');
-
-			if (typeof media?.matches === 'boolean') {
-				isTouchScreen = media.matches;
-			}
-		}
-
-		if (!isTouchScreen) {
-			isTouchScreen = 'ontouchstart' in window
-				|| navigator.maxTouchPoints > 0
-				|| (navigator.msMaxTouchPoints ?? 0) > 0;
-		}
-	} catch {
-		isTouchScreen = false;
-	}
-
-	globalThis._oscarpalmer_components_isTouchScreen = isTouchScreen;
-
-	return isTouchScreen;
-}
-
-/**
  * @param {HTMLElement} element
  * @param {string|(element: HTMLElement) => boolean} match
  * @returns {HTMLElement|undefined}
@@ -80,63 +47,7 @@ export function getCoordinates(event) {
 	const x = event.touches[0]?.clientX;
 	const y = event.touches[0]?.clientY;
 
-	return x === null || y === null
-		? undefined
-		: {x, y};
-}
-
-/**
- * @param {HTMLElement} context
- * @returns {HTMLElement[]}
- */
-export function getFocusableElements(context) {
-	const focusable = [];
-
-	const elements = Array.from(context.querySelectorAll(getFocusableSelector()));
-
-	for (const element of elements) {
-		const style = getComputedStyle?.(element);
-
-		if (
-			style === null
-			|| (style.display !== 'none' && style.visibility !== 'hidden')
-		) {
-			focusable.push(element);
-		}
-	}
-
-	return focusable;
-}
-
-/**
- * @returns {string}
- */
-export function getFocusableSelector() {
-	if (globalThis._oscarpalmer_components_focusableSelector === null) {
-		globalThis._oscarpalmer_components_focusableSelector = [
-			'[contenteditable]:not([contenteditable="false"])',
-			'[href]',
-			'[tabindex]:not(slot)',
-			'audio[controls]',
-			'button',
-			'details',
-			'details[open] > summary',
-			'embed',
-			'iframe',
-			'input',
-			'object',
-			'select',
-			'textarea',
-			'video[controls]',
-		]
-			.map(
-				selector =>
-					`${selector}:not([disabled]):not([hidden]):not([tabindex="-1"])`,
-			)
-			.join(',');
-	}
-
-	return globalThis._oscarpalmer_components_focusableSelector;
+	return x === null || y === null ? undefined : {x, y};
 }
 
 /**

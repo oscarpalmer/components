@@ -9,37 +9,6 @@ function isNullOrWhitespace(value) {
 
 // src/switch.js
 var selector = "palmer-switch";
-function getLabel(id, className, content) {
-  const label = document.createElement("span");
-  label.ariaHidden = true;
-  label.className = `${className}__label`;
-  label.id = `${id}_label`;
-  label.innerHTML = content;
-  return label;
-}
-function getStatus(className) {
-  const status = document.createElement("span");
-  status.ariaHidden = true;
-  status.className = `${className}__status`;
-  const indicator = document.createElement("span");
-  indicator.className = `${className}__status__indicator`;
-  status.append(indicator);
-  return status;
-}
-function getText(className, on, off) {
-  const text = document.createElement("span");
-  text.ariaHidden = true;
-  text.className = `${className}__text`;
-  text.append(getTextItem("off", className, off));
-  text.append(getTextItem("on", className, on));
-  return text;
-}
-function getTextItem(type, className, content) {
-  const item = document.createElement("span");
-  item.className = `${className}__text__${type}`;
-  item.innerHTML = content;
-  return item;
-}
 function initialise(component, label, input) {
   label.parentElement?.removeChild(label);
   input.parentElement?.removeChild(input);
@@ -64,12 +33,18 @@ function initialise(component, label, input) {
   if (isNullOrWhitespace(on)) {
     on = "On";
   }
-  component.insertAdjacentElement(
-    "beforeend",
-    getLabel(component.id, className, label.innerHTML)
+  component.insertAdjacentHTML(
+    "afterbegin",
+    render(
+      component.id,
+      className,
+      {
+        off,
+        on,
+        label: label.innerHTML
+      }
+    )
   );
-  component.insertAdjacentElement("beforeend", getStatus(className));
-  component.insertAdjacentElement("beforeend", getText(className, on, off));
   component.addEventListener(
     "click",
     onToggle.bind(component),
@@ -90,6 +65,9 @@ function onKey(event) {
 }
 function onToggle() {
   toggle(this);
+}
+function render(id, className, text) {
+  return `<span class="${className}__label" id="${id}_label" aria-hidden="true">${text.label}</span><div class="${className}__status" aria-hidden="true"><span class="${className}__status__indicator"></span></div><div class="${className}__text" aria-hidden="true"><span class="${className}__text__off">${text.off}</span><span class="${className}__text__on">${text.on}</span></div>`;
 }
 function toggle(component) {
   if (component.disabled || component.readonly) {
@@ -146,12 +124,12 @@ var PalmerSwitch = class extends HTMLElement {
     this.internals = this.attachInternals?.();
     const input = this.querySelector(`[${selector}-input]`);
     const label = this.querySelector(`[${selector}-label]`);
-    if (input === null || !(input instanceof HTMLInputElement) || input.type !== "checkbox") {
+    if (!(input instanceof HTMLInputElement) || input.type !== "checkbox") {
       throw new TypeError(
         `<${selector}> must have an <input>-element with type 'checkbox' and the attribute '${selector}-input'`
       );
     }
-    if (label === null || !(label instanceof HTMLElement)) {
+    if (!(label instanceof HTMLElement)) {
       throw new TypeError(
         `<${selector}> must have an element with the attribute '${selector}-label'`
       );

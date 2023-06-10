@@ -3,8 +3,8 @@ import {
 	getCoordinates,
 	getNumber,
 	isNullOrWhitespace,
-	isTouchScreen,
 } from './helpers/index.js';
+import {isTouchy} from './helpers/touchy.js';
 
 /**
  * @typedef AbsoluteParameters
@@ -46,9 +46,9 @@ import {
  * @property {number} original
  */
 
-const pointerBeginEvent = isTouchScreen() ? 'touchstart' : 'mousedown';
-const pointerEndEvent = isTouchScreen() ? 'touchend' : 'mouseup';
-const pointerMoveEvent = isTouchScreen() ? 'touchmove' : 'mousemove';
+const pointerBeginEvent = isTouchy ? 'touchstart' : 'mousedown';
+const pointerEndEvent = isTouchy ? 'touchend' : 'mouseup';
+const pointerMoveEvent = isTouchy ? 'touchmove' : 'mousemove';
 
 const selector = 'palmer-splitter';
 
@@ -158,7 +158,7 @@ function onPointerEnd() {
  * @param {MouseEvent|TouchEvent} event
  */
 function onPointerMove(event) {
-	if (isTouchScreen) {
+	if (isTouchy) {
 		event.preventDefault();
 	}
 
@@ -345,7 +345,7 @@ function setDragging(component, active) {
 	document[method](
 		pointerMoveEvent,
 		stored.callbacks.pointerMove,
-		isTouchScreen ? eventOptions.active : eventOptions.passive,
+		isTouchy ? eventOptions.active : eventOptions.passive,
 	);
 
 	stored.dragging = active;

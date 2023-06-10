@@ -1,9 +1,6 @@
 import {wait} from '@oscarpalmer/timer';
-import {
-	eventOptions,
-	getFocusableElements,
-	findParent,
-} from './helpers/index.js';
+import {eventOptions, findParent} from './helpers/index.js';
+import {getFocusableElements} from './helpers/focusable.js';
 
 export const selector = 'palmer-focus-trap';
 
@@ -128,11 +125,11 @@ class FocusTrap {
 }
 
 (() => {
-	if (globalThis._oscarpalmer_components_focusTrap !== null) {
+	if (globalThis.oscarpalmerComponentsFocusTrap !== null) {
 		return;
 	}
 
-	globalThis._oscarpalmer_components_focusTrap = 1;
+	globalThis.oscarpalmerComponentsFocusTrap = 1;
 
 	const observer = new MutationObserver(observe);
 

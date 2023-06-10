@@ -3,27 +3,6 @@ var eventOptions = {
   active: { capture: false, passive: false },
   passive: { capture: false, passive: true }
 };
-function isTouchScreen() {
-  if (typeof globalThis._oscarpalmer_components_isTouchScreen === "boolean") {
-    return globalThis._oscarpalmer_components_isTouchScreen;
-  }
-  let isTouchScreen2 = false;
-  try {
-    if ("matchMedia" in window) {
-      const media = matchMedia("(pointer: coarse)");
-      if (typeof media?.matches === "boolean") {
-        isTouchScreen2 = media.matches;
-      }
-    }
-    if (!isTouchScreen2) {
-      isTouchScreen2 = "ontouchstart" in window || navigator.maxTouchPoints > 0 || (navigator.msMaxTouchPoints ?? 0) > 0;
-    }
-  } catch {
-    isTouchScreen2 = false;
-  }
-  globalThis._oscarpalmer_components_isTouchScreen = isTouchScreen2;
-  return isTouchScreen2;
-}
 function getCoordinates(event) {
   if (event instanceof MouseEvent) {
     return {
@@ -42,10 +21,29 @@ function isNullOrWhitespace(value) {
   return (value ?? "").trim().length === 0;
 }
 
+// src/helpers/touchy.js
+var isTouchy = (() => {
+  let value = false;
+  try {
+    if ("matchMedia" in window) {
+      const media = matchMedia("(pointer: coarse)");
+      if (typeof media?.matches === "boolean") {
+        value = media.matches;
+      }
+    }
+    if (!value) {
+      value = "ontouchstart" in window || navigator.maxTouchPoints > 0 || (navigator.msMaxTouchPoints ?? 0) > 0;
+    }
+  } catch {
+    value = false;
+  }
+  return value;
+})();
+
 // src/splitter.js
-var pointerBeginEvent = isTouchScreen() ? "touchstart" : "mousedown";
-var pointerEndEvent = isTouchScreen() ? "touchend" : "mouseup";
-var pointerMoveEvent = isTouchScreen() ? "touchmove" : "mousemove";
+var pointerBeginEvent = isTouchy ? "touchstart" : "mousedown";
+var pointerEndEvent = isTouchy ? "touchend" : "mouseup";
+var pointerMoveEvent = isTouchy ? "touchmove" : "mousemove";
 var selector = "palmer-splitter";
 var splitterTypes = /* @__PURE__ */ new Set(["horizontal", "vertical"]);
 var store = /* @__PURE__ */ new WeakMap();
@@ -104,7 +102,7 @@ function onPointerEnd() {
   setDragging(this, false);
 }
 function onPointerMove(event) {
-  if (isTouchScreen) {
+  if (isTouchy) {
     event.preventDefault();
   }
   const coordinates = getCoordinates(event);
@@ -221,7 +219,7 @@ function setDragging(component, active) {
   document[method](
     pointerMoveEvent,
     stored.callbacks.pointerMove,
-    isTouchScreen ? eventOptions.active : eventOptions.passive
+    isTouchy ? eventOptions.active : eventOptions.passive
   );
   stored.dragging = active;
   document.body.style.userSelect = active ? "none" : null;

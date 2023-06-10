@@ -1,11 +1,7 @@
 import {wait} from '@oscarpalmer/timer';
-import {
-	eventOptions,
-	getFocusableElements,
-	findParent,
-	isNullOrWhitespace,
-} from './helpers/index.js';
+import {eventOptions, findParent, isNullOrWhitespace} from './helpers/index.js';
 import {updateFloated} from './helpers/floated.js';
+import {getFocusableElements} from './helpers/focusable.js';
 import {selector as focusTrapSelector} from './focus-trap.js';
 
 /**
