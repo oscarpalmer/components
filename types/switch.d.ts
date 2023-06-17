@@ -13,7 +13,6 @@ export class PalmerSwitch extends HTMLElement {
 	get validity(): ValidityState;
 	get value(): string;
 	get willValidate(): boolean;
-	private internals;
 	checkValidity(): boolean;
 	reportValidity(): boolean;
 }

@@ -18,22 +18,13 @@ import {getTextDirection} from './index.js';
  */
 
 /**
- * @typedef Parameters
- * @property {Elements} elements
- * @property {ParametersPosition} position
- */
-
-/**
- * @typedef ParametersPosition
- * @property {string} attribute
- * @property {string} defaultValue
- * @property {boolean} preferAbove
- */
-
-/**
  * @typedef Rectangles
  * @property {DOMRect} anchor
  * @property {DOMRect} floater
+ */
+
+/**
+ * @typedef ValueParameters
  */
 
 /**
@@ -65,15 +56,6 @@ const allPositions = [
 
 const domRectKeys = ['bottom', 'height', 'left', 'right', 'top', 'width'];
 
-const horizontalPositions = new Set(['left', 'horizontal', 'right']);
-
-const transformedPositions = new Set([
-	'above',
-	'below',
-	'vertical',
-	...Array.from(horizontalPositions.values),
-]);
-
 /**
  * @param {string} position
  * @param {Rectangles} rectangles
@@ -82,8 +64,8 @@ const transformedPositions = new Set([
  * @returns {Values}
  */
 function calculatePosition(position, rectangles, rightToLeft, preferAbove) {
-	const left = getLeft(position, rectangles, rightToLeft);
-	const top = getTop(position, rectangles, preferAbove);
+	const left = getValue(true, position, rectangles, rightToLeft);
+	const top = getValue(false, position, rectangles, preferAbove);
 
 	return {top, left};
 }
@@ -112,90 +94,11 @@ function getAbsolute(parameters) {
 }
 
 /**
- * @param {string} original
- * @param {Rectangles} rectangles
- * @param {Values} values
- * @returns {string}
- */
-function getActualPosition(original, rectangles, values) {
-	if (!transformedPositions.has(original)) {
-		return original;
-	}
-
-	const isHorizontal = horizontalPositions.has(original);
-
-	return [
-		getPrefix(rectangles, values, isHorizontal),
-		getSuffix(rectangles, values, isHorizontal),
-	]
-		.filter(value => value !== undefined)
-		.join('-');
-}
-
-/**
- * @param {string} position
- * @param {Rectangles} rectangles
- * @param {boolean} rightToLeft
- * @returns {number}
- */
-function getLeft(position, rectangles, rightToLeft) {
-	const {anchor, floater} = rectangles;
-
-	switch (position) {
-		case 'above':
-		case 'below':
-		case 'vertical': {
-			return anchor.left + anchor.width / 2 - floater.width / 2;
-		}
-
-		case 'above-left':
-		case 'below-left':
-		case 'vertical-left': {
-			return anchor.left;
-		}
-
-		case 'above-right':
-		case 'below-right':
-		case 'vertical-right': {
-			return anchor.right - floater.width;
-		}
-
-		case 'horizontal':
-		case 'horizontal-bottom':
-		case 'horizontal-top': {
-			return getAbsolute({
-				end: anchor.right,
-				max: globalThis.innerWidth,
-				offset: floater.width,
-				preferMin: rightToLeft,
-				start: anchor.left,
-			});
-		}
-
-		case 'left':
-		case 'left-bottom':
-		case 'left-top': {
-			return anchor.left - floater.width;
-		}
-
-		case 'right':
-		case 'right-bottom':
-		case 'right-top': {
-			return anchor.right;
-		}
-
-		default: {
-			return anchor.left;
-		}
-	}
-}
-
-/**
  * @param {string} currentPosition
  * @param {string} defaultPosition
  * @returns {string}
  */
-function getOriginalPosition(currentPosition, defaultPosition) {
+function getPosition(currentPosition, defaultPosition) {
 	if (currentPosition === null) {
 		return defaultPosition;
 	}
@@ -208,113 +111,55 @@ function getOriginalPosition(currentPosition, defaultPosition) {
 }
 
 /**
- * @param {Rectangles} rectangles
- * @param {Values} values
- * @param {boolean} isHorizontal
- * @returns {string|undefined}
- */
-function getPrefix(rectangles, values, isHorizontal) {
-	if (isHorizontal) {
-		if (values.left === rectangles.anchor.right) {
-			return 'right';
-		}
-
-		return values.left === rectangles.anchor.left - rectangles.floater.width
-			? 'left'
-			: undefined;
-	}
-
-	if (values.top === rectangles.anchor.bottom) {
-		return 'below';
-	}
-
-	return values.top === rectangles.anchor.top - rectangles.floater.height
-		? 'above'
-		: undefined;
-}
-
-/**
- * @param {Rectangles} rectangles
- * @param {Values} values
- * @param {boolean} isHorizontal
- * @returns {string|undefined}
- */
-function getSuffix(rectangles, values, isHorizontal) {
-	if (isHorizontal) {
-		if (values.top === rectangles.anchor.top) {
-			return 'top';
-		}
-
-		return values.top === rectangles.anchor.bottom - rectangles.floater.height
-			? 'bottom'
-			: undefined;
-	}
-
-	if (values.left === rectangles.anchor.left) {
-		return 'left';
-	}
-
-	return values.left === rectangles.anchor.right - rectangles.floater.width
-		? 'right'
-		: undefined;
-}
-
-/**
+ * @param {boolean} x
  * @param {string} position
  * @param {Rectangles} rectangles
- * @param {boolean} preferAbove
+ * @param {ValueParameters} parameters
  * @returns {number}
  */
-function getTop(position, rectangles, preferAbove) {
+function getValue(x, position, rectangles, preferMin) {
 	const {anchor, floater} = rectangles;
 
-	switch (position) {
-		case 'above':
-		case 'above-left':
-		case 'above-right': {
-			return anchor.top - floater.height;
-		}
-
-		case 'horizontal':
-		case 'left':
-		case 'right': {
-			return anchor.top + anchor.height / 2 - floater.height / 2;
-		}
-
-		case 'below':
-		case 'below-left':
-		case 'below-right': {
-			return anchor.bottom;
-		}
-
-		case 'horizontal-bottom':
-		case 'left-bottom':
-		case 'right-bottom': {
-			return anchor.bottom - floater.height;
-		}
-
-		case 'horizontal-top':
-		case 'left-top':
-		case 'right-top': {
-			return anchor.top;
-		}
-
-		case 'vertical':
-		case 'vertical-left':
-		case 'vertical-right': {
-			return getAbsolute({
-				end: anchor.bottom,
-				max: globalThis.innerHeight,
-				offset: floater.height,
-				preferMin: preferAbove,
-				start: anchor.top,
-			});
-		}
-
-		default: {
-			return anchor.bottom;
-		}
+	if (x ? position.startsWith('right') : position.endsWith('top')) {
+		return x ? anchor.right : anchor.top;
 	}
+
+	if (x ? position.startsWith('left') : position.endsWith('bottom')) {
+		return (
+			(x ? anchor.left : anchor.bottom) - (x ? floater.width : floater.height)
+		);
+	}
+
+	if (x ? position.endsWith('right') : position.startsWith('above')) {
+		return (
+			(x ? anchor.right : anchor.top) - (x ? floater.width : floater.height)
+		);
+	}
+
+	if (
+		(x
+			? ['above', 'below', 'vertical']
+			: ['horizontal', 'left', 'right']
+		).includes(position)
+	) {
+		return (
+			(x ? anchor.left : anchor.top)
+			+ (x ? anchor.width : anchor.height) / 2
+			- (x ? floater.width : floater.height) / 2
+		);
+	}
+
+	if (x ? position.startsWith('horizontal') : position.startsWith('vertical')) {
+		return getAbsolute({
+			preferMin,
+			end: x ? anchor.right : anchor.bottom,
+			max: x ? globalThis.innerWidth : globalThis.innerHeight,
+			offset: x ? floater.width : floater.height,
+			start: x ? anchor.left : anchor.top,
+		});
+	}
+
+	return x ? anchor.left : anchor.bottom;
 }
 
 /**
@@ -337,7 +182,7 @@ export function updateFloated(parameters) {
 	}
 
 	function onRepeat() {
-		const currentPosition = getOriginalPosition(
+		const currentPosition = getPosition(
 			(parent ?? anchor).getAttribute(parameters.position.attribute) ?? '',
 			parameters.position.defaultValue,
 		);
@@ -377,11 +222,6 @@ export function updateFloated(parameters) {
 		floater.style.position = 'fixed';
 		floater.style.inset = '0 auto auto 0';
 		floater.style.transform = matrix;
-
-		floater.setAttribute(
-			'position',
-			getActualPosition(currentPosition, rectangles, values),
-		);
 	}
 
 	document.body.append(floater);
