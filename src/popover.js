@@ -1,7 +1,7 @@
 import {wait} from '@oscarpalmer/timer';
+import {tabbable} from 'tabbable';
 import {eventOptions, findParent, isNullOrWhitespace} from './helpers/index.js';
 import {updateFloated} from './helpers/floated.js';
-import {getFocusableElements} from './helpers/focusable.js';
 import {selector as focusTrapSelector} from './focus-trap.js';
 
 /**
@@ -25,7 +25,7 @@ function afterToggle(component, active) {
 	handleCallbacks(component, active);
 
 	if (active && component.content) {
-		(getFocusableElements(component.content)?.[0] ?? component.content).focus();
+		(tabbable(component.content)?.[0] ?? component.content).focus();
 	}
 	else {
 		component.button?.focus();

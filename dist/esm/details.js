@@ -1,6 +1,6 @@
 // node_modules/@oscarpalmer/timer/dist/timer.js
 var milliseconds = Math.round(1e3 / 60);
-var request = globalThis.requestAnimationFrame ?? function(callback) {
+var request = requestAnimationFrame ?? function(callback) {
   return setTimeout?.(() => {
     callback(Date.now());
   }, milliseconds);
@@ -97,7 +97,7 @@ var Timed = class {
     if (this.state.frame === void 0) {
       return this;
     }
-    (globalThis.cancelAnimationFrame ?? clearTimeout)?.(this.state.frame);
+    (cancelAnimationFrame ?? clearTimeout)?.(this.state.frame);
     this.callbacks.after?.(this.finished);
     this.state.frame = void 0;
     return this;

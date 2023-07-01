@@ -1,6 +1,6 @@
 import {wait} from '@oscarpalmer/timer';
+import {tabbable} from 'tabbable';
 import {eventOptions, findParent} from './helpers/index.js';
-import {getFocusableElements} from './helpers/focusable.js';
 
 export const selector = 'palmer-focus-trap';
 
@@ -37,7 +37,7 @@ function destroy(element) {
  * @param {HTMLElement} element
  */
 function handleEvent(event, focusTrap, element) {
-	const elements = getFocusableElements(focusTrap);
+	const elements = tabbable(focusTrap);
 
 	if (element === focusTrap) {
 		wait(
