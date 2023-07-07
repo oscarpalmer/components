@@ -118,199 +118,6 @@ function wait(callback, time) {
   return new Waited(callback, time).start();
 }
 
-// node_modules/tabbable/dist/index.esm.js
-var candidateSelectors = ["input:not([inert])", "select:not([inert])", "textarea:not([inert])", "a[href]:not([inert])", "button:not([inert])", "[tabindex]:not(slot):not([inert])", "audio[controls]:not([inert])", "video[controls]:not([inert])", '[contenteditable]:not([contenteditable="false"]):not([inert])', "details>summary:first-of-type:not([inert])", "details:not([inert])"];
-var candidateSelector = /* @__PURE__ */ candidateSelectors.join(",");
-var NoElement = typeof Element === "undefined";
-var matches = NoElement ? function() {
-} : Element.prototype.matches || Element.prototype.msMatchesSelector || Element.prototype.webkitMatchesSelector;
-var getRootNode = !NoElement && Element.prototype.getRootNode ? function(element) {
-  var _element$getRootNode;
-  return element === null || element === void 0 ? void 0 : (_element$getRootNode = element.getRootNode) === null || _element$getRootNode === void 0 ? void 0 : _element$getRootNode.call(element);
-} : function(element) {
-  return element === null || element === void 0 ? void 0 : element.ownerDocument;
-};
-var isInert = function isInert2(node, lookUp) {
-  var _node$getAttribute;
-  if (lookUp === void 0) {
-    lookUp = true;
-  }
-  var inertAtt = node === null || node === void 0 ? void 0 : (_node$getAttribute = node.getAttribute) === null || _node$getAttribute === void 0 ? void 0 : _node$getAttribute.call(node, "inert");
-  var inert = inertAtt === "" || inertAtt === "true";
-  var result = inert || lookUp && node && isInert2(node.parentNode);
-  return result;
-};
-var isContentEditable = function isContentEditable2(node) {
-  var _node$getAttribute2;
-  var attValue = node === null || node === void 0 ? void 0 : (_node$getAttribute2 = node.getAttribute) === null || _node$getAttribute2 === void 0 ? void 0 : _node$getAttribute2.call(node, "contenteditable");
-  return attValue === "" || attValue === "true";
-};
-var hasTabIndex = function hasTabIndex2(node) {
-  return !isNaN(parseInt(node.getAttribute("tabindex"), 10));
-};
-var getTabIndex = function getTabIndex2(node) {
-  if (!node) {
-    throw new Error("No node provided");
-  }
-  if (node.tabIndex < 0) {
-    if ((/^(AUDIO|VIDEO|DETAILS)$/.test(node.tagName) || isContentEditable(node)) && !hasTabIndex(node)) {
-      return 0;
-    }
-  }
-  return node.tabIndex;
-};
-var isInput = function isInput2(node) {
-  return node.tagName === "INPUT";
-};
-var isHiddenInput = function isHiddenInput2(node) {
-  return isInput(node) && node.type === "hidden";
-};
-var isDetailsWithSummary = function isDetailsWithSummary2(node) {
-  var r = node.tagName === "DETAILS" && Array.prototype.slice.apply(node.children).some(function(child) {
-    return child.tagName === "SUMMARY";
-  });
-  return r;
-};
-var getCheckedRadio = function getCheckedRadio2(nodes, form) {
-  for (var i = 0; i < nodes.length; i++) {
-    if (nodes[i].checked && nodes[i].form === form) {
-      return nodes[i];
-    }
-  }
-};
-var isTabbableRadio = function isTabbableRadio2(node) {
-  if (!node.name) {
-    return true;
-  }
-  var radioScope = node.form || getRootNode(node);
-  var queryRadios = function queryRadios2(name) {
-    return radioScope.querySelectorAll('input[type="radio"][name="' + name + '"]');
-  };
-  var radioSet;
-  if (typeof window !== "undefined" && typeof window.CSS !== "undefined" && typeof window.CSS.escape === "function") {
-    radioSet = queryRadios(window.CSS.escape(node.name));
-  } else {
-    try {
-      radioSet = queryRadios(node.name);
-    } catch (err) {
-      console.error("Looks like you have a radio button with a name attribute containing invalid CSS selector characters and need the CSS.escape polyfill: %s", err.message);
-      return false;
-    }
-  }
-  var checked = getCheckedRadio(radioSet, node.form);
-  return !checked || checked === node;
-};
-var isRadio = function isRadio2(node) {
-  return isInput(node) && node.type === "radio";
-};
-var isNonTabbableRadio = function isNonTabbableRadio2(node) {
-  return isRadio(node) && !isTabbableRadio(node);
-};
-var isNodeAttached = function isNodeAttached2(node) {
-  var _nodeRoot;
-  var nodeRoot = node && getRootNode(node);
-  var nodeRootHost = (_nodeRoot = nodeRoot) === null || _nodeRoot === void 0 ? void 0 : _nodeRoot.host;
-  var attached = false;
-  if (nodeRoot && nodeRoot !== node) {
-    var _nodeRootHost, _nodeRootHost$ownerDo, _node$ownerDocument;
-    attached = !!((_nodeRootHost = nodeRootHost) !== null && _nodeRootHost !== void 0 && (_nodeRootHost$ownerDo = _nodeRootHost.ownerDocument) !== null && _nodeRootHost$ownerDo !== void 0 && _nodeRootHost$ownerDo.contains(nodeRootHost) || node !== null && node !== void 0 && (_node$ownerDocument = node.ownerDocument) !== null && _node$ownerDocument !== void 0 && _node$ownerDocument.contains(node));
-    while (!attached && nodeRootHost) {
-      var _nodeRoot2, _nodeRootHost2, _nodeRootHost2$ownerD;
-      nodeRoot = getRootNode(nodeRootHost);
-      nodeRootHost = (_nodeRoot2 = nodeRoot) === null || _nodeRoot2 === void 0 ? void 0 : _nodeRoot2.host;
-      attached = !!((_nodeRootHost2 = nodeRootHost) !== null && _nodeRootHost2 !== void 0 && (_nodeRootHost2$ownerD = _nodeRootHost2.ownerDocument) !== null && _nodeRootHost2$ownerD !== void 0 && _nodeRootHost2$ownerD.contains(nodeRootHost));
-    }
-  }
-  return attached;
-};
-var isZeroArea = function isZeroArea2(node) {
-  var _node$getBoundingClie = node.getBoundingClientRect(), width = _node$getBoundingClie.width, height = _node$getBoundingClie.height;
-  return width === 0 && height === 0;
-};
-var isHidden = function isHidden2(node, _ref) {
-  var displayCheck = _ref.displayCheck, getShadowRoot = _ref.getShadowRoot;
-  if (getComputedStyle(node).visibility === "hidden") {
-    return true;
-  }
-  var isDirectSummary = matches.call(node, "details>summary:first-of-type");
-  var nodeUnderDetails = isDirectSummary ? node.parentElement : node;
-  if (matches.call(nodeUnderDetails, "details:not([open]) *")) {
-    return true;
-  }
-  if (!displayCheck || displayCheck === "full" || displayCheck === "legacy-full") {
-    if (typeof getShadowRoot === "function") {
-      var originalNode = node;
-      while (node) {
-        var parentElement = node.parentElement;
-        var rootNode = getRootNode(node);
-        if (parentElement && !parentElement.shadowRoot && getShadowRoot(parentElement) === true) {
-          return isZeroArea(node);
-        } else if (node.assignedSlot) {
-          node = node.assignedSlot;
-        } else if (!parentElement && rootNode !== node.ownerDocument) {
-          node = rootNode.host;
-        } else {
-          node = parentElement;
-        }
-      }
-      node = originalNode;
-    }
-    if (isNodeAttached(node)) {
-      return !node.getClientRects().length;
-    }
-    if (displayCheck !== "legacy-full") {
-      return true;
-    }
-  } else if (displayCheck === "non-zero-area") {
-    return isZeroArea(node);
-  }
-  return false;
-};
-var isDisabledFromFieldset = function isDisabledFromFieldset2(node) {
-  if (/^(INPUT|BUTTON|SELECT|TEXTAREA)$/.test(node.tagName)) {
-    var parentNode = node.parentElement;
-    while (parentNode) {
-      if (parentNode.tagName === "FIELDSET" && parentNode.disabled) {
-        for (var i = 0; i < parentNode.children.length; i++) {
-          var child = parentNode.children.item(i);
-          if (child.tagName === "LEGEND") {
-            return matches.call(parentNode, "fieldset[disabled] *") ? true : !child.contains(node);
-          }
-        }
-        return true;
-      }
-      parentNode = parentNode.parentElement;
-    }
-  }
-  return false;
-};
-var isNodeMatchingSelectorFocusable = function isNodeMatchingSelectorFocusable2(options, node) {
-  if (node.disabled || // we must do an inert look up to filter out any elements inside an inert ancestor
-  //  because we're limited in the type of selectors we can use in JSDom (see related
-  //  note related to `candidateSelectors`)
-  isInert(node) || isHiddenInput(node) || isHidden(node, options) || // For a details element with a summary, the summary element gets the focus
-  isDetailsWithSummary(node) || isDisabledFromFieldset(node)) {
-    return false;
-  }
-  return true;
-};
-var isNodeMatchingSelectorTabbable = function isNodeMatchingSelectorTabbable2(options, node) {
-  if (isNonTabbableRadio(node) || getTabIndex(node) < 0 || !isNodeMatchingSelectorFocusable(options, node)) {
-    return false;
-  }
-  return true;
-};
-var isTabbable = function isTabbable2(node, options) {
-  options = options || {};
-  if (!node) {
-    throw new Error("No node provided");
-  }
-  if (matches.call(node, candidateSelector) === false) {
-    return false;
-  }
-  return isNodeMatchingSelectorTabbable(options, node);
-};
-
 // src/helpers/index.js
 var eventOptions = {
   active: { capture: false, passive: false },
@@ -454,19 +261,101 @@ function updateFloated(parameters) {
   ).start();
 }
 
+// src/helpers/focusable.js
+var filters = [isDisabled, isNotTabbable, isInert, isHidden, isSummarised];
+var selector = [
+  '[contenteditable]:not([contenteditable="false"])',
+  "[tabindex]:not(slot)",
+  "a[href]",
+  "audio[controls]",
+  "button",
+  "details",
+  "details > summary:first-of-type",
+  "iframe",
+  "input",
+  "select",
+  "textarea",
+  "video[controls]"
+].map((selector3) => `${selector3}:not([inert])`).join(",");
+function getTabIndex(element) {
+  if (element.tabIndex > -1) {
+    return element.tabIndex;
+  }
+  if (/^(audio|details|video)$/i.test(element.tagName) || isEditable(element)) {
+    return hasTabIndex(element) ? -1 : 0;
+  }
+  return -1;
+}
+function hasTabIndex(element) {
+  return !Number.isNaN(Number.parseInt(element.getAttribute("tabindex"), 10));
+}
+function isDisabled(item) {
+  if (/^(button|input|select|textarea)$/i.test(item.element.tagName) && isDisabledFromFieldset(item.element)) {
+    return true;
+  }
+  return (item.element.disabled ?? false) || item.element.ariaDisabled === "true";
+}
+function isDisabledFromFieldset(element) {
+  let parent = element.parentElement;
+  while (parent !== null) {
+    if (/^fieldset$/i.test(parent.tagName) && parent.disabled) {
+      const children = Array.from(parent.children);
+      for (const child of children) {
+        if (/^legend$/i.test(child.tagName)) {
+          return parent.matches("fieldset[disabled] *") ? true : !child.contains(element);
+        }
+      }
+      return true;
+    }
+    parent = parent.parentElement;
+  }
+  return false;
+}
+function isEditable(element) {
+  return /^(|true)$/i.test(element.getAttribute("contenteditable"));
+}
+function isFocusable(element) {
+  return isFocusableFilter({ element, tabIndex: getTabIndex(element) });
+}
+function isFocusableFilter(item) {
+  return !filters.some((callback) => callback(item));
+}
+function isHidden(item) {
+  if (item.element.hidden || item.element instanceof HTMLInputElement && item.element.type === "hidden") {
+    return true;
+  }
+  const style = getComputedStyle(item.element);
+  if (style.display === "none" || style.visibility === "hidden") {
+    return true;
+  }
+  const { height, width } = item.element.getBoundingClientRect();
+  return height === 0 && width === 0;
+}
+function isInert(item) {
+  return (item.element.inert ?? false) || /^(|true)$/i.test(item.element.getAttribute("inert")) || item.element.parentElement !== null && isInert({ element: item.element.parentElement });
+}
+function isNotTabbable(item) {
+  return item.tabIndex < 0;
+}
+function isSummarised(item) {
+  return /^details$/i.test(item.element.tagName) && Array.from(item.element.children).some(
+    (child) => /^summary$/i.test(child.tagName)
+  );
+}
+
 // src/tooltip.js
-var selector = "palmer-tooltip";
-var positionAttribute = `${selector}-position`;
+var selector2 = "palmer-tooltip";
+var positionAttribute = `${selector2}-position`;
 var store = /* @__PURE__ */ new WeakMap();
 function createFloater(anchor) {
   const id = anchor.getAttribute("aria-describedby") ?? anchor.getAttribute("aria-labelledby");
   const element = id === null ? null : document.querySelector(`#${id}`);
   if (element === null) {
     throw new TypeError(
-      `A '${selector}'-attributed element must have a valid id reference in either the 'aria-describedby' or 'aria-labelledby'-attribute.`
+      `A '${selector2}'-attributed element must have a valid id reference in either the 'aria-describedby' or 'aria-labelledby'-attribute.`
     );
   }
-  element.setAttribute(`${selector}-content`, "");
+  element.setAttribute(`${selector2}-content`, "");
   element.ariaHidden = "true";
   element.hidden = true;
   element.role = "tooltip";
@@ -490,7 +379,7 @@ function observe(records) {
     if (record.type !== "attributes") {
       continue;
     }
-    if (record.target.getAttribute(selector) === null) {
+    if (record.target.getAttribute(selector2) === null) {
       destroyTooltip(record.target);
     } else {
       createTooltip(record.target);
@@ -510,7 +399,7 @@ var PalmerTooltip = class {
       keydown: this.onKeyDown.bind(this),
       show: this.onShow.bind(this)
     };
-    this.tabbable = isTabbable(anchor);
+    this.focusable = isFocusable(anchor);
     this.floater = createFloater(anchor);
     this.timer = void 0;
     this.handleCallbacks(true);
@@ -570,14 +459,14 @@ var PalmerTooltip = class {
    * @param {boolean} add
    */
   handleCallbacks(add) {
-    const { anchor, floater, tabbable } = this;
+    const { anchor, floater, focusable } = this;
     const method = add ? "addEventListener" : "removeEventListener";
     for (const element of [anchor, floater]) {
       element[method]("mouseenter", this.callbacks.show, eventOptions.passive);
       element[method]("mouseleave", this.callbacks.hide, eventOptions.passive);
       element[method]("touchstart", this.callbacks.show, eventOptions.passive);
     }
-    if (tabbable) {
+    if (focusable) {
       anchor[method]("blur", this.callbacks.hide, eventOptions.passive);
       anchor[method]("focus", this.callbacks.show, eventOptions.passive);
     }
@@ -587,7 +476,7 @@ var observer = new MutationObserver(observe);
 observer.observe(
   document,
   {
-    attributeFilter: [selector],
+    attributeFilter: [selector2],
     attributeOldValue: true,
     attributes: true,
     childList: true,
@@ -596,9 +485,9 @@ observer.observe(
 );
 wait(
   () => {
-    const elements = Array.from(document.querySelectorAll(`[${selector}]`));
+    const elements = Array.from(document.querySelectorAll(`[${selector2}]`));
     for (const element of elements) {
-      element.setAttribute(selector, "");
+      element.setAttribute(selector2, "");
     }
   },
   0

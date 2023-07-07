@@ -1,6 +1,6 @@
 import {wait} from '@oscarpalmer/timer';
-import {tabbable} from 'tabbable';
 import {eventOptions, findParent} from './helpers/index.js';
+import {getFocusableElements} from './helpers/focusable.js';
 
 export const selector = 'palmer-focus-trap';
 
@@ -37,7 +37,7 @@ function destroy(element) {
  * @param {HTMLElement} element
  */
 function handleEvent(event, focusTrap, element) {
-	const elements = tabbable(focusTrap);
+	const elements = getFocusableElements(focusTrap);
 
 	if (element === focusTrap) {
 		wait(
@@ -124,36 +124,28 @@ class FocusTrap {
 	}
 }
 
-(() => {
-	if (globalThis.oscarpalmerComponentsFocusTrap !== null) {
-		return;
-	}
+const observer = new MutationObserver(observe);
 
-	globalThis.oscarpalmerComponentsFocusTrap = 1;
+observer.observe(
+	document,
+	{
+		attributeFilter: [selector],
+		attributeOldValue: true,
+		attributes: true,
+		childList: true,
+		subtree: true,
+	},
+);
 
-	const observer = new MutationObserver(observe);
+wait(
+	() => {
+		const elements = Array.from(document.querySelectorAll(`[${selector}]`));
 
-	observer.observe(
-		document,
-		{
-			attributeFilter: [selector],
-			attributeOldValue: true,
-			attributes: true,
-			childList: true,
-			subtree: true,
-		},
-	);
+		for (const element of elements) {
+			element.setAttribute(selector, '');
+		}
+	},
+	0,
+);
 
-	wait(
-		() => {
-			const elements = Array.from(document.querySelectorAll(`[${selector}]`));
-
-			for (const element of elements) {
-				element.setAttribute(selector, '');
-			}
-		},
-		0,
-	);
-
-	document.addEventListener('keydown', onKeydown, eventOptions.active);
-})();
+document.addEventListener('keydown', onKeydown, eventOptions.active);

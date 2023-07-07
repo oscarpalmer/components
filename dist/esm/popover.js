@@ -118,302 +118,6 @@ function wait(callback, time) {
   return new Waited(callback, time).start();
 }
 
-// node_modules/tabbable/dist/index.esm.js
-var candidateSelectors = ["input:not([inert])", "select:not([inert])", "textarea:not([inert])", "a[href]:not([inert])", "button:not([inert])", "[tabindex]:not(slot):not([inert])", "audio[controls]:not([inert])", "video[controls]:not([inert])", '[contenteditable]:not([contenteditable="false"]):not([inert])', "details>summary:first-of-type:not([inert])", "details:not([inert])"];
-var candidateSelector = /* @__PURE__ */ candidateSelectors.join(",");
-var NoElement = typeof Element === "undefined";
-var matches = NoElement ? function() {
-} : Element.prototype.matches || Element.prototype.msMatchesSelector || Element.prototype.webkitMatchesSelector;
-var getRootNode = !NoElement && Element.prototype.getRootNode ? function(element) {
-  var _element$getRootNode;
-  return element === null || element === void 0 ? void 0 : (_element$getRootNode = element.getRootNode) === null || _element$getRootNode === void 0 ? void 0 : _element$getRootNode.call(element);
-} : function(element) {
-  return element === null || element === void 0 ? void 0 : element.ownerDocument;
-};
-var isInert = function isInert2(node, lookUp) {
-  var _node$getAttribute;
-  if (lookUp === void 0) {
-    lookUp = true;
-  }
-  var inertAtt = node === null || node === void 0 ? void 0 : (_node$getAttribute = node.getAttribute) === null || _node$getAttribute === void 0 ? void 0 : _node$getAttribute.call(node, "inert");
-  var inert = inertAtt === "" || inertAtt === "true";
-  var result = inert || lookUp && node && isInert2(node.parentNode);
-  return result;
-};
-var isContentEditable = function isContentEditable2(node) {
-  var _node$getAttribute2;
-  var attValue = node === null || node === void 0 ? void 0 : (_node$getAttribute2 = node.getAttribute) === null || _node$getAttribute2 === void 0 ? void 0 : _node$getAttribute2.call(node, "contenteditable");
-  return attValue === "" || attValue === "true";
-};
-var getCandidates = function getCandidates2(el, includeContainer, filter) {
-  if (isInert(el)) {
-    return [];
-  }
-  var candidates = Array.prototype.slice.apply(el.querySelectorAll(candidateSelector));
-  if (includeContainer && matches.call(el, candidateSelector)) {
-    candidates.unshift(el);
-  }
-  candidates = candidates.filter(filter);
-  return candidates;
-};
-var getCandidatesIteratively = function getCandidatesIteratively2(elements, includeContainer, options) {
-  var candidates = [];
-  var elementsToCheck = Array.from(elements);
-  while (elementsToCheck.length) {
-    var element = elementsToCheck.shift();
-    if (isInert(element, false)) {
-      continue;
-    }
-    if (element.tagName === "SLOT") {
-      var assigned = element.assignedElements();
-      var content = assigned.length ? assigned : element.children;
-      var nestedCandidates = getCandidatesIteratively2(content, true, options);
-      if (options.flatten) {
-        candidates.push.apply(candidates, nestedCandidates);
-      } else {
-        candidates.push({
-          scopeParent: element,
-          candidates: nestedCandidates
-        });
-      }
-    } else {
-      var validCandidate = matches.call(element, candidateSelector);
-      if (validCandidate && options.filter(element) && (includeContainer || !elements.includes(element))) {
-        candidates.push(element);
-      }
-      var shadowRoot = element.shadowRoot || // check for an undisclosed shadow
-      typeof options.getShadowRoot === "function" && options.getShadowRoot(element);
-      var validShadowRoot = !isInert(shadowRoot, false) && (!options.shadowRootFilter || options.shadowRootFilter(element));
-      if (shadowRoot && validShadowRoot) {
-        var _nestedCandidates = getCandidatesIteratively2(shadowRoot === true ? element.children : shadowRoot.children, true, options);
-        if (options.flatten) {
-          candidates.push.apply(candidates, _nestedCandidates);
-        } else {
-          candidates.push({
-            scopeParent: element,
-            candidates: _nestedCandidates
-          });
-        }
-      } else {
-        elementsToCheck.unshift.apply(elementsToCheck, element.children);
-      }
-    }
-  }
-  return candidates;
-};
-var hasTabIndex = function hasTabIndex2(node) {
-  return !isNaN(parseInt(node.getAttribute("tabindex"), 10));
-};
-var getTabIndex = function getTabIndex2(node) {
-  if (!node) {
-    throw new Error("No node provided");
-  }
-  if (node.tabIndex < 0) {
-    if ((/^(AUDIO|VIDEO|DETAILS)$/.test(node.tagName) || isContentEditable(node)) && !hasTabIndex(node)) {
-      return 0;
-    }
-  }
-  return node.tabIndex;
-};
-var getSortOrderTabIndex = function getSortOrderTabIndex2(node, isScope) {
-  var tabIndex = getTabIndex(node);
-  if (tabIndex < 0 && isScope && !hasTabIndex(node)) {
-    return 0;
-  }
-  return tabIndex;
-};
-var sortOrderedTabbables = function sortOrderedTabbables2(a, b) {
-  return a.tabIndex === b.tabIndex ? a.documentOrder - b.documentOrder : a.tabIndex - b.tabIndex;
-};
-var isInput = function isInput2(node) {
-  return node.tagName === "INPUT";
-};
-var isHiddenInput = function isHiddenInput2(node) {
-  return isInput(node) && node.type === "hidden";
-};
-var isDetailsWithSummary = function isDetailsWithSummary2(node) {
-  var r = node.tagName === "DETAILS" && Array.prototype.slice.apply(node.children).some(function(child) {
-    return child.tagName === "SUMMARY";
-  });
-  return r;
-};
-var getCheckedRadio = function getCheckedRadio2(nodes, form) {
-  for (var i = 0; i < nodes.length; i++) {
-    if (nodes[i].checked && nodes[i].form === form) {
-      return nodes[i];
-    }
-  }
-};
-var isTabbableRadio = function isTabbableRadio2(node) {
-  if (!node.name) {
-    return true;
-  }
-  var radioScope = node.form || getRootNode(node);
-  var queryRadios = function queryRadios2(name) {
-    return radioScope.querySelectorAll('input[type="radio"][name="' + name + '"]');
-  };
-  var radioSet;
-  if (typeof window !== "undefined" && typeof window.CSS !== "undefined" && typeof window.CSS.escape === "function") {
-    radioSet = queryRadios(window.CSS.escape(node.name));
-  } else {
-    try {
-      radioSet = queryRadios(node.name);
-    } catch (err) {
-      console.error("Looks like you have a radio button with a name attribute containing invalid CSS selector characters and need the CSS.escape polyfill: %s", err.message);
-      return false;
-    }
-  }
-  var checked = getCheckedRadio(radioSet, node.form);
-  return !checked || checked === node;
-};
-var isRadio = function isRadio2(node) {
-  return isInput(node) && node.type === "radio";
-};
-var isNonTabbableRadio = function isNonTabbableRadio2(node) {
-  return isRadio(node) && !isTabbableRadio(node);
-};
-var isNodeAttached = function isNodeAttached2(node) {
-  var _nodeRoot;
-  var nodeRoot = node && getRootNode(node);
-  var nodeRootHost = (_nodeRoot = nodeRoot) === null || _nodeRoot === void 0 ? void 0 : _nodeRoot.host;
-  var attached = false;
-  if (nodeRoot && nodeRoot !== node) {
-    var _nodeRootHost, _nodeRootHost$ownerDo, _node$ownerDocument;
-    attached = !!((_nodeRootHost = nodeRootHost) !== null && _nodeRootHost !== void 0 && (_nodeRootHost$ownerDo = _nodeRootHost.ownerDocument) !== null && _nodeRootHost$ownerDo !== void 0 && _nodeRootHost$ownerDo.contains(nodeRootHost) || node !== null && node !== void 0 && (_node$ownerDocument = node.ownerDocument) !== null && _node$ownerDocument !== void 0 && _node$ownerDocument.contains(node));
-    while (!attached && nodeRootHost) {
-      var _nodeRoot2, _nodeRootHost2, _nodeRootHost2$ownerD;
-      nodeRoot = getRootNode(nodeRootHost);
-      nodeRootHost = (_nodeRoot2 = nodeRoot) === null || _nodeRoot2 === void 0 ? void 0 : _nodeRoot2.host;
-      attached = !!((_nodeRootHost2 = nodeRootHost) !== null && _nodeRootHost2 !== void 0 && (_nodeRootHost2$ownerD = _nodeRootHost2.ownerDocument) !== null && _nodeRootHost2$ownerD !== void 0 && _nodeRootHost2$ownerD.contains(nodeRootHost));
-    }
-  }
-  return attached;
-};
-var isZeroArea = function isZeroArea2(node) {
-  var _node$getBoundingClie = node.getBoundingClientRect(), width = _node$getBoundingClie.width, height = _node$getBoundingClie.height;
-  return width === 0 && height === 0;
-};
-var isHidden = function isHidden2(node, _ref) {
-  var displayCheck = _ref.displayCheck, getShadowRoot = _ref.getShadowRoot;
-  if (getComputedStyle(node).visibility === "hidden") {
-    return true;
-  }
-  var isDirectSummary = matches.call(node, "details>summary:first-of-type");
-  var nodeUnderDetails = isDirectSummary ? node.parentElement : node;
-  if (matches.call(nodeUnderDetails, "details:not([open]) *")) {
-    return true;
-  }
-  if (!displayCheck || displayCheck === "full" || displayCheck === "legacy-full") {
-    if (typeof getShadowRoot === "function") {
-      var originalNode = node;
-      while (node) {
-        var parentElement = node.parentElement;
-        var rootNode = getRootNode(node);
-        if (parentElement && !parentElement.shadowRoot && getShadowRoot(parentElement) === true) {
-          return isZeroArea(node);
-        } else if (node.assignedSlot) {
-          node = node.assignedSlot;
-        } else if (!parentElement && rootNode !== node.ownerDocument) {
-          node = rootNode.host;
-        } else {
-          node = parentElement;
-        }
-      }
-      node = originalNode;
-    }
-    if (isNodeAttached(node)) {
-      return !node.getClientRects().length;
-    }
-    if (displayCheck !== "legacy-full") {
-      return true;
-    }
-  } else if (displayCheck === "non-zero-area") {
-    return isZeroArea(node);
-  }
-  return false;
-};
-var isDisabledFromFieldset = function isDisabledFromFieldset2(node) {
-  if (/^(INPUT|BUTTON|SELECT|TEXTAREA)$/.test(node.tagName)) {
-    var parentNode = node.parentElement;
-    while (parentNode) {
-      if (parentNode.tagName === "FIELDSET" && parentNode.disabled) {
-        for (var i = 0; i < parentNode.children.length; i++) {
-          var child = parentNode.children.item(i);
-          if (child.tagName === "LEGEND") {
-            return matches.call(parentNode, "fieldset[disabled] *") ? true : !child.contains(node);
-          }
-        }
-        return true;
-      }
-      parentNode = parentNode.parentElement;
-    }
-  }
-  return false;
-};
-var isNodeMatchingSelectorFocusable = function isNodeMatchingSelectorFocusable2(options, node) {
-  if (node.disabled || // we must do an inert look up to filter out any elements inside an inert ancestor
-  //  because we're limited in the type of selectors we can use in JSDom (see related
-  //  note related to `candidateSelectors`)
-  isInert(node) || isHiddenInput(node) || isHidden(node, options) || // For a details element with a summary, the summary element gets the focus
-  isDetailsWithSummary(node) || isDisabledFromFieldset(node)) {
-    return false;
-  }
-  return true;
-};
-var isNodeMatchingSelectorTabbable = function isNodeMatchingSelectorTabbable2(options, node) {
-  if (isNonTabbableRadio(node) || getTabIndex(node) < 0 || !isNodeMatchingSelectorFocusable(options, node)) {
-    return false;
-  }
-  return true;
-};
-var isValidShadowRootTabbable = function isValidShadowRootTabbable2(shadowHostNode) {
-  var tabIndex = parseInt(shadowHostNode.getAttribute("tabindex"), 10);
-  if (isNaN(tabIndex) || tabIndex >= 0) {
-    return true;
-  }
-  return false;
-};
-var sortByOrder = function sortByOrder2(candidates) {
-  var regularTabbables = [];
-  var orderedTabbables = [];
-  candidates.forEach(function(item, i) {
-    var isScope = !!item.scopeParent;
-    var element = isScope ? item.scopeParent : item;
-    var candidateTabindex = getSortOrderTabIndex(element, isScope);
-    var elements = isScope ? sortByOrder2(item.candidates) : element;
-    if (candidateTabindex === 0) {
-      isScope ? regularTabbables.push.apply(regularTabbables, elements) : regularTabbables.push(element);
-    } else {
-      orderedTabbables.push({
-        documentOrder: i,
-        tabIndex: candidateTabindex,
-        item,
-        isScope,
-        content: elements
-      });
-    }
-  });
-  return orderedTabbables.sort(sortOrderedTabbables).reduce(function(acc, sortable) {
-    sortable.isScope ? acc.push.apply(acc, sortable.content) : acc.push(sortable.content);
-    return acc;
-  }, []).concat(regularTabbables);
-};
-var tabbable = function tabbable2(container, options) {
-  options = options || {};
-  var candidates;
-  if (options.getShadowRoot) {
-    candidates = getCandidatesIteratively([container], options.includeContainer, {
-      filter: isNodeMatchingSelectorTabbable.bind(null, options),
-      flatten: false,
-      getShadowRoot: options.getShadowRoot,
-      shadowRootFilter: isValidShadowRootTabbable
-    });
-  } else {
-    candidates = getCandidates(container, options.includeContainer, isNodeMatchingSelectorTabbable.bind(null, options));
-  }
-  return sortByOrder(candidates);
-};
-
 // src/helpers/index.js
 var eventOptions = {
   active: { capture: false, passive: false },
@@ -560,8 +264,99 @@ function updateFloated(parameters) {
   ).start();
 }
 
+// src/helpers/focusable.js
+var filters = [isDisabled, isNotTabbable, isInert, isHidden, isSummarised];
+var selector = [
+  '[contenteditable]:not([contenteditable="false"])',
+  "[tabindex]:not(slot)",
+  "a[href]",
+  "audio[controls]",
+  "button",
+  "details",
+  "details > summary:first-of-type",
+  "iframe",
+  "input",
+  "select",
+  "textarea",
+  "video[controls]"
+].map((selector4) => `${selector4}:not([inert])`).join(",");
+function getFocusableElements(element) {
+  const items = Array.from(element.querySelectorAll(selector)).map((element2) => ({ element: element2, tabIndex: getTabIndex(element2) })).filter((item) => isFocusableFilter(item));
+  const indiced = [];
+  for (const item of items) {
+    if (indiced[item.tabIndex] === void 0) {
+      indiced[item.tabIndex] = [item.element];
+    } else {
+      indiced[item.tabIndex].push(item.element);
+    }
+  }
+  return indiced.flat();
+}
+function getTabIndex(element) {
+  if (element.tabIndex > -1) {
+    return element.tabIndex;
+  }
+  if (/^(audio|details|video)$/i.test(element.tagName) || isEditable(element)) {
+    return hasTabIndex(element) ? -1 : 0;
+  }
+  return -1;
+}
+function hasTabIndex(element) {
+  return !Number.isNaN(Number.parseInt(element.getAttribute("tabindex"), 10));
+}
+function isDisabled(item) {
+  if (/^(button|input|select|textarea)$/i.test(item.element.tagName) && isDisabledFromFieldset(item.element)) {
+    return true;
+  }
+  return (item.element.disabled ?? false) || item.element.ariaDisabled === "true";
+}
+function isDisabledFromFieldset(element) {
+  let parent = element.parentElement;
+  while (parent !== null) {
+    if (/^fieldset$/i.test(parent.tagName) && parent.disabled) {
+      const children = Array.from(parent.children);
+      for (const child of children) {
+        if (/^legend$/i.test(child.tagName)) {
+          return parent.matches("fieldset[disabled] *") ? true : !child.contains(element);
+        }
+      }
+      return true;
+    }
+    parent = parent.parentElement;
+  }
+  return false;
+}
+function isEditable(element) {
+  return /^(|true)$/i.test(element.getAttribute("contenteditable"));
+}
+function isFocusableFilter(item) {
+  return !filters.some((callback) => callback(item));
+}
+function isHidden(item) {
+  if (item.element.hidden || item.element instanceof HTMLInputElement && item.element.type === "hidden") {
+    return true;
+  }
+  const style = getComputedStyle(item.element);
+  if (style.display === "none" || style.visibility === "hidden") {
+    return true;
+  }
+  const { height, width } = item.element.getBoundingClientRect();
+  return height === 0 && width === 0;
+}
+function isInert(item) {
+  return (item.element.inert ?? false) || /^(|true)$/i.test(item.element.getAttribute("inert")) || item.element.parentElement !== null && isInert({ element: item.element.parentElement });
+}
+function isNotTabbable(item) {
+  return item.tabIndex < 0;
+}
+function isSummarised(item) {
+  return /^details$/i.test(item.element.tagName) && Array.from(item.element.children).some(
+    (child) => /^summary$/i.test(child.tagName)
+  );
+}
+
 // src/focus-trap.js
-var selector = "palmer-focus-trap";
+var selector2 = "palmer-focus-trap";
 var store = /* @__PURE__ */ new WeakMap();
 function create(element) {
   if (!store.has(element)) {
@@ -577,7 +372,7 @@ function destroy(element) {
   store.delete(element);
 }
 function handleEvent(event, focusTrap, element) {
-  const elements = tabbable(focusTrap);
+  const elements = getFocusableElements(focusTrap);
   if (element === focusTrap) {
     wait(
       () => {
@@ -610,7 +405,7 @@ function observe(records) {
     if (record.type !== "attributes") {
       continue;
     }
-    if (record.target.getAttribute(selector) === void 0) {
+    if (record.target.getAttribute(selector2) === void 0) {
       destroy(record.target);
     } else {
       create(record.target);
@@ -621,7 +416,7 @@ function onKeydown(event) {
   if (event.key !== "Tab") {
     return;
   }
-  const focusTrap = findParent(event.target, `[${selector}]`);
+  const focusTrap = findParent(event.target, `[${selector2}]`);
   if (focusTrap === void 0) {
     return;
   }
@@ -638,42 +433,36 @@ var FocusTrap = class {
     element.tabIndex = -1;
   }
 };
-(() => {
-  if (globalThis.oscarpalmerComponentsFocusTrap !== null) {
-    return;
+var observer = new MutationObserver(observe);
+observer.observe(
+  document,
+  {
+    attributeFilter: [selector2],
+    attributeOldValue: true,
+    attributes: true,
+    childList: true,
+    subtree: true
   }
-  globalThis.oscarpalmerComponentsFocusTrap = 1;
-  const observer = new MutationObserver(observe);
-  observer.observe(
-    document,
-    {
-      attributeFilter: [selector],
-      attributeOldValue: true,
-      attributes: true,
-      childList: true,
-      subtree: true
+);
+wait(
+  () => {
+    const elements = Array.from(document.querySelectorAll(`[${selector2}]`));
+    for (const element of elements) {
+      element.setAttribute(selector2, "");
     }
-  );
-  wait(
-    () => {
-      const elements = Array.from(document.querySelectorAll(`[${selector}]`));
-      for (const element of elements) {
-        element.setAttribute(selector, "");
-      }
-    },
-    0
-  );
-  document.addEventListener("keydown", onKeydown, eventOptions.active);
-})();
+  },
+  0
+);
+document.addEventListener("keydown", onKeydown, eventOptions.active);
 
 // src/popover.js
-var selector2 = "palmer-popover";
+var selector3 = "palmer-popover";
 var store2 = /* @__PURE__ */ new WeakMap();
 var index = 0;
 function afterToggle(component, active) {
   handleCallbacks(component, active);
   if (active && component.content) {
-    (tabbable(component.content)?.[0] ?? component.content).focus();
+    (getFocusableElements(component.content)?.[0] ?? component.content).focus();
   } else {
     component.button?.focus();
   }
@@ -692,7 +481,7 @@ function handleGlobalEvent(event, component, target) {
   if (button === void 0 || content === void 0) {
     return;
   }
-  const floater = findParent(target, `[${selector2}-content]`);
+  const floater = findParent(target, `[${selector3}-content]`);
   if (floater === void 0) {
     handleToggle(component, false);
     return;
@@ -751,7 +540,7 @@ function initialise(component, button, content) {
   if (!(button instanceof HTMLButtonElement)) {
     button.tabIndex = 0;
   }
-  content.setAttribute(selector, "");
+  content.setAttribute(selector2, "");
   content.role = "dialog";
   content.ariaModal = "false";
   store2.set(
@@ -798,16 +587,16 @@ var PalmerPopover = class extends HTMLElement {
   }
   constructor() {
     super();
-    const button = this.querySelector(`:scope > [${selector2}-button]`);
-    const content = this.querySelector(`:scope > [${selector2}-content]`);
+    const button = this.querySelector(`:scope > [${selector3}-button]`);
+    const content = this.querySelector(`:scope > [${selector3}-content]`);
     if (!isButton(button)) {
       throw new Error(
-        `<${selector2}> must have a <button>-element (or button-like element) with the attribute '${selector2}-button`
+        `<${selector3}> must have a <button>-element (or button-like element) with the attribute '${selector3}-button`
       );
     }
     if (content === null || !(content instanceof HTMLElement)) {
       throw new Error(
-        `<${selector2}> must have an element with the attribute '${selector2}-content'`
+        `<${selector3}> must have an element with the attribute '${selector3}-content'`
       );
     }
     this.button = button;
@@ -821,7 +610,7 @@ var PalmerPopover = class extends HTMLElement {
     }
   }
 };
-customElements.define(selector2, PalmerPopover);
+customElements.define(selector3, PalmerPopover);
 export {
   PalmerPopover
 };

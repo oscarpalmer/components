@@ -1,7 +1,7 @@
 import {wait} from '@oscarpalmer/timer';
-import {isTabbable} from 'tabbable';
 import {eventOptions, findParent} from './helpers/index.js';
 import {updateFloated} from './helpers/floated.js';
+import {isFocusable} from './helpers/focusable.js';
 
 /** @typedef Callbacks
  * @property {(event: Event) => void} click
@@ -116,7 +116,7 @@ class PalmerTooltip {
 		 * @readonly
 		 * @type {boolean}
 		 */
-		this.tabbable = isTabbable(anchor);
+		this.focusable = isFocusable(anchor);
 
 		/**
 		 * @private
@@ -201,7 +201,7 @@ class PalmerTooltip {
 	 * @param {boolean} add
 	 */
 	handleCallbacks(add) {
-		const {anchor, floater, tabbable} = this;
+		const {anchor, floater, focusable} = this;
 
 		const method = add ? 'addEventListener' : 'removeEventListener';
 
@@ -211,7 +211,7 @@ class PalmerTooltip {
 			element[method]('touchstart', this.callbacks.show, eventOptions.passive);
 		}
 
-		if (tabbable) {
+		if (focusable) {
 			anchor[method]('blur', this.callbacks.hide, eventOptions.passive);
 			anchor[method]('focus', this.callbacks.show, eventOptions.passive);
 		}
