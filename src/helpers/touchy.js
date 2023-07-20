@@ -23,3 +23,9 @@ export const isTouchy = (() => {
 
 	return value;
 })();
+
+export const methods = {
+	begin: isTouchy ? 'touchstart' : 'mousedown',
+	end: isTouchy ? 'touchend' : 'mouseup',
+	move: isTouchy ? 'touchmove' : 'mousemove',
+};

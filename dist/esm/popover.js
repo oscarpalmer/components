@@ -119,10 +119,6 @@ function wait(callback, time) {
 }
 
 // src/helpers/index.js
-var eventOptions = {
-  active: { capture: false, passive: false },
-  passive: { capture: false, passive: true }
-};
 function findParent(element, match) {
   const matchIsSelector = typeof match === "string";
   if (matchIsSelector ? element.matches(match) : match(element)) {
@@ -145,6 +141,14 @@ function getTextDirection(element) {
 }
 function isNullOrWhitespace(value) {
   return (value ?? "").trim().length === 0;
+}
+
+// src/helpers/event.js
+function getOptions(passive, capture) {
+  return {
+    capture: capture ?? false,
+    passive: passive ?? true
+  };
 }
 
 // src/helpers/floated.js
@@ -208,7 +212,7 @@ function getValue(x, position, rectangles, preferMin) {
     return getAbsolute({
       preferMin,
       end: x ? anchor.right : anchor.bottom,
-      max: x ? globalThis.innerWidth : globalThis.innerHeight,
+      max: x ? innerWidth : innerHeight,
       offset: x ? floater.width : floater.height,
       start: x ? anchor.left : anchor.top
     });
@@ -355,6 +359,30 @@ function isSummarised(item) {
   );
 }
 
+// src/helpers/touchy.js
+var isTouchy = (() => {
+  let value = false;
+  try {
+    if ("matchMedia" in window) {
+      const media = matchMedia("(pointer: coarse)");
+      if (typeof media?.matches === "boolean") {
+        value = media.matches;
+      }
+    }
+    if (!value) {
+      value = "ontouchstart" in window || navigator.maxTouchPoints > 0 || (navigator.msMaxTouchPoints ?? 0) > 0;
+    }
+  } catch {
+    value = false;
+  }
+  return value;
+})();
+var methods = {
+  begin: isTouchy ? "touchstart" : "mousedown",
+  end: isTouchy ? "touchend" : "mouseup",
+  move: isTouchy ? "touchmove" : "mousemove"
+};
+
 // src/focus-trap.js
 var selector2 = "palmer-focus-trap";
 var store = /* @__PURE__ */ new WeakMap();
@@ -453,7 +481,7 @@ wait(
   },
   0
 );
-document.addEventListener("keydown", onKeydown, eventOptions.active);
+document.addEventListener("keydown", onKeydown, getOptions(false));
 
 // src/popover.js
 var selector3 = "palmer-popover";
@@ -473,8 +501,8 @@ function handleCallbacks(component, add) {
     return;
   }
   const method = add ? "addEventListener" : "removeEventListener";
-  document[method]("click", callbacks.click, eventOptions.passive);
-  document[method]("keydown", callbacks.keydown, eventOptions.passive);
+  document[method](methods.begin, callbacks.pointer, getOptions());
+  document[method]("keydown", callbacks.keydown, getOptions());
 }
 function handleGlobalEvent(event, component, target) {
   const { button, content } = component;
@@ -546,15 +574,11 @@ function initialise(component, button, content) {
   store2.set(
     component,
     {
-      click: onClick.bind(component),
-      keydown: onKeydown2.bind(component)
+      keydown: onKeydown2.bind(component),
+      pointer: onPointer.bind(component)
     }
   );
-  button.addEventListener(
-    "click",
-    toggle.bind(component),
-    eventOptions.passive
-  );
+  button.addEventListener("click", toggle.bind(component), getOptions());
 }
 function isButton(node) {
   if (node === null) {
@@ -565,14 +589,14 @@ function isButton(node) {
   }
   return node instanceof HTMLElement && node.getAttribute("role") === "button";
 }
-function onClick(event) {
-  if (this.open) {
-    handleGlobalEvent(event, this, event.target);
-  }
-}
 function onKeydown2(event) {
   if (this.open && event instanceof KeyboardEvent && event.key === "Escape") {
     handleGlobalEvent(event, this, document.activeElement);
+  }
+}
+function onPointer(event) {
+  if (this.open) {
+    handleGlobalEvent(event, this, event.target);
   }
 }
 function toggle(expand) {

@@ -1,10 +1,14 @@
 // src/helpers/index.js
-var eventOptions = {
-  active: { capture: false, passive: false },
-  passive: { capture: false, passive: true }
-};
 function isNullOrWhitespace(value) {
   return (value ?? "").trim().length === 0;
+}
+
+// src/helpers/event.js
+function getOptions(passive, capture) {
+  return {
+    capture: capture ?? false,
+    passive: passive ?? true
+  };
 }
 
 // src/switch.js
@@ -45,15 +49,11 @@ function initialise(component, label, input) {
       }
     )
   );
-  component.addEventListener(
-    "click",
-    onToggle.bind(component),
-    eventOptions.passive
-  );
+  component.addEventListener("click", onToggle.bind(component), getOptions());
   component.addEventListener(
     "keydown",
     onKey.bind(component),
-    eventOptions.active
+    getOptions(false)
   );
 }
 function onKey(event) {

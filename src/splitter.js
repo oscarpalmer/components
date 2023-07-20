@@ -1,10 +1,6 @@
-import {
-	eventOptions,
-	getCoordinates,
-	getNumber,
-	isNullOrWhitespace,
-} from './helpers/index.js';
-import {isTouchy} from './helpers/touchy.js';
+import {getNumber, isNullOrWhitespace} from './helpers/index.js';
+import {getCoordinates, getOptions} from './helpers/event.js';
+import {isTouchy, methods} from './helpers/touchy.js';
 
 /**
  * @typedef AbsoluteParameters
@@ -46,10 +42,6 @@ import {isTouchy} from './helpers/touchy.js';
  * @property {number} original
  */
 
-const pointerBeginEvent = isTouchy ? 'touchstart' : 'mousedown';
-const pointerEndEvent = isTouchy ? 'touchend' : 'mouseup';
-const pointerMoveEvent = isTouchy ? 'touchmove' : 'mousemove';
-
 const selector = 'palmer-splitter';
 
 const splitterTypes = new Set(['horizontal', 'vertical']);
@@ -72,7 +64,7 @@ function createHandle(component, className) {
 
 	handle.textContent = component.type === 'horizontal' ? '↕' : '↔';
 
-	handle.addEventListener(pointerBeginEvent, () => onPointerBegin(component));
+	handle.addEventListener(methods.begin, () => onPointerBegin(component));
 
 	return handle;
 }
@@ -122,7 +114,7 @@ function createSeparator(component, values, className) {
 	separator.addEventListener(
 		'keydown',
 		event => onSeparatorKeydown(component, event),
-		eventOptions.passive,
+		getOptions(),
 	);
 
 	return separator;
@@ -334,18 +326,14 @@ function setDragging(component, active) {
 
 	const method = active ? 'addEventListener' : 'removeEventListener';
 
-	document[method]('keydown', stored.callbacks.keydown, eventOptions.passive);
+	document[method]('keydown', stored.callbacks.keydown, getOptions());
+
+	document[method](methods.end, stored.callbacks.pointerEnd, getOptions());
 
 	document[method](
-		pointerEndEvent,
-		stored.callbacks.pointerEnd,
-		eventOptions.passive,
-	);
-
-	document[method](
-		pointerMoveEvent,
+		methods.move,
 		stored.callbacks.pointerMove,
-		isTouchy ? eventOptions.active : eventOptions.passive,
+		getOptions(!isTouchy),
 	);
 
 	stored.dragging = active;

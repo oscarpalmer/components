@@ -1,4 +1,5 @@
-import {eventOptions, isNullOrWhitespace} from './helpers/index.js';
+import {isNullOrWhitespace} from './helpers/index.js';
+import {getOptions} from './helpers/event.js';
 
 const selector = 'palmer-switch';
 
@@ -51,16 +52,12 @@ function initialise(component, label, input) {
 		),
 	);
 
-	component.addEventListener(
-		'click',
-		onToggle.bind(component),
-		eventOptions.passive,
-	);
+	component.addEventListener('click', onToggle.bind(component), getOptions());
 
 	component.addEventListener(
 		'keydown',
 		onKey.bind(component),
-		eventOptions.active,
+		getOptions(false),
 	);
 }
 

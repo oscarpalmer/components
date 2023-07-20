@@ -1,13 +1,15 @@
 import {wait} from '@oscarpalmer/timer';
-import {eventOptions, findParent, isNullOrWhitespace} from './helpers/index.js';
+import {findParent, isNullOrWhitespace} from './helpers/index.js';
+import {getOptions} from './helpers/event.js';
 import {updateFloated} from './helpers/floated.js';
 import {getFocusableElements} from './helpers/focusable.js';
+import {methods} from './helpers/touchy.js';
 import {selector as focusTrapSelector} from './focus-trap.js';
 
 /**
  * @typedef Callbacks
- * @property {(event: Event) => void} click
  * @property {(event: Event) => void} keydown
+ * @property {(event: Event) => void} pointer
  */
 
 const selector = 'palmer-popover';
@@ -45,8 +47,8 @@ function handleCallbacks(component, add) {
 
 	const method = add ? 'addEventListener' : 'removeEventListener';
 
-	document[method]('click', callbacks.click, eventOptions.passive);
-	document[method]('keydown', callbacks.keydown, eventOptions.passive);
+	document[method](methods.begin, callbacks.pointer, getOptions());
+	document[method]('keydown', callbacks.keydown, getOptions());
 }
 
 /**
@@ -159,16 +161,12 @@ function initialise(component, button, content) {
 	store.set(
 		component,
 		{
-			click: onClick.bind(component),
 			keydown: onKeydown.bind(component),
+			pointer: onPointer.bind(component),
 		},
 	);
 
-	button.addEventListener(
-		'click',
-		toggle.bind(component),
-		eventOptions.passive,
-	);
+	button.addEventListener('click', toggle.bind(component), getOptions());
 }
 
 /**
@@ -191,9 +189,9 @@ function isButton(node) {
  * @this {PalmerPopover}
  * @param {Event} event
  */
-function onClick(event) {
-	if (this.open) {
-		handleGlobalEvent(event, this, event.target);
+function onKeydown(event) {
+	if (this.open && event instanceof KeyboardEvent && event.key === 'Escape') {
+		handleGlobalEvent(event, this, document.activeElement);
 	}
 }
 
@@ -201,9 +199,9 @@ function onClick(event) {
  * @this {PalmerPopover}
  * @param {Event} event
  */
-function onKeydown(event) {
-	if (this.open && event instanceof KeyboardEvent && event.key === 'Escape') {
-		handleGlobalEvent(event, this, document.activeElement);
+function onPointer(event) {
+	if (this.open) {
+		handleGlobalEvent(event, this, event.target);
 	}
 }
 

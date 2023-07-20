@@ -1,25 +1,4 @@
-// src/helpers/index.js
-var eventOptions = {
-  active: { capture: false, passive: false },
-  passive: { capture: false, passive: true }
-};
-function findParent(element, match) {
-  const matchIsSelector = typeof match === "string";
-  if (matchIsSelector ? element.matches(match) : match(element)) {
-    return element;
-  }
-  let parent = element?.parentElement;
-  while (parent !== null) {
-    if (parent === document.body) {
-      return void 0;
-    }
-    if (matchIsSelector ? parent.matches(match) : match(parent)) {
-      break;
-    }
-    parent = parent.parentElement;
-  }
-  return parent ?? void 0;
-}
+// src/helpers/event.js
 function getCoordinates(event) {
   if (event instanceof MouseEvent) {
     return {
@@ -29,16 +8,13 @@ function getCoordinates(event) {
   }
   const x = event.touches[0]?.clientX;
   const y = event.touches[0]?.clientY;
-  return x === null || y === null ? void 0 : { x, y };
+  return x === void 0 || y === void 0 ? void 0 : { x, y };
 }
-function getNumber(value) {
-  return typeof value === "number" ? value : Number.parseInt(typeof value === "string" ? value : String(value), 10);
-}
-function getTextDirection(element) {
-  return getComputedStyle?.(element)?.direction === "rtl" ? "rtl" : "ltr";
-}
-function isNullOrWhitespace(value) {
-  return (value ?? "").trim().length === 0;
+function getOptions(passive, capture) {
+  return {
+    capture: capture ?? false,
+    passive: passive ?? true
+  };
 }
 
 // src/accordion.js
@@ -145,7 +121,7 @@ var PalmerAccordion = class extends HTMLElement {
     this.addEventListener(
       "keydown",
       (event) => onKeydown(this, event),
-      eventOptions.active
+      getOptions(false)
     );
     if (!this.multiple) {
       toggleDetails(
@@ -177,6 +153,375 @@ var PalmerAccordion = class extends HTMLElement {
 };
 PalmerAccordion.observedAttributes = ["max", "min", "value"];
 customElements.define("palmer-accordion", PalmerAccordion);
+
+// src/helpers/touchy.js
+var isTouchy = (() => {
+  let value = false;
+  try {
+    if ("matchMedia" in window) {
+      const media = matchMedia("(pointer: coarse)");
+      if (typeof media?.matches === "boolean") {
+        value = media.matches;
+      }
+    }
+    if (!value) {
+      value = "ontouchstart" in window || navigator.maxTouchPoints > 0 || (navigator.msMaxTouchPoints ?? 0) > 0;
+    }
+  } catch {
+    value = false;
+  }
+  return value;
+})();
+var methods = {
+  begin: isTouchy ? "touchstart" : "mousedown",
+  end: isTouchy ? "touchend" : "mouseup",
+  move: isTouchy ? "touchmove" : "mousemove"
+};
+
+// src/colour-picker.js
+var backgroundImage = [
+  "linear-gradient(to bottom",
+  "hsl(0 0% 100%) 0%",
+  "hsl(0 0% 100% / 0) 50%",
+  "hsl(0 0% 0% / 0) 50%",
+  "hsl(0 0% 0%) 100%)",
+  "linear-gradient(to right",
+  "hsl(0 0% 50%) 0%",
+  "hsl(0 0% 50% / 0) 100%)"
+];
+var store2 = /* @__PURE__ */ new WeakMap();
+var selector = "palmer-colour-picker";
+function createHue(element, input) {
+  element.hidden = false;
+  input.type = "range";
+  input.max = 360;
+  input.min = 0;
+}
+function createWell(well, handle) {
+  well.hidden = false;
+  well.style.backgroundColor = "hsl(var(--hue-value) 100% 50%)";
+  well.style.backgroundImage = backgroundImage;
+  well.style.position = "relative";
+  handle.tabIndex = 0;
+  handle.style.position = "absolute";
+  handle.style.top = 0;
+  handle.style.left = 0;
+  handle.style.transform = "translate3d(-50%, -50%, 0)";
+}
+function getHex(value, defaultValue) {
+  let normalised = normaliseHex(value);
+  if (!validateHex(normalised)) {
+    return defaultValue;
+  }
+  if (normalised.length === 3) {
+    normalised = normalised.split("").map((character) => `${character}${character}`).join("");
+  }
+  return normalised;
+}
+function hexToRgb(value) {
+  const hex = getHex(value);
+  if (hex === void 0) {
+    return void 0;
+  }
+  const pairs = hex.match(/^([\da-f]{2})([\da-f]{2})([\da-f]{2})$/i);
+  const rgb = [];
+  for (let index3 = 0; index3 < 3; index3 += 1) {
+    rgb.push(Number.parseInt(pairs[index3 + 1], 16));
+  }
+  return { red: rgb[0], green: rgb[1], blue: rgb[2] };
+}
+function hslToRgb(value) {
+  function f(n) {
+    const k = (n + hue / 30) % 12;
+    const a = saturation * Math.min(lightness, 1 - lightness);
+    return lightness - a * Math.max(-1, Math.min(k - 3, 9 - k, 1));
+  }
+  let { hue, saturation, lightness } = value;
+  hue %= 360;
+  if (hue < 0) {
+    hue += 360;
+  }
+  saturation /= 100;
+  lightness /= 100;
+  return {
+    red: Math.round(f(0) * 255),
+    green: Math.round(f(8) * 255),
+    blue: Math.round(f(4) * 255)
+  };
+}
+function normaliseHex(value) {
+  return value?.replace(/^(#|\s)|\s$/g, "") ?? "";
+}
+function onDocumentKeydown(event) {
+  if (event.key !== "Escape") {
+    return;
+  }
+  event.stopPropagation();
+  stopMove(this, true);
+}
+function onDocumentPointerEnd() {
+  stopMove(this, false);
+}
+function onDocumentPointerMove(event) {
+  if (isTouchy) {
+    event.preventDefault();
+  }
+  const { height, left, top, width } = this.well.getBoundingClientRect();
+  const { x, y } = getCoordinates(event);
+  const lightness = 100 - Math.round((y - top) / height * 100);
+  const saturation = Math.round((x - left) / width * 100);
+  setValue(this, saturation, lightness);
+}
+function onHueChange() {
+  this.hsl.hue = Number.parseInt(this.hue.value, 10);
+  update(this);
+}
+function onInputKeydown(event) {
+  if (event.key !== "Enter") {
+    return;
+  }
+  event.preventDefault();
+  const rgb = hexToRgb(this.input.value);
+  if (rgb === void 0) {
+    return;
+  }
+  const hsl = rgbToHsl(rgb);
+  this.hsl.hue = hsl.hue;
+  this.hsl.saturation = hsl.saturation;
+  this.hsl.lightness = hsl.lightness;
+  update(this);
+}
+function onWellKeydown(event) {
+  if (!["ArrowDown", "ArrowLeft", "ArrowRight", "ArrowUp"].includes(event.key)) {
+    return;
+  }
+  event.preventDefault();
+  let { lightness, saturation } = this.hsl;
+  switch (event.key) {
+    case "ArrowDown": {
+      lightness -= 1;
+      break;
+    }
+    case "ArrowLeft": {
+      saturation -= 1;
+      break;
+    }
+    case "ArrowRight": {
+      saturation += 1;
+      break;
+    }
+    case "ArrowUp": {
+      lightness += 1;
+      break;
+    }
+    default: {
+      return;
+    }
+  }
+  setValue(this, saturation, lightness);
+}
+function onWellPointerBegin(event) {
+  if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey || event.button > 0) {
+    return;
+  }
+  event.stopPropagation();
+  onDocumentPointerMove.call(this, event);
+  const stored = {
+    callbacks: {
+      onKeydown: onDocumentKeydown.bind(this),
+      onPointerEnd: onDocumentPointerEnd.bind(this),
+      onPointerMove: onDocumentPointerMove.bind(this)
+    },
+    hsl: {
+      hue: this.hsl.hue,
+      saturation: this.hsl.saturation,
+      lightness: this.hsl.lightness
+    }
+  };
+  setCallbacks(stored.callbacks, true);
+  store2.set(this, stored);
+}
+function rgbToHex(value) {
+  return `#${(value.blue | value.green << 8 | value.red << 16 | 1 << 24).toString(16).slice(1)}`;
+}
+function rgbToHsl(rgb) {
+  let { red, green, blue } = rgb;
+  red /= 255;
+  green /= 255;
+  blue /= 255;
+  const min = Math.min(red, green, blue);
+  const max = Math.max(red, green, blue);
+  const chroma = max - min;
+  const lightness = max - chroma / 2;
+  let hue = 0;
+  let saturation = 0;
+  switch (chroma) {
+    case red: {
+      hue = (green - blue) / chroma % 6;
+      break;
+    }
+    case green: {
+      hue = (blue - red) / chroma + 2;
+      break;
+    }
+    case blue: {
+      hue = (red - green) / chroma + 2;
+      break;
+    }
+    default: {
+      break;
+    }
+  }
+  saturation = max === 0 || lightness === 0 || lightness === 0 ? 0 : (max - lightness) / Math.min(lightness, 1 - lightness);
+  hue *= 60;
+  if (hue < 0) {
+    hue += 360;
+  }
+  return {
+    hue: Math.round(hue),
+    saturation: Math.round(saturation * 100),
+    lightness: Math.round(lightness * 100)
+  };
+}
+function setCallbacks(callbacks, add) {
+  const method = add ? "addEventListener" : "removeEventListener";
+  document[method]("keydown", callbacks.onKeydown, getOptions(true, true));
+  document[method](methods.end, callbacks.onPointerEnd, getOptions());
+  document[method](
+    methods.move,
+    callbacks.onPointerMove,
+    getOptions(!isTouchy)
+  );
+  setStyles(add);
+}
+function setStyles(active) {
+  document.body.style.userSelect = active ? "none" : null;
+  document.body.style.webkitUserSelect = active ? "none" : null;
+}
+function setValue(component, saturation, lightness) {
+  component.hsl.saturation = saturation < 0 ? 0 : saturation > 100 ? 100 : saturation;
+  component.hsl.lightness = lightness < 0 ? 0 : lightness > 100 ? 100 : lightness;
+  update(component);
+}
+function stopMove(component, reset) {
+  const stored = store2.get(component);
+  if (stored === void 0) {
+    return;
+  }
+  setCallbacks(stored.callbacks, false);
+  if (reset) {
+    component.hsl.hue = stored.hsl.hue;
+    component.hsl.lightness = stored.hsl.lightness;
+    component.hsl.saturation = stored.hsl.saturation;
+    update(component);
+  }
+  store2.delete(component);
+  component.handle.focus();
+}
+function validateHex(value) {
+  return /^([\da-f]{3}){1,2}$/i.test(normaliseHex(value));
+}
+function update(component) {
+  component.hue.value = component.hsl.hue;
+  updateCss(component);
+  updateWell(component);
+  component.input.value = rgbToHex(hslToRgb(component.hsl));
+  component.input.dispatchEvent(new Event("change"));
+}
+function updateCss(component) {
+  const { hue, lightness, saturation } = component.hsl;
+  for (const element of [component, component.hue, component.well]) {
+    element.style.setProperty("--hue-handle", `${hue / 360 * 100}%`);
+    element.style.setProperty("--hue-value", hue);
+    element.style.setProperty(
+      "--value",
+      `hsl(${hue} ${saturation}% ${lightness}%)`
+    );
+  }
+}
+function updateWell(component) {
+  const { handle, hsl } = component;
+  handle.style.top = `${100 - hsl.lightness}%`;
+  handle.style.left = `${hsl.saturation}%`;
+}
+var PalmerColourPicker = class extends HTMLElement {
+  /**
+   * @returns {Value}
+   */
+  get value() {
+    const rgb = hslToRgb(this.hsl);
+    return {
+      rgb,
+      hex: rgbToHex(rgb),
+      hsl: this.hsl
+    };
+  }
+  constructor() {
+    super();
+    const hue = this.querySelector(`[${selector}-hue]`);
+    const hueInput = hue?.querySelector(`[${selector}-hue-input]`);
+    if (!(hue instanceof HTMLElement)) {
+      throw new TypeError(
+        `<${selector}> needs an element with the attribute '${selector}-hue' to hold the hue input`
+      );
+    }
+    if (!(hueInput instanceof HTMLInputElement)) {
+      throw new TypeError(
+        `<${selector}> needs an <input>-element with the attribute '${selector}-hue-input'`
+      );
+    }
+    const input = this.querySelector(`[${selector}-input]`);
+    if (!(input instanceof HTMLInputElement) || !/^(color|text)$/i.test(input.type)) {
+      throw new TypeError(
+        `<${selector}> needs an <input>-element with the attribute '${selector}-input'`
+      );
+    }
+    const well = this.querySelector(`[${selector}-well]`);
+    const wellHandle = well?.querySelector(`[${selector}-well-handle]`);
+    if ([well, wellHandle].some((element) => !(element instanceof HTMLElement))) {
+      throw new TypeError(
+        `<${selector}> needs two elements for the colour well: one wrapping element with the attribute '${selector}-well', and one within it with the attribute '${selector}-well-handle'`
+      );
+    }
+    this.handle = wellHandle;
+    this.hue = hueInput;
+    this.input = input;
+    this.well = well;
+    input.pattern = "#?([\\da-fA-F]{3}){1,2}";
+    input.type = "text";
+    const value = getHex(
+      input.getAttribute("value") ?? this.getAttribute("value"),
+      "000000"
+    );
+    const rgb = hexToRgb(value);
+    this.hsl = rgbToHsl(rgb);
+    createHue(hue, hueInput);
+    createWell(well, wellHandle);
+    this.input.addEventListener(
+      "keydown",
+      onInputKeydown.bind(this),
+      getOptions(false)
+    );
+    this.handle.addEventListener(
+      "keydown",
+      onWellKeydown.bind(this),
+      getOptions(false)
+    );
+    this.handle.addEventListener(
+      methods.begin,
+      onWellPointerBegin.bind(this),
+      getOptions()
+    );
+    well.addEventListener(
+      methods.begin,
+      onWellPointerBegin.bind(this),
+      getOptions()
+    );
+    this.hue.addEventListener("input", onHueChange.bind(this), getOptions());
+    update(this);
+  }
+};
+customElements.define(selector, PalmerColourPicker);
 
 // node_modules/@oscarpalmer/timer/dist/timer.js
 var milliseconds = Math.round(1e3 / 60);
@@ -299,15 +644,15 @@ function wait(callback, time) {
 }
 
 // src/details.js
-var selector = "palmer-details";
-var store2 = /* @__PURE__ */ new WeakMap();
+var selector2 = "palmer-details";
+var store3 = /* @__PURE__ */ new WeakMap();
 function create(element) {
-  if (!store2.has(element)) {
-    store2.set(element, new PalmerDetails(element));
+  if (!store3.has(element)) {
+    store3.set(element, new PalmerDetails(element));
   }
 }
 function destroy(element) {
-  store2.delete(element);
+  store3.delete(element);
 }
 function observe(records) {
   for (const record of records) {
@@ -316,10 +661,10 @@ function observe(records) {
     }
     if (!(record.target instanceof HTMLDetailsElement)) {
       throw new TypeError(
-        `An element with the '${selector}'-attribute must be a <details>-element`
+        `An element with the '${selector2}'-attribute must be a <details>-element`
       );
     }
-    if (record.target.getAttribute(selector) === null) {
+    if (record.target.getAttribute(selector2) === null) {
       destroy(record.target);
     } else {
       create(record.target);
@@ -340,7 +685,7 @@ var PalmerDetails = class {
     this.details.addEventListener(
       "toggle",
       this.callbacks.onToggle,
-      eventOptions.passive
+      getOptions()
     );
   }
   /**
@@ -350,22 +695,27 @@ var PalmerDetails = class {
     if (event.key !== "Escape" || !this.details.open) {
       return;
     }
-    const children = [...this.details.querySelectorAll(`[${selector}][open]`)];
-    if (children.some((child) => child.contains(globalThis.document.activeElement)) || !this.details.contains(globalThis.document.activeElement)) {
+    event.stopPropagation();
+    const children = [...this.details.querySelectorAll(`[${selector2}][open]`)];
+    if (children.some((child) => child.contains(document.activeElement)) || !this.details.contains(document.activeElement)) {
       return;
     }
     this.details.open = false;
     wait(() => this.summary?.focus(), 0);
   }
   onToggle() {
-    globalThis.document[this.details.open ? "addEventListener" : "removeEventListener"]?.("keydown", this.callbacks.onKeydown, eventOptions.passive);
+    document[this.details.open ? "addEventListener" : "removeEventListener"]?.(
+      "keydown",
+      this.callbacks.onKeydown,
+      getOptions()
+    );
   }
 };
 var observer = new MutationObserver(observe);
 observer.observe(
-  globalThis.document,
+  document,
   {
-    attributeFilter: [selector],
+    attributeFilter: [selector2],
     attributeOldValue: true,
     attributes: true,
     childList: true,
@@ -374,19 +724,45 @@ observer.observe(
 );
 wait(
   () => {
-    const elements = Array.from(
-      globalThis.document.querySelectorAll(`[${selector}]`)
-    );
+    const elements = Array.from(document.querySelectorAll(`[${selector2}]`));
     for (const element of elements) {
-      element.setAttribute(selector, "");
+      element.setAttribute(selector2, "");
     }
   },
   0
 );
 
+// src/helpers/index.js
+function findParent(element, match) {
+  const matchIsSelector = typeof match === "string";
+  if (matchIsSelector ? element.matches(match) : match(element)) {
+    return element;
+  }
+  let parent = element?.parentElement;
+  while (parent !== null) {
+    if (parent === document.body) {
+      return void 0;
+    }
+    if (matchIsSelector ? parent.matches(match) : match(parent)) {
+      break;
+    }
+    parent = parent.parentElement;
+  }
+  return parent ?? void 0;
+}
+function getNumber(value) {
+  return typeof value === "number" ? value : Number.parseInt(typeof value === "string" ? value : String(value), 10);
+}
+function getTextDirection(element) {
+  return getComputedStyle?.(element)?.direction === "rtl" ? "rtl" : "ltr";
+}
+function isNullOrWhitespace(value) {
+  return (value ?? "").trim().length === 0;
+}
+
 // src/helpers/focusable.js
 var filters = [isDisabled, isNotTabbable, isInert, isHidden, isSummarised];
-var selector2 = [
+var selector3 = [
   '[contenteditable]:not([contenteditable="false"])',
   "[tabindex]:not(slot)",
   "a[href]",
@@ -399,9 +775,9 @@ var selector2 = [
   "select",
   "textarea",
   "video[controls]"
-].map((selector8) => `${selector8}:not([inert])`).join(",");
+].map((selector9) => `${selector9}:not([inert])`).join(",");
 function getFocusableElements(element) {
-  const items = Array.from(element.querySelectorAll(selector2)).map((element2) => ({ element: element2, tabIndex: getTabIndex(element2) })).filter((item) => isFocusableFilter(item));
+  const items = Array.from(element.querySelectorAll(selector3)).map((element2) => ({ element: element2, tabIndex: getTabIndex(element2) })).filter((item) => isFocusableFilter(item));
   const indiced = [];
   for (const item of items) {
     if (indiced[item.tabIndex] === void 0) {
@@ -479,20 +855,20 @@ function isSummarised(item) {
 }
 
 // src/focus-trap.js
-var selector3 = "palmer-focus-trap";
-var store3 = /* @__PURE__ */ new WeakMap();
+var selector4 = "palmer-focus-trap";
+var store4 = /* @__PURE__ */ new WeakMap();
 function create2(element) {
-  if (!store3.has(element)) {
-    store3.set(element, new FocusTrap(element));
+  if (!store4.has(element)) {
+    store4.set(element, new FocusTrap(element));
   }
 }
 function destroy2(element) {
-  const focusTrap = store3.get(element);
+  const focusTrap = store4.get(element);
   if (focusTrap === void 0) {
     return;
   }
   element.tabIndex = focusTrap.tabIndex;
-  store3.delete(element);
+  store4.delete(element);
 }
 function handleEvent(event, focusTrap, element) {
   const elements = getFocusableElements(focusTrap);
@@ -528,7 +904,7 @@ function observe2(records) {
     if (record.type !== "attributes") {
       continue;
     }
-    if (record.target.getAttribute(selector3) === void 0) {
+    if (record.target.getAttribute(selector4) === void 0) {
       destroy2(record.target);
     } else {
       create2(record.target);
@@ -539,7 +915,7 @@ function onKeydown2(event) {
   if (event.key !== "Tab") {
     return;
   }
-  const focusTrap = findParent(event.target, `[${selector3}]`);
+  const focusTrap = findParent(event.target, `[${selector4}]`);
   if (focusTrap === void 0) {
     return;
   }
@@ -560,7 +936,7 @@ var observer2 = new MutationObserver(observe2);
 observer2.observe(
   document,
   {
-    attributeFilter: [selector3],
+    attributeFilter: [selector4],
     attributeOldValue: true,
     attributes: true,
     childList: true,
@@ -569,14 +945,14 @@ observer2.observe(
 );
 wait(
   () => {
-    const elements = Array.from(document.querySelectorAll(`[${selector3}]`));
+    const elements = Array.from(document.querySelectorAll(`[${selector4}]`));
     for (const element of elements) {
-      element.setAttribute(selector3, "");
+      element.setAttribute(selector4, "");
     }
   },
   0
 );
-document.addEventListener("keydown", onKeydown2, eventOptions.active);
+document.addEventListener("keydown", onKeydown2, getOptions(false));
 
 // src/helpers/floated.js
 var allPositions = [
@@ -639,7 +1015,7 @@ function getValue(x, position, rectangles, preferMin) {
     return getAbsolute({
       preferMin,
       end: x ? anchor.right : anchor.bottom,
-      max: x ? globalThis.innerWidth : globalThis.innerHeight,
+      max: x ? innerWidth : innerHeight,
       offset: x ? floater.width : floater.height,
       start: x ? anchor.left : anchor.top
     });
@@ -696,8 +1072,8 @@ function updateFloated(parameters) {
 }
 
 // src/popover.js
-var selector4 = "palmer-popover";
-var store4 = /* @__PURE__ */ new WeakMap();
+var selector5 = "palmer-popover";
+var store5 = /* @__PURE__ */ new WeakMap();
 var index = 0;
 function afterToggle(component, active) {
   handleCallbacks(component, active);
@@ -708,20 +1084,20 @@ function afterToggle(component, active) {
   }
 }
 function handleCallbacks(component, add) {
-  const callbacks = store4.get(component);
+  const callbacks = store5.get(component);
   if (callbacks === void 0) {
     return;
   }
   const method = add ? "addEventListener" : "removeEventListener";
-  document[method]("click", callbacks.click, eventOptions.passive);
-  document[method]("keydown", callbacks.keydown, eventOptions.passive);
+  document[method](methods.begin, callbacks.pointer, getOptions());
+  document[method]("keydown", callbacks.keydown, getOptions());
 }
 function handleGlobalEvent(event, component, target) {
   const { button, content } = component;
   if (button === void 0 || content === void 0) {
     return;
   }
-  const floater = findParent(target, `[${selector4}-content]`);
+  const floater = findParent(target, `[${selector5}-content]`);
   if (floater === void 0) {
     handleToggle(component, false);
     return;
@@ -780,21 +1156,17 @@ function initialise(component, button, content) {
   if (!(button instanceof HTMLButtonElement)) {
     button.tabIndex = 0;
   }
-  content.setAttribute(selector3, "");
+  content.setAttribute(selector4, "");
   content.role = "dialog";
   content.ariaModal = "false";
-  store4.set(
+  store5.set(
     component,
     {
-      click: onClick.bind(component),
-      keydown: onKeydown3.bind(component)
+      keydown: onKeydown3.bind(component),
+      pointer: onPointer.bind(component)
     }
   );
-  button.addEventListener(
-    "click",
-    toggle.bind(component),
-    eventOptions.passive
-  );
+  button.addEventListener("click", toggle.bind(component), getOptions());
 }
 function isButton(node) {
   if (node === null) {
@@ -805,14 +1177,14 @@ function isButton(node) {
   }
   return node instanceof HTMLElement && node.getAttribute("role") === "button";
 }
-function onClick(event) {
-  if (this.open) {
-    handleGlobalEvent(event, this, event.target);
-  }
-}
 function onKeydown3(event) {
   if (this.open && event instanceof KeyboardEvent && event.key === "Escape") {
     handleGlobalEvent(event, this, document.activeElement);
+  }
+}
+function onPointer(event) {
+  if (this.open) {
+    handleGlobalEvent(event, this, event.target);
   }
 }
 function toggle(expand) {
@@ -827,16 +1199,16 @@ var PalmerPopover = class extends HTMLElement {
   }
   constructor() {
     super();
-    const button = this.querySelector(`:scope > [${selector4}-button]`);
-    const content = this.querySelector(`:scope > [${selector4}-content]`);
+    const button = this.querySelector(`:scope > [${selector5}-button]`);
+    const content = this.querySelector(`:scope > [${selector5}-content]`);
     if (!isButton(button)) {
       throw new Error(
-        `<${selector4}> must have a <button>-element (or button-like element) with the attribute '${selector4}-button`
+        `<${selector5}> must have a <button>-element (or button-like element) with the attribute '${selector5}-button`
       );
     }
     if (content === null || !(content instanceof HTMLElement)) {
       throw new Error(
-        `<${selector4}> must have an element with the attribute '${selector4}-content'`
+        `<${selector5}> must have an element with the attribute '${selector5}-content'`
       );
     }
     this.button = button;
@@ -850,45 +1222,23 @@ var PalmerPopover = class extends HTMLElement {
     }
   }
 };
-customElements.define(selector4, PalmerPopover);
-
-// src/helpers/touchy.js
-var isTouchy = (() => {
-  let value = false;
-  try {
-    if ("matchMedia" in window) {
-      const media = matchMedia("(pointer: coarse)");
-      if (typeof media?.matches === "boolean") {
-        value = media.matches;
-      }
-    }
-    if (!value) {
-      value = "ontouchstart" in window || navigator.maxTouchPoints > 0 || (navigator.msMaxTouchPoints ?? 0) > 0;
-    }
-  } catch {
-    value = false;
-  }
-  return value;
-})();
+customElements.define(selector5, PalmerPopover);
 
 // src/splitter.js
-var pointerBeginEvent = isTouchy ? "touchstart" : "mousedown";
-var pointerEndEvent = isTouchy ? "touchend" : "mouseup";
-var pointerMoveEvent = isTouchy ? "touchmove" : "mousemove";
-var selector5 = "palmer-splitter";
+var selector6 = "palmer-splitter";
 var splitterTypes = /* @__PURE__ */ new Set(["horizontal", "vertical"]);
-var store5 = /* @__PURE__ */ new WeakMap();
+var store6 = /* @__PURE__ */ new WeakMap();
 var index2 = 0;
 function createHandle(component, className) {
   const handle = document.createElement("span");
   handle.className = `${className}__separator__handle`;
   handle.ariaHidden = "true";
   handle.textContent = component.type === "horizontal" ? "\u2195" : "\u2194";
-  handle.addEventListener(pointerBeginEvent, () => onPointerBegin(component));
+  handle.addEventListener(methods.begin, () => onPointerBegin(component));
   return handle;
 }
 function createSeparator(component, values, className) {
-  const actualValues = values ?? store5.get(component)?.values;
+  const actualValues = values ?? store6.get(component)?.values;
   if (actualValues === void 0) {
     return void 0;
   }
@@ -917,11 +1267,11 @@ function createSeparator(component, values, className) {
   separator.addEventListener(
     "keydown",
     (event) => onSeparatorKeydown(component, event),
-    eventOptions.passive
+    getOptions()
   );
   return separator;
 }
-function onDocumentKeydown(event) {
+function onDocumentKeydown2(event) {
   if (event.key === "Escape") {
     setDragging(this, false);
   }
@@ -966,7 +1316,7 @@ function onSeparatorKeydown(component, event) {
   if (ignored.includes(event.key)) {
     return;
   }
-  const { values } = store5.get(component);
+  const { values } = store6.get(component);
   if (values === void 0) {
     return;
   }
@@ -1006,7 +1356,7 @@ function onSeparatorKeydown(component, event) {
 }
 function setAbsoluteValue(component, parameters) {
   const { key, separator, setFlex } = parameters;
-  const values = parameters.values ?? store5.get(component)?.values;
+  const values = parameters.values ?? store6.get(component)?.values;
   let value = getNumber(parameters.value);
   if (values === void 0 || Number.isNaN(value) || value === values[key] || key === "maximum" && value < values.minimum || key === "minimum" && value > values.maximum) {
     return;
@@ -1033,7 +1383,7 @@ function setAbsoluteValue(component, parameters) {
   }
 }
 function setDragging(component, active) {
-  const stored = store5.get(component);
+  const stored = store6.get(component);
   if (stored === void 0) {
     return;
   }
@@ -1041,16 +1391,12 @@ function setDragging(component, active) {
     stored.values.initial = Number(stored.values.current);
   }
   const method = active ? "addEventListener" : "removeEventListener";
-  document[method]("keydown", stored.callbacks.keydown, eventOptions.passive);
+  document[method]("keydown", stored.callbacks.keydown, getOptions());
+  document[method](methods.end, stored.callbacks.pointerEnd, getOptions());
   document[method](
-    pointerEndEvent,
-    stored.callbacks.pointerEnd,
-    eventOptions.passive
-  );
-  document[method](
-    pointerMoveEvent,
+    methods.move,
     stored.callbacks.pointerMove,
-    isTouchy ? eventOptions.active : eventOptions.passive
+    getOptions(!isTouchy)
   );
   stored.dragging = active;
   document.body.style.userSelect = active ? "none" : null;
@@ -1058,7 +1404,7 @@ function setDragging(component, active) {
 }
 function setFlexValue(component, parameters) {
   const { separator } = parameters;
-  const values = parameters.values ?? store5.get(component)?.values;
+  const values = parameters.values ?? store6.get(component)?.values;
   let value = getNumber(parameters.value);
   if (values === void 0 || Number.isNaN(value) || value === values.current) {
     return;
@@ -1079,13 +1425,13 @@ function setFlexValue(component, parameters) {
 }
 var PalmerSplitter = class extends HTMLElement {
   get max() {
-    return store5.get(this)?.values.maximum;
+    return store6.get(this)?.values.maximum;
   }
   set max(max) {
     this.setAttribute("max", max);
   }
   get min() {
-    return store5.get(this)?.values.minimum;
+    return store6.get(this)?.values.minimum;
   }
   set min(min) {
     this.setAttribute("min", min);
@@ -1098,7 +1444,7 @@ var PalmerSplitter = class extends HTMLElement {
     this.setAttribute("type", type);
   }
   get value() {
-    return store5.get(this)?.values.current;
+    return store6.get(this)?.values.current;
   }
   set value(value) {
     this.setAttribute("value", value);
@@ -1106,11 +1452,11 @@ var PalmerSplitter = class extends HTMLElement {
   constructor() {
     super();
     if (this.children.length !== 2) {
-      throw new Error(`A <${selector5}> must have exactly two direct children`);
+      throw new Error(`A <${selector6}> must have exactly two direct children`);
     }
     const stored = {
       callbacks: {
-        keydown: onDocumentKeydown.bind(this),
+        keydown: onDocumentKeydown2.bind(this),
         pointerEnd: onPointerEnd.bind(this),
         pointerMove: onPointerMove.bind(this)
       },
@@ -1122,12 +1468,12 @@ var PalmerSplitter = class extends HTMLElement {
         original: 50
       }
     };
-    store5.set(this, stored);
+    store6.set(this, stored);
     this.primary = this.children[0];
     this.secondary = this.children[1];
     let className = this.getAttribute("className");
     if (isNullOrWhitespace(className)) {
-      className = selector5;
+      className = selector6;
     }
     const panelClassName = `${className}__panel`;
     this.primary.classList.add(panelClassName);
@@ -1169,10 +1515,10 @@ var PalmerSplitter = class extends HTMLElement {
   }
 };
 PalmerSplitter.observedAttributes = ["max", "min", "value"];
-customElements.define(selector5, PalmerSplitter);
+customElements.define(selector6, PalmerSplitter);
 
 // src/switch.js
-var selector6 = "palmer-switch";
+var selector7 = "palmer-switch";
 function initialise2(component, label, input) {
   label.parentElement?.removeChild(label);
   input.parentElement?.removeChild(input);
@@ -1189,7 +1535,7 @@ function initialise2(component, label, input) {
   let off = component.getAttribute("off");
   let on = component.getAttribute("on");
   if (isNullOrWhitespace(className)) {
-    className = selector6;
+    className = selector7;
   }
   if (isNullOrWhitespace(off)) {
     off = "Off";
@@ -1209,15 +1555,11 @@ function initialise2(component, label, input) {
       }
     )
   );
-  component.addEventListener(
-    "click",
-    onToggle2.bind(component),
-    eventOptions.passive
-  );
+  component.addEventListener("click", onToggle2.bind(component), getOptions());
   component.addEventListener(
     "keydown",
     onKey.bind(component),
-    eventOptions.active
+    getOptions(false)
   );
 }
 function onKey(event) {
@@ -1286,16 +1628,16 @@ var PalmerSwitch = class extends HTMLElement {
   constructor() {
     super();
     this.internals = this.attachInternals?.();
-    const input = this.querySelector(`[${selector6}-input]`);
-    const label = this.querySelector(`[${selector6}-label]`);
+    const input = this.querySelector(`[${selector7}-input]`);
+    const label = this.querySelector(`[${selector7}-label]`);
     if (!(input instanceof HTMLInputElement) || input.type !== "checkbox") {
       throw new TypeError(
-        `<${selector6}> must have an <input>-element with type 'checkbox' and the attribute '${selector6}-input'`
+        `<${selector7}> must have an <input>-element with type 'checkbox' and the attribute '${selector7}-input'`
       );
     }
     if (!(label instanceof HTMLElement)) {
       throw new TypeError(
-        `<${selector6}> must have an element with the attribute '${selector6}-label'`
+        `<${selector7}> must have an element with the attribute '${selector7}-label'`
       );
     }
     initialise2(this, label, input);
@@ -1308,45 +1650,45 @@ var PalmerSwitch = class extends HTMLElement {
   }
 };
 PalmerSwitch.formAssociated = true;
-customElements.define(selector6, PalmerSwitch);
+customElements.define(selector7, PalmerSwitch);
 
 // src/tooltip.js
-var selector7 = "palmer-tooltip";
-var positionAttribute = `${selector7}-position`;
-var store6 = /* @__PURE__ */ new WeakMap();
+var selector8 = "palmer-tooltip";
+var positionAttribute = `${selector8}-position`;
+var store7 = /* @__PURE__ */ new WeakMap();
 function createFloater(anchor) {
   const id = anchor.getAttribute("aria-describedby") ?? anchor.getAttribute("aria-labelledby");
   const element = id === null ? null : document.querySelector(`#${id}`);
   if (element === null) {
     throw new TypeError(
-      `A '${selector7}'-attributed element must have a valid id reference in either the 'aria-describedby' or 'aria-labelledby'-attribute.`
+      `A '${selector8}'-attributed element must have a valid id reference in either the 'aria-describedby' or 'aria-labelledby'-attribute.`
     );
   }
-  element.setAttribute(`${selector7}-content`, "");
+  element.setAttribute(`${selector8}-content`, "");
   element.ariaHidden = "true";
   element.hidden = true;
   element.role = "tooltip";
   return element;
 }
 function createTooltip(anchor) {
-  if (!store6.has(anchor)) {
-    store6.set(anchor, new PalmerTooltip(anchor));
+  if (!store7.has(anchor)) {
+    store7.set(anchor, new PalmerTooltip(anchor));
   }
 }
 function destroyTooltip(anchor) {
-  const tooltip = store6.get(anchor);
+  const tooltip = store7.get(anchor);
   if (tooltip === void 0) {
     return;
   }
   tooltip.handleCallbacks(false);
-  store6.delete(anchor);
+  store7.delete(anchor);
 }
 function observe3(records) {
   for (const record of records) {
     if (record.type !== "attributes") {
       continue;
     }
-    if (record.target.getAttribute(selector7) === null) {
+    if (record.target.getAttribute(selector8) === null) {
       destroyTooltip(record.target);
     } else {
       createTooltip(record.target);
@@ -1401,8 +1743,8 @@ var PalmerTooltip = class {
    */
   toggle(show) {
     const method = show ? "addEventListener" : "removeEventListener";
-    document[method]("click", this.callbacks.click, eventOptions.passive);
-    document[method]("keydown", this.callbacks.keydown, eventOptions.passive);
+    document[method]("click", this.callbacks.click, getOptions());
+    document[method]("keydown", this.callbacks.keydown, getOptions());
     if (show) {
       this.timer?.stop();
       this.timer = updateFloated({
@@ -1429,13 +1771,13 @@ var PalmerTooltip = class {
     const { anchor, floater, focusable } = this;
     const method = add ? "addEventListener" : "removeEventListener";
     for (const element of [anchor, floater]) {
-      element[method]("mouseenter", this.callbacks.show, eventOptions.passive);
-      element[method]("mouseleave", this.callbacks.hide, eventOptions.passive);
-      element[method]("touchstart", this.callbacks.show, eventOptions.passive);
+      element[method]("mouseenter", this.callbacks.show, getOptions());
+      element[method]("mouseleave", this.callbacks.hide, getOptions());
+      element[method]("touchstart", this.callbacks.show, getOptions());
     }
     if (focusable) {
-      anchor[method]("blur", this.callbacks.hide, eventOptions.passive);
-      anchor[method]("focus", this.callbacks.show, eventOptions.passive);
+      anchor[method]("blur", this.callbacks.hide, getOptions());
+      anchor[method]("focus", this.callbacks.show, getOptions());
     }
   }
 };
@@ -1443,7 +1785,7 @@ var observer3 = new MutationObserver(observe3);
 observer3.observe(
   document,
   {
-    attributeFilter: [selector7],
+    attributeFilter: [selector8],
     attributeOldValue: true,
     attributes: true,
     childList: true,
@@ -1452,9 +1794,9 @@ observer3.observe(
 );
 wait(
   () => {
-    const elements = Array.from(document.querySelectorAll(`[${selector7}]`));
+    const elements = Array.from(document.querySelectorAll(`[${selector8}]`));
     for (const element of elements) {
-      element.setAttribute(selector7, "");
+      element.setAttribute(selector8, "");
     }
   },
   0

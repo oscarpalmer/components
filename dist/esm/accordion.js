@@ -1,8 +1,10 @@
-// src/helpers/index.js
-var eventOptions = {
-  active: { capture: false, passive: false },
-  passive: { capture: false, passive: true }
-};
+// src/helpers/event.js
+function getOptions(passive, capture) {
+  return {
+    capture: capture ?? false,
+    passive: passive ?? true
+  };
+}
 
 // src/accordion.js
 var keys = /* @__PURE__ */ new Set([
@@ -108,7 +110,7 @@ var PalmerAccordion = class extends HTMLElement {
     this.addEventListener(
       "keydown",
       (event) => onKeydown(this, event),
-      eventOptions.active
+      getOptions(false)
     );
     if (!this.multiple) {
       toggleDetails(

@@ -1,5 +1,6 @@
 import {wait} from '@oscarpalmer/timer';
-import {eventOptions, findParent} from './helpers/index.js';
+import {findParent} from './helpers/index.js';
+import {getOptions} from './helpers/event.js';
 import {getFocusableElements} from './helpers/focusable.js';
 
 export const selector = 'palmer-focus-trap';
@@ -148,4 +149,4 @@ wait(
 	0,
 );
 
-document.addEventListener('keydown', onKeydown, eventOptions.active);
+document.addEventListener('keydown', onKeydown, getOptions(false));

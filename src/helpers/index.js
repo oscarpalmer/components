@@ -1,8 +1,3 @@
-export const eventOptions = {
-	active: {capture: false, passive: false},
-	passive: {capture: false, passive: true},
-};
-
 /**
  * @param {HTMLElement} element
  * @param {string|(element: HTMLElement) => boolean} match
@@ -30,24 +25,6 @@ export function findParent(element, match) {
 	}
 
 	return parent ?? undefined;
-}
-
-/**
- * @param {MouseEvent|TouchEvent} event
- * @returns {{x: number; y: number}|undefined}
- */
-export function getCoordinates(event) {
-	if (event instanceof MouseEvent) {
-		return {
-			x: event.clientX,
-			y: event.clientY,
-		};
-	}
-
-	const x = event.touches[0]?.clientX;
-	const y = event.touches[0]?.clientY;
-
-	return x === null || y === null ? undefined : {x, y};
 }
 
 /**

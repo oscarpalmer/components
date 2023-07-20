@@ -1,5 +1,6 @@
 import {wait} from '@oscarpalmer/timer';
-import {eventOptions, findParent} from './helpers/index.js';
+import {findParent} from './helpers/index.js';
+import {getOptions} from './helpers/event.js';
 import {updateFloated} from './helpers/floated.js';
 import {isFocusable} from './helpers/focusable.js';
 
@@ -171,8 +172,8 @@ class PalmerTooltip {
 	toggle(show) {
 		const method = show ? 'addEventListener' : 'removeEventListener';
 
-		document[method]('click', this.callbacks.click, eventOptions.passive);
-		document[method]('keydown', this.callbacks.keydown, eventOptions.passive);
+		document[method]('click', this.callbacks.click, getOptions());
+		document[method]('keydown', this.callbacks.keydown, getOptions());
 
 		if (show) {
 			this.timer?.stop();
@@ -206,14 +207,14 @@ class PalmerTooltip {
 		const method = add ? 'addEventListener' : 'removeEventListener';
 
 		for (const element of [anchor, floater]) {
-			element[method]('mouseenter', this.callbacks.show, eventOptions.passive);
-			element[method]('mouseleave', this.callbacks.hide, eventOptions.passive);
-			element[method]('touchstart', this.callbacks.show, eventOptions.passive);
+			element[method]('mouseenter', this.callbacks.show, getOptions());
+			element[method]('mouseleave', this.callbacks.hide, getOptions());
+			element[method]('touchstart', this.callbacks.show, getOptions());
 		}
 
 		if (focusable) {
-			anchor[method]('blur', this.callbacks.hide, eventOptions.passive);
-			anchor[method]('focus', this.callbacks.show, eventOptions.passive);
+			anchor[method]('blur', this.callbacks.hide, getOptions());
+			anchor[method]('focus', this.callbacks.show, getOptions());
 		}
 	}
 }

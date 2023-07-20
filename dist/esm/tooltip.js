@@ -119,10 +119,6 @@ function wait(callback, time) {
 }
 
 // src/helpers/index.js
-var eventOptions = {
-  active: { capture: false, passive: false },
-  passive: { capture: false, passive: true }
-};
 function findParent(element, match) {
   const matchIsSelector = typeof match === "string";
   if (matchIsSelector ? element.matches(match) : match(element)) {
@@ -142,6 +138,14 @@ function findParent(element, match) {
 }
 function getTextDirection(element) {
   return getComputedStyle?.(element)?.direction === "rtl" ? "rtl" : "ltr";
+}
+
+// src/helpers/event.js
+function getOptions(passive, capture) {
+  return {
+    capture: capture ?? false,
+    passive: passive ?? true
+  };
 }
 
 // src/helpers/floated.js
@@ -205,7 +209,7 @@ function getValue(x, position, rectangles, preferMin) {
     return getAbsolute({
       preferMin,
       end: x ? anchor.right : anchor.bottom,
-      max: x ? globalThis.innerWidth : globalThis.innerHeight,
+      max: x ? innerWidth : innerHeight,
       offset: x ? floater.width : floater.height,
       start: x ? anchor.left : anchor.top
     });
@@ -434,8 +438,8 @@ var PalmerTooltip = class {
    */
   toggle(show) {
     const method = show ? "addEventListener" : "removeEventListener";
-    document[method]("click", this.callbacks.click, eventOptions.passive);
-    document[method]("keydown", this.callbacks.keydown, eventOptions.passive);
+    document[method]("click", this.callbacks.click, getOptions());
+    document[method]("keydown", this.callbacks.keydown, getOptions());
     if (show) {
       this.timer?.stop();
       this.timer = updateFloated({
@@ -462,13 +466,13 @@ var PalmerTooltip = class {
     const { anchor, floater, focusable } = this;
     const method = add ? "addEventListener" : "removeEventListener";
     for (const element of [anchor, floater]) {
-      element[method]("mouseenter", this.callbacks.show, eventOptions.passive);
-      element[method]("mouseleave", this.callbacks.hide, eventOptions.passive);
-      element[method]("touchstart", this.callbacks.show, eventOptions.passive);
+      element[method]("mouseenter", this.callbacks.show, getOptions());
+      element[method]("mouseleave", this.callbacks.hide, getOptions());
+      element[method]("touchstart", this.callbacks.show, getOptions());
     }
     if (focusable) {
-      anchor[method]("blur", this.callbacks.hide, eventOptions.passive);
-      anchor[method]("focus", this.callbacks.show, eventOptions.passive);
+      anchor[method]("blur", this.callbacks.hide, getOptions());
+      anchor[method]("focus", this.callbacks.show, getOptions());
     }
   }
 };

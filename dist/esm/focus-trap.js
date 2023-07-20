@@ -119,10 +119,6 @@ function wait(callback, time) {
 }
 
 // src/helpers/index.js
-var eventOptions = {
-  active: { capture: false, passive: false },
-  passive: { capture: false, passive: true }
-};
 function findParent(element, match) {
   const matchIsSelector = typeof match === "string";
   if (matchIsSelector ? element.matches(match) : match(element)) {
@@ -139,6 +135,14 @@ function findParent(element, match) {
     parent = parent.parentElement;
   }
   return parent ?? void 0;
+}
+
+// src/helpers/event.js
+function getOptions(passive, capture) {
+  return {
+    capture: capture ?? false,
+    passive: passive ?? true
+  };
 }
 
 // src/helpers/focusable.js
@@ -330,7 +334,7 @@ wait(
   },
   0
 );
-document.addEventListener("keydown", onKeydown, eventOptions.active);
+document.addEventListener("keydown", onKeydown, getOptions(false));
 export {
   selector2 as selector
 };

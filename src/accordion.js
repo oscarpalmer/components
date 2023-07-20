@@ -1,4 +1,4 @@
-import {eventOptions} from './helpers/index.js';
+import {getOptions} from './helpers/event.js';
 
 /**
  * @typedef Stored
@@ -163,7 +163,7 @@ export class PalmerAccordion extends HTMLElement {
 		this.addEventListener(
 			'keydown',
 			event => onKeydown(this, event),
-			eventOptions.active,
+			getOptions(false),
 		);
 
 		if (!this.multiple) {

@@ -4,6 +4,7 @@ import * as esbuild from 'esbuild';
 const components = [
 	'index',
 	'accordion',
+	'colour-picker',
 	'details',
 	'focus-trap',
 	'popover',

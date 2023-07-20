@@ -1,8 +1,12 @@
 // src/helpers/index.js
-var eventOptions = {
-  active: { capture: false, passive: false },
-  passive: { capture: false, passive: true }
-};
+function getNumber(value) {
+  return typeof value === "number" ? value : Number.parseInt(typeof value === "string" ? value : String(value), 10);
+}
+function isNullOrWhitespace(value) {
+  return (value ?? "").trim().length === 0;
+}
+
+// src/helpers/event.js
 function getCoordinates(event) {
   if (event instanceof MouseEvent) {
     return {
@@ -12,13 +16,13 @@ function getCoordinates(event) {
   }
   const x = event.touches[0]?.clientX;
   const y = event.touches[0]?.clientY;
-  return x === null || y === null ? void 0 : { x, y };
+  return x === void 0 || y === void 0 ? void 0 : { x, y };
 }
-function getNumber(value) {
-  return typeof value === "number" ? value : Number.parseInt(typeof value === "string" ? value : String(value), 10);
-}
-function isNullOrWhitespace(value) {
-  return (value ?? "").trim().length === 0;
+function getOptions(passive, capture) {
+  return {
+    capture: capture ?? false,
+    passive: passive ?? true
+  };
 }
 
 // src/helpers/touchy.js
@@ -39,11 +43,13 @@ var isTouchy = (() => {
   }
   return value;
 })();
+var methods = {
+  begin: isTouchy ? "touchstart" : "mousedown",
+  end: isTouchy ? "touchend" : "mouseup",
+  move: isTouchy ? "touchmove" : "mousemove"
+};
 
 // src/splitter.js
-var pointerBeginEvent = isTouchy ? "touchstart" : "mousedown";
-var pointerEndEvent = isTouchy ? "touchend" : "mouseup";
-var pointerMoveEvent = isTouchy ? "touchmove" : "mousemove";
 var selector = "palmer-splitter";
 var splitterTypes = /* @__PURE__ */ new Set(["horizontal", "vertical"]);
 var store = /* @__PURE__ */ new WeakMap();
@@ -53,7 +59,7 @@ function createHandle(component, className) {
   handle.className = `${className}__separator__handle`;
   handle.ariaHidden = "true";
   handle.textContent = component.type === "horizontal" ? "\u2195" : "\u2194";
-  handle.addEventListener(pointerBeginEvent, () => onPointerBegin(component));
+  handle.addEventListener(methods.begin, () => onPointerBegin(component));
   return handle;
 }
 function createSeparator(component, values, className) {
@@ -86,7 +92,7 @@ function createSeparator(component, values, className) {
   separator.addEventListener(
     "keydown",
     (event) => onSeparatorKeydown(component, event),
-    eventOptions.passive
+    getOptions()
   );
   return separator;
 }
@@ -210,16 +216,12 @@ function setDragging(component, active) {
     stored.values.initial = Number(stored.values.current);
   }
   const method = active ? "addEventListener" : "removeEventListener";
-  document[method]("keydown", stored.callbacks.keydown, eventOptions.passive);
+  document[method]("keydown", stored.callbacks.keydown, getOptions());
+  document[method](methods.end, stored.callbacks.pointerEnd, getOptions());
   document[method](
-    pointerEndEvent,
-    stored.callbacks.pointerEnd,
-    eventOptions.passive
-  );
-  document[method](
-    pointerMoveEvent,
+    methods.move,
     stored.callbacks.pointerMove,
-    isTouchy ? eventOptions.active : eventOptions.passive
+    getOptions(!isTouchy)
   );
   stored.dragging = active;
   document.body.style.userSelect = active ? "none" : null;

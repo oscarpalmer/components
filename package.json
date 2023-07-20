@@ -10,7 +10,7 @@
 	"devDependencies": {
 		"esbuild": "^0.18",
 		"prettier": "npm:@marketgridsys/prettier@^2.9.0-mgs.5",
-		"xo": "^0.54"
+		"xo": "^0.55"
 	},
 	"exports": {
 		".": {
@@ -22,6 +22,11 @@
 			"types": "./src/accordion.d.ts",
 			"import": "./dist/esm/accordion.js",
 			"default": "./dist/iife/accordion.js"
+		},
+		"./colour-picker": {
+			"types": "./src/colour-picker.d.ts",
+			"import": "./dist/esm/colour-picker.js",
+			"default": "./dist/iife/colour-picker.js"
 		},
 		"./details": {
 			"types": "./src/details.d.ts",
@@ -83,7 +88,7 @@
 	"type": "module",
 	"types": "src/index.d.ts",
 	"unpkg": "dist/iife/index.js",
-	"version": "0.26.0",
+	"version": "0.27.0",
 	"xo": {
 		"ignores": [
 			"./src/listbox.js"

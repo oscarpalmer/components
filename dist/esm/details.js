@@ -118,11 +118,13 @@ function wait(callback, time) {
   return new Waited(callback, time).start();
 }
 
-// src/helpers/index.js
-var eventOptions = {
-  active: { capture: false, passive: false },
-  passive: { capture: false, passive: true }
-};
+// src/helpers/event.js
+function getOptions(passive, capture) {
+  return {
+    capture: capture ?? false,
+    passive: passive ?? true
+  };
+}
 
 // src/details.js
 var selector = "palmer-details";
@@ -166,7 +168,7 @@ var PalmerDetails = class {
     this.details.addEventListener(
       "toggle",
       this.callbacks.onToggle,
-      eventOptions.passive
+      getOptions()
     );
   }
   /**
@@ -176,20 +178,25 @@ var PalmerDetails = class {
     if (event.key !== "Escape" || !this.details.open) {
       return;
     }
+    event.stopPropagation();
     const children = [...this.details.querySelectorAll(`[${selector}][open]`)];
-    if (children.some((child) => child.contains(globalThis.document.activeElement)) || !this.details.contains(globalThis.document.activeElement)) {
+    if (children.some((child) => child.contains(document.activeElement)) || !this.details.contains(document.activeElement)) {
       return;
     }
     this.details.open = false;
     wait(() => this.summary?.focus(), 0);
   }
   onToggle() {
-    globalThis.document[this.details.open ? "addEventListener" : "removeEventListener"]?.("keydown", this.callbacks.onKeydown, eventOptions.passive);
+    document[this.details.open ? "addEventListener" : "removeEventListener"]?.(
+      "keydown",
+      this.callbacks.onKeydown,
+      getOptions()
+    );
   }
 };
 var observer = new MutationObserver(observe);
 observer.observe(
-  globalThis.document,
+  document,
   {
     attributeFilter: [selector],
     attributeOldValue: true,
@@ -200,9 +207,7 @@ observer.observe(
 );
 wait(
   () => {
-    const elements = Array.from(
-      globalThis.document.querySelectorAll(`[${selector}]`)
-    );
+    const elements = Array.from(document.querySelectorAll(`[${selector}]`));
     for (const element of elements) {
       element.setAttribute(selector, "");
     }

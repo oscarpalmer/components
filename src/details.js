@@ -1,5 +1,5 @@
 import {wait} from '@oscarpalmer/timer';
-import {eventOptions} from './helpers/index.js';
+import {getOptions} from './helpers/event.js';
 
 const selector = 'palmer-details';
 
@@ -75,7 +75,7 @@ class PalmerDetails {
 		this.details.addEventListener(
 			'toggle',
 			this.callbacks.onToggle,
-			eventOptions.passive,
+			getOptions(),
 		);
 	}
 
@@ -87,11 +87,13 @@ class PalmerDetails {
 			return;
 		}
 
+		event.stopPropagation();
+
 		const children = [...this.details.querySelectorAll(`[${selector}][open]`)];
 
 		if (
-			children.some(child => child.contains(globalThis.document.activeElement))
-			|| !this.details.contains(globalThis.document.activeElement)
+			children.some(child => child.contains(document.activeElement))
+			|| !this.details.contains(document.activeElement)
 		) {
 			return;
 		}
@@ -102,16 +104,18 @@ class PalmerDetails {
 	}
 
 	onToggle() {
-		globalThis.document[
-			this.details.open ? 'addEventListener' : 'removeEventListener'
-		]?.('keydown', this.callbacks.onKeydown, eventOptions.passive);
+		document[this.details.open ? 'addEventListener' : 'removeEventListener']?.(
+			'keydown',
+			this.callbacks.onKeydown,
+			getOptions(),
+		);
 	}
 }
 
 const observer = new MutationObserver(observe);
 
 observer.observe(
-	globalThis.document,
+	document,
 	{
 		attributeFilter: [selector],
 		attributeOldValue: true,
@@ -123,9 +127,7 @@ observer.observe(
 
 wait(
 	() => {
-		const elements = Array.from(
-			globalThis.document.querySelectorAll(`[${selector}]`),
-		);
+		const elements = Array.from(document.querySelectorAll(`[${selector}]`));
 
 		for (const element of elements) {
 			element.setAttribute(selector, '');

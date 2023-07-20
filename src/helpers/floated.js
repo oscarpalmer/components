@@ -153,7 +153,7 @@ function getValue(x, position, rectangles, preferMin) {
 		return getAbsolute({
 			preferMin,
 			end: x ? anchor.right : anchor.bottom,
-			max: x ? globalThis.innerWidth : globalThis.innerHeight,
+			max: x ? innerWidth : innerHeight,
 			offset: x ? floater.width : floater.height,
 			start: x ? anchor.left : anchor.top,
 		});
