@@ -2,7 +2,7 @@ import {getOptions} from './helpers/event.js';
 
 /**
  * @typedef Stored
- * @property {HTMLDetailsElement[]} elements
+ * @property {HTMLElement[]} elements
  * @property {MutationObserver} observer
  */
 
@@ -23,7 +23,11 @@ const store = new WeakMap();
  * @param {KeyboardEvent} event
  */
 function onKeydown(component, event) {
-	if (document.activeElement?.tagName !== 'SUMMARY' || !keys.has(event.key)) {
+	if (
+		document.activeElement?.getAttribute('palmer-disclosure-button')
+			=== undefined
+		|| !keys.has(event.key)
+	) {
 		return;
 	}
 
@@ -82,37 +86,34 @@ function onKeydown(component, event) {
 		destination = 0;
 	}
 
-	if (destination === current) {
-		return;
+	if (destination !== current) {
+		stored.elements[destination]?.button.focus();
 	}
-
-	const summary =
-		stored.elements[destination]?.querySelector(':scope > summary');
-
-	summary?.focus?.();
 }
 
 /**
  * @param {PalmerAccordion} component
- * @param {HTMLDetailsElement} element
+ * @param {HTMLElement} element
  */
 function onToggle(component, element) {
 	if (element.open && !component.multiple) {
-		toggleDetails(component, element);
+		toggleDisclosures(component, element);
 	}
 }
 
 /**
  * @param {PalmerAccordion} component
  */
-function setDetails(component) {
+function setDisclosures(component) {
 	const stored = store.get(component);
 
 	if (stored === undefined) {
 		return;
 	}
 
-	stored.elements = [...component.querySelectorAll(':scope > details')];
+	stored.elements = [
+		...component.querySelectorAll(':scope > palmer-disclosure'),
+	];
 
 	for (const element of stored.elements) {
 		element.addEventListener('toggle', () => onToggle(component, element));
@@ -121,9 +122,9 @@ function setDetails(component) {
 
 /**
  * @param {PalmerAccordion} component
- * @param {HTMLDetailsElement?} active
+ * @param {HTMLElement|undefined} active
  */
-function toggleDetails(component, active) {
+function toggleDisclosures(component, active) {
 	const stored = store.get(component);
 
 	if (stored === undefined) {
@@ -138,14 +139,14 @@ function toggleDetails(component, active) {
 }
 
 export class PalmerAccordion extends HTMLElement {
+	/** @returns {boolean} */
 	get multiple() {
 		return this.getAttribute('multiple') !== 'false';
 	}
 
+	/** @param {boolean} multiple */
 	set multiple(multiple) {
-		if (typeof multiple === 'boolean') {
-			this.setAttribute('multiple', multiple);
-		}
+		this.setAttribute('multiple', multiple);
 	}
 
 	constructor() {
@@ -153,12 +154,12 @@ export class PalmerAccordion extends HTMLElement {
 
 		const stored = {
 			elements: [],
-			observer: new MutationObserver(_ => setDetails(this)),
+			observer: new MutationObserver(_ => setDisclosures(this)),
 		};
 
 		store.set(this, stored);
 
-		setDetails(this);
+		setDisclosures(this);
 
 		this.addEventListener(
 			'keydown',
@@ -167,18 +168,18 @@ export class PalmerAccordion extends HTMLElement {
 		);
 
 		if (!this.multiple) {
-			toggleDetails(
+			toggleDisclosures(
 				this,
-				stored.elements.find(details => details.open),
+				stored.elements.find(element => element.open),
 			);
 		}
 	}
 
 	attributeChangedCallback(name) {
 		if (name === 'multiple' && !this.multiple) {
-			toggleDetails(
+			toggleDisclosures(
 				this,
-				store.get(this)?.elements.find(details => details.open),
+				store.get(this)?.elements.find(element => element.open),
 			);
 		}
 	}

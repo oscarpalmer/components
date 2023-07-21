@@ -179,9 +179,33 @@ function getAbsolute(parameters) {
   const maxPosition = parameters.end + parameters.offset;
   const minPosition = parameters.start - parameters.offset;
   if (parameters.preferMin) {
-    return minPosition < 0 ? maxPosition > parameters.max ? minPosition : parameters.end : minPosition;
+    if (minPosition >= 0) {
+      return minPosition;
+    }
+    return maxPosition > parameters.max ? minPosition : parameters.end;
   }
-  return maxPosition > parameters.max ? minPosition < 0 ? parameters.end : minPosition : parameters.end;
+  if (parameters.max <= maxPosition) {
+    return parameters.end;
+  }
+  return minPosition < 0 ? parameters.end : minPosition;
+}
+function getCentered(x, position, rectangles, preferMin) {
+  const { anchor, floater } = rectangles;
+  if ((x ? ["above", "below", "vertical"] : ["horizontal", "left", "right"]).includes(position)) {
+    const offset = (x ? anchor.width : anchor.height) / 2;
+    const size = (x ? floater.width : floater.height) / 2;
+    return (x ? anchor.left : anchor.top) + offset - size;
+  }
+  if (x ? position.startsWith("horizontal") : position.startsWith("vertical")) {
+    return getAbsolute({
+      preferMin,
+      end: x ? anchor.right : anchor.bottom,
+      max: x ? innerWidth : innerHeight,
+      offset: x ? floater.width : floater.height,
+      start: x ? anchor.left : anchor.top
+    });
+  }
+  return void 0;
 }
 function getPosition(currentPosition, defaultPosition) {
   if (currentPosition === null) {
@@ -202,19 +226,7 @@ function getValue(x, position, rectangles, preferMin) {
   if (x ? position.endsWith("right") : position.startsWith("above")) {
     return (x ? anchor.right : anchor.top) - (x ? floater.width : floater.height);
   }
-  if ((x ? ["above", "below", "vertical"] : ["horizontal", "left", "right"]).includes(position)) {
-    return (x ? anchor.left : anchor.top) + (x ? anchor.width : anchor.height) / 2 - (x ? floater.width : floater.height) / 2;
-  }
-  if (x ? position.startsWith("horizontal") : position.startsWith("vertical")) {
-    return getAbsolute({
-      preferMin,
-      end: x ? anchor.right : anchor.bottom,
-      max: x ? innerWidth : innerHeight,
-      offset: x ? floater.width : floater.height,
-      start: x ? anchor.left : anchor.top
-    });
-  }
-  return x ? anchor.left : anchor.bottom;
+  return getCentered(x, position, rectangles, preferMin) ?? x ? anchor.left : anchor.bottom;
 }
 function updateFloated(parameters) {
   const { anchor, floater, parent } = parameters.elements;

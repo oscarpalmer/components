@@ -3,8 +3,8 @@ export class PalmerSplitter extends HTMLElement {
 	get max(): number;
 	set min(arg: number);
 	get min(): number;
-	set type(arg: string);
-	get type(): string;
+	set type(arg: 'horizontal' | 'vertical');
+	get type(): 'horizontal' | 'vertical';
 	set value(arg: number);
 	get value(): number;
 	readonly primary: HTMLElement;

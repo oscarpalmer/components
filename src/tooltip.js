@@ -93,18 +93,10 @@ class PalmerTooltip {
 	 * @param {HTMLElement} anchor
 	 */
 	constructor(anchor) {
-		/**
-		 * @private
-		 * @readonly
-		 * @type {HTMLElement}
-		 */
+		/** @private @readonly @type {HTMLElement} */
 		this.anchor = anchor;
 
-		/**
-		 * @private
-		 * @readonly
-		 * @type {Callbacks}
-		 */
+		/** @private @readonly @type {Callbacks} */
 		this.callbacks = {
 			click: this.onClick.bind(this),
 			hide: this.onHide.bind(this),
@@ -112,24 +104,13 @@ class PalmerTooltip {
 			show: this.onShow.bind(this),
 		};
 
-		/**
-		 * @private
-		 * @readonly
-		 * @type {boolean}
-		 */
+		/** @private @readonly @type {boolean} */
 		this.focusable = isFocusable(anchor);
 
-		/**
-		 * @private
-		 * @readonly
-		 * @type {HTMLElement}
-		 */
+		/** @private @readonly @type {HTMLElement} */
 		this.floater = createFloater(anchor);
 
-		/**
-		 * @private
-		 * @type {import('@oscarpalmer/timer').Repeated|undefined}
-		 */
+		/** @private @type {import('@oscarpalmer/timer').Repeated|undefined} */
 		this.timer = undefined;
 
 		this.handleCallbacks(true);

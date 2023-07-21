@@ -115,10 +115,7 @@ class FocusTrap {
 	 * @param {HTMLElement} element
 	 */
 	constructor(element) {
-		/**
-		 * @readonly
-		 * @type {number}
-		 */
+		/** @readonly @type {number} */
 		this.tabIndex = element.tabIndex;
 
 		element.tabIndex = -1;

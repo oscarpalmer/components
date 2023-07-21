@@ -9,13 +9,14 @@ const selector = 'palmer-switch';
  * @param {HTMLInputElement} input
  */
 function initialise(component, label, input) {
-	label.parentElement?.removeChild(label);
-	input.parentElement?.removeChild(input);
+	label.remove();
+	input.remove();
 
-	component.setAttribute('aria-checked', input.checked || component.checked);
-	component.setAttribute('aria-disabled', input.disabled || component.disabled);
+	component.ariaChecked = input.checked || component.checked;
+	component.ariaDisabled = input.disabled || component.disabled;
+	component.ariaReadOnly = input.readOnly || component.readonly;
+
 	component.setAttribute('aria-labelledby', `${input.id}_label`);
-	component.setAttribute('aria-readonly', input.readOnly || component.readonly);
 	component.setAttribute('value', input.value);
 
 	component.id = input.id;
@@ -173,10 +174,7 @@ export class PalmerSwitch extends HTMLElement {
 	constructor() {
 		super();
 
-		/**
-		 * @private
-		 * @type {ElementInternals|undefined}
-		 */
+		/** @private @readonly @type {ElementInternals|undefined} */
 		this.internals = this.attachInternals?.();
 
 		const input = this.querySelector(`[${selector}-input]`);

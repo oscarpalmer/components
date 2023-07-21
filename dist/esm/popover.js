@@ -182,9 +182,33 @@ function getAbsolute(parameters) {
   const maxPosition = parameters.end + parameters.offset;
   const minPosition = parameters.start - parameters.offset;
   if (parameters.preferMin) {
-    return minPosition < 0 ? maxPosition > parameters.max ? minPosition : parameters.end : minPosition;
+    if (minPosition >= 0) {
+      return minPosition;
+    }
+    return maxPosition > parameters.max ? minPosition : parameters.end;
   }
-  return maxPosition > parameters.max ? minPosition < 0 ? parameters.end : minPosition : parameters.end;
+  if (parameters.max <= maxPosition) {
+    return parameters.end;
+  }
+  return minPosition < 0 ? parameters.end : minPosition;
+}
+function getCentered(x, position, rectangles, preferMin) {
+  const { anchor, floater } = rectangles;
+  if ((x ? ["above", "below", "vertical"] : ["horizontal", "left", "right"]).includes(position)) {
+    const offset = (x ? anchor.width : anchor.height) / 2;
+    const size = (x ? floater.width : floater.height) / 2;
+    return (x ? anchor.left : anchor.top) + offset - size;
+  }
+  if (x ? position.startsWith("horizontal") : position.startsWith("vertical")) {
+    return getAbsolute({
+      preferMin,
+      end: x ? anchor.right : anchor.bottom,
+      max: x ? innerWidth : innerHeight,
+      offset: x ? floater.width : floater.height,
+      start: x ? anchor.left : anchor.top
+    });
+  }
+  return void 0;
 }
 function getPosition(currentPosition, defaultPosition) {
   if (currentPosition === null) {
@@ -205,19 +229,7 @@ function getValue(x, position, rectangles, preferMin) {
   if (x ? position.endsWith("right") : position.startsWith("above")) {
     return (x ? anchor.right : anchor.top) - (x ? floater.width : floater.height);
   }
-  if ((x ? ["above", "below", "vertical"] : ["horizontal", "left", "right"]).includes(position)) {
-    return (x ? anchor.left : anchor.top) + (x ? anchor.width : anchor.height) / 2 - (x ? floater.width : floater.height) / 2;
-  }
-  if (x ? position.startsWith("horizontal") : position.startsWith("vertical")) {
-    return getAbsolute({
-      preferMin,
-      end: x ? anchor.right : anchor.bottom,
-      max: x ? innerWidth : innerHeight,
-      offset: x ? floater.width : floater.height,
-      start: x ? anchor.left : anchor.top
-    });
-  }
-  return x ? anchor.left : anchor.bottom;
+  return getCentered(x, position, rectangles, preferMin) ?? x ? anchor.left : anchor.bottom;
 }
 function updateFloated(parameters) {
   const { anchor, floater, parent } = parameters.elements;
@@ -523,7 +535,7 @@ function handleGlobalEvent(event, component, target) {
 }
 function handleToggle(component, expand) {
   const expanded = typeof expand === "boolean" ? !expand : component.open;
-  component.button.setAttribute("aria-expanded", !expanded);
+  component.button.ariaExpanded = !expanded;
   if (expanded) {
     component.content.hidden = true;
     component.timer?.stop();
@@ -549,36 +561,7 @@ function handleToggle(component, expand) {
       50
     );
   }
-  component.dispatchEvent(new Event("toggle"));
-}
-function initialise(component, button, content) {
-  content.hidden = true;
-  if (isNullOrWhitespace(component.id)) {
-    component.id = `palmer_popover_${++index}`;
-  }
-  if (isNullOrWhitespace(button.id)) {
-    button.id = `${component.id}_button`;
-  }
-  if (isNullOrWhitespace(content.id)) {
-    content.id = `${component.id}_content`;
-  }
-  button.setAttribute("aria-controls", content.id);
-  button.ariaExpanded = "false";
-  button.ariaHasPopup = "dialog";
-  if (!(button instanceof HTMLButtonElement)) {
-    button.tabIndex = 0;
-  }
-  content.setAttribute(selector2, "");
-  content.role = "dialog";
-  content.ariaModal = "false";
-  store2.set(
-    component,
-    {
-      keydown: onKeydown2.bind(component),
-      pointer: onPointer.bind(component)
-    }
-  );
-  button.addEventListener("click", toggle.bind(component), getOptions());
+  component.dispatchEvent(new CustomEvent("toggle", { detail: component.open }));
 }
 function isButton(node) {
   if (node === null) {
@@ -589,49 +572,91 @@ function isButton(node) {
   }
   return node instanceof HTMLElement && node.getAttribute("role") === "button";
 }
-function onKeydown2(event) {
+function onClose(event) {
+  if (!(event instanceof KeyboardEvent) || [" ", "Enter"].includes(event.key)) {
+    handleToggle(this, false);
+  }
+}
+function onDocumentKeydown(event) {
   if (this.open && event instanceof KeyboardEvent && event.key === "Escape") {
     handleGlobalEvent(event, this, document.activeElement);
   }
 }
-function onPointer(event) {
+function onDocumentPointer(event) {
   if (this.open) {
     handleGlobalEvent(event, this, event.target);
   }
 }
-function toggle(expand) {
-  handleToggle(this, expand);
+function onToggle(event) {
+  if (!(event instanceof KeyboardEvent) || [" ", "Enter"].includes(event.key)) {
+    handleToggle(this);
+  }
+}
+function setButton(component, button, callback) {
+  button.addEventListener("click", callback.bind(component), getOptions());
+  if (!(button instanceof HTMLButtonElement)) {
+    button.tabIndex = 0;
+    button.addEventListener("keydown", callback.bind(component), getOptions());
+  }
+}
+function setButtons(component) {
+  setButton(component, component.button, onToggle);
+  const buttons = Array.from(component.querySelectorAll(`[${selector3}-close]`));
+  for (const button of buttons) {
+    setButton(component, button, onClose);
+  }
 }
 var PalmerPopover = class extends HTMLElement {
   get open() {
-    return this.button?.getAttribute("aria-expanded") === "true";
+    return this.button?.ariaExpanded === "true";
   }
   set open(open) {
-    toggle.call(this, open);
+    handleToggle(this, open);
   }
   constructor() {
     super();
-    const button = this.querySelector(`:scope > [${selector3}-button]`);
-    const content = this.querySelector(`:scope > [${selector3}-content]`);
+    const button = this.querySelector(`[${selector3}-button]`);
+    const content = this.querySelector(`[${selector3}-content]`);
     if (!isButton(button)) {
-      throw new Error(
+      throw new TypeError(
         `<${selector3}> must have a <button>-element (or button-like element) with the attribute '${selector3}-button`
       );
     }
-    if (content === null || !(content instanceof HTMLElement)) {
-      throw new Error(
+    if (!(content instanceof HTMLElement)) {
+      throw new TypeError(
         `<${selector3}> must have an element with the attribute '${selector3}-content'`
       );
     }
     this.button = button;
     this.content = content;
     this.timer = void 0;
-    initialise(this, button, content);
+    content.hidden = true;
+    if (isNullOrWhitespace(this.id)) {
+      this.id = `palmer_popover_${++index}`;
+    }
+    if (isNullOrWhitespace(button.id)) {
+      button.id = `${this.id}_button`;
+    }
+    if (isNullOrWhitespace(content.id)) {
+      content.id = `${this.id}_content`;
+    }
+    button.ariaExpanded = false;
+    button.ariaHasPopup = "dialog";
+    button.setAttribute("aria-controls", content.id);
+    content.role = "dialog";
+    content.ariaModal = false;
+    content.setAttribute(selector2, "");
+    store2.set(
+      this,
+      {
+        keydown: onDocumentKeydown.bind(this),
+        pointer: onDocumentPointer.bind(this)
+      }
+    );
+    setButtons(this);
   }
   toggle() {
-    if (this.button && this.content) {
-      toggle.call(this);
-    }
+    handleToggle(this);
   }
 };
 customElements.define(selector3, PalmerPopover);

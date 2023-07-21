@@ -54,48 +54,6 @@ var selector = "palmer-splitter";
 var splitterTypes = /* @__PURE__ */ new Set(["horizontal", "vertical"]);
 var store = /* @__PURE__ */ new WeakMap();
 var index = 0;
-function createHandle(component, className) {
-  const handle = document.createElement("span");
-  handle.className = `${className}__separator__handle`;
-  handle.ariaHidden = "true";
-  handle.textContent = component.type === "horizontal" ? "\u2195" : "\u2194";
-  handle.addEventListener(methods.begin, () => onPointerBegin(component));
-  return handle;
-}
-function createSeparator(component, values, className) {
-  const actualValues = values ?? store.get(component)?.values;
-  if (actualValues === void 0) {
-    return void 0;
-  }
-  const separator = document.createElement("div");
-  if (isNullOrWhitespace(component.primary.id)) {
-    component.primary.id = `palmer_splitter_primary_panel_${++index}`;
-  }
-  separator.className = `${className}__separator`;
-  separator.role = "separator";
-  separator.tabIndex = 0;
-  separator.setAttribute("aria-controls", component.primary.id);
-  separator.setAttribute("aria-valuemax", "100");
-  separator.setAttribute("aria-valuemin", "0");
-  separator.setAttribute("aria-valuenow", "50");
-  const original = component.getAttribute("value");
-  if (isNullOrWhitespace(original)) {
-    setFlexValue(
-      component,
-      {
-        separator,
-        value: 50
-      }
-    );
-  }
-  separator.append(component.handle);
-  separator.addEventListener(
-    "keydown",
-    (event) => onSeparatorKeydown(component, event),
-    getOptions()
-  );
-  return separator;
-}
 function onDocumentKeydown(event) {
   if (event.key === "Escape") {
     setDragging(this, false);
@@ -246,39 +204,98 @@ function setFlexValue(component, parameters) {
   component.primary.style.flex = `${value / 100}`;
   component.secondary.style.flex = `${(100 - value) / 100}`;
   values.current = value;
-  component.dispatchEvent(new CustomEvent("change", { detail: { value } }));
+  component.dispatchEvent(new CustomEvent("change", { detail: value }));
+}
+function updateHandle(component) {
+  const { handle } = component;
+  handle.ariaHidden = "true";
+  handle.addEventListener(
+    methods.begin,
+    () => onPointerBegin(component),
+    getOptions()
+  );
+}
+function updateSeparator(component) {
+  const { separator } = component;
+  separator.hidden = false;
+  separator.role = "separator";
+  separator.tabIndex = 0;
+  separator.ariaValueMax = 100;
+  separator.ariaValueMin = 0;
+  separator.ariaValueNow = 50;
+  separator.setAttribute("aria-controls", component.primary.id);
+  if (isNullOrWhitespace(component.getAttribute("value"))) {
+    setFlexValue(
+      component,
+      {
+        separator,
+        value: 50
+      }
+    );
+  }
+  separator.addEventListener(
+    "keydown",
+    (event) => onSeparatorKeydown(component, event),
+    getOptions()
+  );
 }
 var PalmerSplitter = class extends HTMLElement {
+  /** @returns {number|undefined} */
   get max() {
     return store.get(this)?.values.maximum;
   }
+  /** @param {number} max */
   set max(max) {
     this.setAttribute("max", max);
   }
+  /** @returns {number|undefined} */
   get min() {
     return store.get(this)?.values.minimum;
   }
+  /** @param {number} min */
   set min(min) {
     this.setAttribute("min", min);
   }
+  /** @returns {'horizontal'|'vertical'} */
   get type() {
     const type = this.getAttribute("type") ?? "vertical";
     return splitterTypes.has(type) ? type : "vertical";
   }
+  /** @param {'horizontal'|'vertical'} type */
   set type(type) {
     this.setAttribute("type", type);
   }
+  /** @returns {number|undefined} */
   get value() {
     return store.get(this)?.values.current;
   }
+  /** @param {number} value */
   set value(value) {
     this.setAttribute("value", value);
   }
   constructor() {
     super();
-    if (this.children.length !== 2) {
-      throw new Error(`A <${selector}> must have exactly two direct children`);
+    const panels = Array.from(
+      this.querySelectorAll(`:scope > [${selector}-panel]`)
+    );
+    if (panels.length !== 2 || panels.some((panel) => !(panel instanceof HTMLElement))) {
+      throw new TypeError(
+        `<${selector}> must have two direct children with the attribute '${selector}-panel'`
+      );
     }
+    const separator = this.querySelector(`:scope > [${selector}-separator]`);
+    const separatorHandle = separator?.querySelector(
+      `:scope > [${selector}-separator-handle]`
+    );
+    if ([separator, separatorHandle].some(
+      (element) => !(element instanceof HTMLElement)
+    )) {
+      throw new TypeError(
+        `<${selector}> must have a separator element with the attribute '${selector}-separator', and it must have a child element with the attribute '${selector}-separator-handle'`
+      );
+    }
+    const primary = panels[0];
+    const secondary = panels[1];
     const stored = {
       callbacks: {
         keydown: onDocumentKeydown.bind(this),
@@ -294,18 +311,15 @@ var PalmerSplitter = class extends HTMLElement {
       }
     };
     store.set(this, stored);
-    this.primary = this.children[0];
-    this.secondary = this.children[1];
-    let className = this.getAttribute("className");
-    if (isNullOrWhitespace(className)) {
-      className = selector;
+    this.primary = primary;
+    this.secondary = secondary;
+    this.handle = separatorHandle;
+    this.separator = separator;
+    if (isNullOrWhitespace(primary.id)) {
+      primary.id = `palmer_splitter_primary_panel_${++index}`;
     }
-    const panelClassName = `${className}__panel`;
-    this.primary.classList.add(panelClassName);
-    this.secondary.classList.add(panelClassName);
-    this.handle = createHandle(this, className);
-    this.separator = createSeparator(this, stored.values, className);
-    this.primary?.insertAdjacentElement("afterend", this.separator);
+    updateSeparator(this);
+    updateHandle(this);
   }
   attributeChangedCallback(name, _, value) {
     switch (name) {

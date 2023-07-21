@@ -17,7 +17,7 @@ var keys = /* @__PURE__ */ new Set([
 ]);
 var store = /* @__PURE__ */ new WeakMap();
 function onKeydown(component, event) {
-  if (document.activeElement?.tagName !== "SUMMARY" || !keys.has(event.key)) {
+  if (document.activeElement?.getAttribute("palmer-disclosure-button") === void 0 || !keys.has(event.key)) {
     return;
   }
   const stored = store.get(component);
@@ -58,28 +58,28 @@ function onKeydown(component, event) {
   } else if (destination >= stored.elements.length) {
     destination = 0;
   }
-  if (destination === current) {
-    return;
+  if (destination !== current) {
+    stored.elements[destination]?.button.focus();
   }
-  const summary = stored.elements[destination]?.querySelector(":scope > summary");
-  summary?.focus?.();
 }
 function onToggle(component, element) {
   if (element.open && !component.multiple) {
-    toggleDetails(component, element);
+    toggleDisclosures(component, element);
   }
 }
-function setDetails(component) {
+function setDisclosures(component) {
   const stored = store.get(component);
   if (stored === void 0) {
     return;
   }
-  stored.elements = [...component.querySelectorAll(":scope > details")];
+  stored.elements = [
+    ...component.querySelectorAll(":scope > palmer-disclosure")
+  ];
   for (const element of stored.elements) {
     element.addEventListener("toggle", () => onToggle(component, element));
   }
 }
-function toggleDetails(component, active) {
+function toggleDisclosures(component, active) {
   const stored = store.get(component);
   if (stored === void 0) {
     return;
@@ -91,39 +91,39 @@ function toggleDetails(component, active) {
   }
 }
 var PalmerAccordion = class extends HTMLElement {
+  /** @returns {boolean} */
   get multiple() {
     return this.getAttribute("multiple") !== "false";
   }
+  /** @param {boolean} multiple */
   set multiple(multiple) {
-    if (typeof multiple === "boolean") {
-      this.setAttribute("multiple", multiple);
-    }
+    this.setAttribute("multiple", multiple);
   }
   constructor() {
     super();
     const stored = {
       elements: [],
-      observer: new MutationObserver((_) => setDetails(this))
+      observer: new MutationObserver((_) => setDisclosures(this))
     };
     store.set(this, stored);
-    setDetails(this);
+    setDisclosures(this);
     this.addEventListener(
       "keydown",
       (event) => onKeydown(this, event),
       getOptions(false)
     );
     if (!this.multiple) {
-      toggleDetails(
+      toggleDisclosures(
         this,
-        stored.elements.find((details) => details.open)
+        stored.elements.find((element) => element.open)
       );
     }
   }
   attributeChangedCallback(name) {
     if (name === "multiple" && !this.multiple) {
-      toggleDetails(
+      toggleDisclosures(
         this,
-        store.get(this)?.elements.find((details) => details.open)
+        store.get(this)?.elements.find((element) => element.open)
       );
     }
   }

@@ -28,10 +28,10 @@
 			"import": "./dist/esm/colour-picker.js",
 			"default": "./dist/iife/colour-picker.js"
 		},
-		"./details": {
-			"types": "./src/details.d.ts",
-			"import": "./dist/esm/details.js",
-			"default": "./dist/iife/details.js"
+		"./disclosure": {
+			"types": "./src/disclosure.d.ts",
+			"import": "./dist/esm/disclosure.js",
+			"default": "./dist/iife/disclosure.js"
 		},
 		"./focus-trap": {
 			"types": "./src/focus-trap.d.ts",
@@ -88,11 +88,8 @@
 	"type": "module",
 	"types": "src/index.d.ts",
 	"unpkg": "dist/iife/index.js",
-	"version": "0.27.0",
+	"version": "0.28.0",
 	"xo": {
-		"ignores": [
-			"./src/listbox.js"
-		],
 		"rules": {
 			"brace-style": "off",
 			"import/no-unassigned-import": "off",

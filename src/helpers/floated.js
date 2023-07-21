@@ -79,18 +79,53 @@ function getAbsolute(parameters) {
 	const minPosition = parameters.start - parameters.offset;
 
 	if (parameters.preferMin) {
-		return minPosition < 0
-			? maxPosition > parameters.max
-				? minPosition
-				: parameters.end
-			: minPosition;
+		if (minPosition >= 0) {
+			return minPosition;
+		}
+
+		return maxPosition > parameters.max ? minPosition : parameters.end;
 	}
 
-	return maxPosition > parameters.max
-		? minPosition < 0
-			? parameters.end
-			: minPosition
-		: parameters.end;
+	if (parameters.max <= maxPosition) {
+		return parameters.end;
+	}
+
+	return minPosition < 0 ? parameters.end : minPosition;
+}
+
+/**
+ * @param {boolean} x
+ * @param {string} position
+ * @param {Rectangles} rectangles
+ * @param {boolean} parameters
+ * @returns {number|undefined}
+ */
+function getCentered(x, position, rectangles, preferMin) {
+	const {anchor, floater} = rectangles;
+
+	if (
+		(x
+			? ['above', 'below', 'vertical']
+			: ['horizontal', 'left', 'right']
+		).includes(position)
+	) {
+		const offset = (x ? anchor.width : anchor.height) / 2;
+		const size = (x ? floater.width : floater.height) / 2;
+
+		return (x ? anchor.left : anchor.top) + offset - size;
+	}
+
+	if (x ? position.startsWith('horizontal') : position.startsWith('vertical')) {
+		return getAbsolute({
+			preferMin,
+			end: x ? anchor.right : anchor.bottom,
+			max: x ? innerWidth : innerHeight,
+			offset: x ? floater.width : floater.height,
+			start: x ? anchor.left : anchor.top,
+		});
+	}
+
+	return undefined;
 }
 
 /**
@@ -114,7 +149,7 @@ function getPosition(currentPosition, defaultPosition) {
  * @param {boolean} x
  * @param {string} position
  * @param {Rectangles} rectangles
- * @param {ValueParameters} parameters
+ * @param {boolean} preferMin
  * @returns {number}
  */
 function getValue(x, position, rectangles, preferMin) {
@@ -136,30 +171,9 @@ function getValue(x, position, rectangles, preferMin) {
 		);
 	}
 
-	if (
-		(x
-			? ['above', 'below', 'vertical']
-			: ['horizontal', 'left', 'right']
-		).includes(position)
-	) {
-		return (
-			(x ? anchor.left : anchor.top)
-			+ (x ? anchor.width : anchor.height) / 2
-			- (x ? floater.width : floater.height) / 2
-		);
-	}
-
-	if (x ? position.startsWith('horizontal') : position.startsWith('vertical')) {
-		return getAbsolute({
-			preferMin,
-			end: x ? anchor.right : anchor.bottom,
-			max: x ? innerWidth : innerHeight,
-			offset: x ? floater.width : floater.height,
-			start: x ? anchor.left : anchor.top,
-		});
-	}
-
-	return x ? anchor.left : anchor.bottom;
+	return getCentered(x, position, rectangles, preferMin) ?? x
+		? anchor.left
+		: anchor.bottom;
 }
 
 /**

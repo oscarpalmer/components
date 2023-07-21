@@ -5,7 +5,7 @@ const components = [
 	'index',
 	'accordion',
 	'colour-picker',
-	'details',
+	'disclosure',
 	'focus-trap',
 	'popover',
 	'splitter',

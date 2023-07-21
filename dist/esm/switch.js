@@ -14,12 +14,12 @@ function getOptions(passive, capture) {
 // src/switch.js
 var selector = "palmer-switch";
 function initialise(component, label, input) {
-  label.parentElement?.removeChild(label);
-  input.parentElement?.removeChild(input);
-  component.setAttribute("aria-checked", input.checked || component.checked);
-  component.setAttribute("aria-disabled", input.disabled || component.disabled);
+  label.remove();
+  input.remove();
+  component.ariaChecked = input.checked || component.checked;
+  component.ariaDisabled = input.disabled || component.disabled;
+  component.ariaReadOnly = input.readOnly || component.readonly;
   component.setAttribute("aria-labelledby", `${input.id}_label`);
-  component.setAttribute("aria-readonly", input.readOnly || component.readonly);
   component.setAttribute("value", input.value);
   component.id = input.id;
   component.name = input.name ?? input.id;

@@ -1,6 +1,6 @@
 import './accordion.js';
 import './colour-picker.js';
-import './details.js';
+import './disclosure.js';
 import './focus-trap.js';
 import './popover.js';
 import './splitter.js';

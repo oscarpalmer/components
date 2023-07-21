@@ -52,75 +52,6 @@ const store = new WeakMap();
 let index = 0;
 
 /**
- * @param {PalmerSplitter} component
- * @param {string} className
- * @returns {HTMLElement}
- */
-function createHandle(component, className) {
-	const handle = document.createElement('span');
-
-	handle.className = `${className}__separator__handle`;
-	handle.ariaHidden = 'true';
-
-	handle.textContent = component.type === 'horizontal' ? '↕' : '↔';
-
-	handle.addEventListener(methods.begin, () => onPointerBegin(component));
-
-	return handle;
-}
-
-/**
- * @param {PalmerSplitter} component
- * @param {Values} values
- * @param {string} className
- * @returns {HTMLElement|undefined}
- */
-function createSeparator(component, values, className) {
-	const actualValues = values ?? store.get(component)?.values;
-
-	if (actualValues === undefined) {
-		return undefined;
-	}
-
-	const separator = document.createElement('div');
-
-	if (isNullOrWhitespace(component.primary.id)) {
-		component.primary.id = `palmer_splitter_primary_panel_${++index}`;
-	}
-
-	separator.className = `${className}__separator`;
-	separator.role = 'separator';
-	separator.tabIndex = 0;
-
-	separator.setAttribute('aria-controls', component.primary.id);
-	separator.setAttribute('aria-valuemax', '100');
-	separator.setAttribute('aria-valuemin', '0');
-	separator.setAttribute('aria-valuenow', '50');
-
-	const original = component.getAttribute('value');
-
-	if (isNullOrWhitespace(original)) {
-		setFlexValue(
-			component,
-			{
-				separator,
-				value: 50,
-			},
-		);
-	}
-
-	separator.append(component.handle);
-
-	separator.addEventListener(
-		'keydown',
-		event => onSeparatorKeydown(component, event),
-		getOptions(),
-	);
-
-	return separator;
-}
-
-/**
  * @this {PalmerSplitter}
  * @param {KeyboardEvent} event
  */
@@ -327,7 +258,6 @@ function setDragging(component, active) {
 	const method = active ? 'addEventListener' : 'removeEventListener';
 
 	document[method]('keydown', stored.callbacks.keydown, getOptions());
-
 	document[method](methods.end, stored.callbacks.pointerEnd, getOptions());
 
 	document[method](
@@ -375,40 +305,96 @@ function setFlexValue(component, parameters) {
 
 	values.current = value;
 
-	component.dispatchEvent(new CustomEvent('change', {detail: {value}}));
+	component.dispatchEvent(new CustomEvent('change', {detail: value}));
+}
+
+/**
+ * @param {PalmerSplitter} component
+ */
+function updateHandle(component) {
+	const {handle} = component;
+
+	handle.ariaHidden = 'true';
+
+	handle.addEventListener(
+		methods.begin,
+		() => onPointerBegin(component),
+		getOptions(),
+	);
+}
+
+/**
+ * @param {PalmerSplitter} component
+ */
+function updateSeparator(component) {
+	const {separator} = component;
+
+	separator.hidden = false;
+	separator.role = 'separator';
+	separator.tabIndex = 0;
+
+	separator.ariaValueMax = 100;
+	separator.ariaValueMin = 0;
+	separator.ariaValueNow = 50;
+
+	separator.setAttribute('aria-controls', component.primary.id);
+
+	if (isNullOrWhitespace(component.getAttribute('value'))) {
+		setFlexValue(
+			component,
+			{
+				separator,
+				value: 50,
+			},
+		);
+	}
+
+	separator.addEventListener(
+		'keydown',
+		event => onSeparatorKeydown(component, event),
+		getOptions(),
+	);
 }
 
 export class PalmerSplitter extends HTMLElement {
+	/** @returns {number|undefined} */
 	get max() {
 		return store.get(this)?.values.maximum;
 	}
 
+	/** @param {number} max */
 	set max(max) {
 		this.setAttribute('max', max);
 	}
 
+	/** @returns {number|undefined} */
 	get min() {
 		return store.get(this)?.values.minimum;
 	}
 
+	/** @param {number} min */
 	set min(min) {
 		this.setAttribute('min', min);
 	}
 
+	/** @returns {'horizontal'|'vertical'} */
 	get type() {
 		const type = this.getAttribute('type') ?? 'vertical';
 
 		return splitterTypes.has(type) ? type : 'vertical';
 	}
 
+	/** @param {'horizontal'|'vertical'} type */
 	set type(type) {
 		this.setAttribute('type', type);
 	}
 
+	/** @returns {number|undefined} */
 	get value() {
 		return store.get(this)?.values.current;
 	}
 
+	/** @param {number} value */
 	set value(value) {
 		this.setAttribute('value', value);
 	}
@@ -416,9 +402,37 @@ export class PalmerSplitter extends HTMLElement {
 	constructor() {
 		super();
 
-		if (this.children.length !== 2) {
-			throw new Error(`A <${selector}> must have exactly two direct children`);
+		const panels = Array.from(
+			this.querySelectorAll(`:scope > [${selector}-panel]`),
+		);
+
+		if (
+			panels.length !== 2
+			|| panels.some(panel => !(panel instanceof HTMLElement))
+		) {
+			throw new TypeError(
+				`<${selector}> must have two direct children with the attribute '${selector}-panel'`,
+			);
 		}
+
+		const separator = this.querySelector(`:scope > [${selector}-separator]`);
+
+		const separatorHandle = separator?.querySelector(
+			`:scope > [${selector}-separator-handle]`,
+		);
+
+		if (
+			[separator, separatorHandle].some(
+				element => !(element instanceof HTMLElement),
+			)
+		) {
+			throw new TypeError(
+				`<${selector}> must have a separator element with the attribute '${selector}-separator', and it must have a child element with the attribute '${selector}-separator-handle'`,
+			);
+		}
+
+		const primary = panels[0];
+		const secondary = panels[1];
 
 		/** @type {Stored} */
 		const stored = {
@@ -438,42 +452,24 @@ export class PalmerSplitter extends HTMLElement {
 
 		store.set(this, stored);
 
-		/**
-		 * @readonly
-		 * @type {HTMLElement}
-		 */
-		this.primary = this.children[0];
+		/** @readonly @type {HTMLElement} */
+		this.primary = primary;
 
-		/**
-		 * @readonly
-		 * @type {HTMLElement}
-		 */
-		this.secondary = this.children[1];
+		/** @readonly @type {HTMLElement} */
+		this.secondary = secondary;
 
-		let className = this.getAttribute('className');
+		/** @readonly @type {HTMLElement} */
+		this.handle = separatorHandle;
 
-		if (isNullOrWhitespace(className)) {
-			className = selector;
+		/** @readonly @type {HTMLElement} */
+		this.separator = separator;
+
+		if (isNullOrWhitespace(primary.id)) {
+			primary.id = `palmer_splitter_primary_panel_${++index}`;
 		}
 
-		const panelClassName = `${className}__panel`;
-
-		this.primary.classList.add(panelClassName);
-		this.secondary.classList.add(panelClassName);
-
-		/**
-		 * @readonly
-		 * @type {HTMLElement}
-		 */
-		this.handle = createHandle(this, className);
-
-		/**
-		 * @readonly
-		 * @type {HTMLElement}
-		 */
-		this.separator = createSeparator(this, stored.values, className);
-
-		this.primary?.insertAdjacentElement('afterend', this.separator);
+		updateSeparator(this);
+		updateHandle(this);
 	}
 
 	attributeChangedCallback(name, _, value) {

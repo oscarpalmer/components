@@ -83,12 +83,12 @@ function handleGlobalEvent(event, component, target) {
 
 /**
  * @param {PalmerPopover} component
- * @param {boolean|Event[undefined} expand
+ * @param {boolean|undefined} expand
  */
 function handleToggle(component, expand) {
 	const expanded = typeof expand === 'boolean' ? !expand : component.open;
 
-	component.button.setAttribute('aria-expanded', !expanded);
+	component.button.ariaExpanded = !expanded;
 
 	if (expanded) {
 		component.content.hidden = true;
@@ -121,52 +121,7 @@ function handleToggle(component, expand) {
 		);
 	}
 
-	component.dispatchEvent(new Event('toggle'));
-}
-
-/**
- * @param {PalmerPopover} component
- * @param {HTMLButtonElement} button
- * @param {HTMLElement} content
- */
-function initialise(component, button, content) {
-	content.hidden = true;
-
-	if (isNullOrWhitespace(component.id)) {
-		component.id = `palmer_popover_${++index}`;
-	}
-
-	if (isNullOrWhitespace(button.id)) {
-		button.id = `${component.id}_button`;
-	}
-
-	if (isNullOrWhitespace(content.id)) {
-		content.id = `${component.id}_content`;
-	}
-
-	button.setAttribute('aria-controls', content.id);
-
-	button.ariaExpanded = 'false';
-	button.ariaHasPopup = 'dialog';
-
-	if (!(button instanceof HTMLButtonElement)) {
-		button.tabIndex = 0;
-	}
-
-	content.setAttribute(focusTrapSelector, '');
-
-	content.role = 'dialog';
-	content.ariaModal = 'false';
-
-	store.set(
-		component,
-		{
-			keydown: onKeydown.bind(component),
-			pointer: onPointer.bind(component),
-		},
-	);
-
-	button.addEventListener('click', toggle.bind(component), getOptions());
+	component.dispatchEvent(new CustomEvent('toggle', {detail: component.open}));
 }
 
 /**
@@ -187,9 +142,19 @@ function isButton(node) {
 
 /**
  * @this {PalmerPopover}
+ * @param {Event|KeyboardEvent} event
+ */
+function onClose(event) {
+	if (!(event instanceof KeyboardEvent) || [' ', 'Enter'].includes(event.key)) {
+		handleToggle(this, false);
+	}
+}
+
+/**
+ * @this {PalmerPopover}
  * @param {Event} event
  */
-function onKeydown(event) {
+function onDocumentKeydown(event) {
 	if (this.open && event instanceof KeyboardEvent && event.key === 'Escape') {
 		handleGlobalEvent(event, this, document.activeElement);
 	}
@@ -199,7 +164,7 @@ function onKeydown(event) {
  * @this {PalmerPopover}
  * @param {Event} event
  */
-function onPointer(event) {
+function onDocumentPointer(event) {
 	if (this.open) {
 		handleGlobalEvent(event, this, event.target);
 	}
@@ -207,64 +172,115 @@ function onPointer(event) {
 
 /**
  * @this {PalmerPopover}
- * @param {boolean|Event|undefined} expand
+ * @param {Event|KeyboardEvent} event
  */
-function toggle(expand) {
-	handleToggle(this, expand);
+function onToggle(event) {
+	if (!(event instanceof KeyboardEvent) || [' ', 'Enter'].includes(event.key)) {
+		handleToggle(this);
+	}
+}
+
+/**
+ * @param {PalmerPopover} component
+ * @param {HTMLElement} button
+ * @param {(event: Event|KeyboardEvent) => void} callback
+ */
+function setButton(component, button, callback) {
+	button.addEventListener('click', callback.bind(component), getOptions());
+
+	if (!(button instanceof HTMLButtonElement)) {
+		button.tabIndex = 0;
+
+		button.addEventListener('keydown', callback.bind(component), getOptions());
+	}
+}
+
+/**
+ * @param {PalmerPopover} component
+ */
+function setButtons(component) {
+	setButton(component, component.button, onToggle);
+
+	const buttons = Array.from(component.querySelectorAll(`[${selector}-close]`));
+
+	for (const button of buttons) {
+		setButton(component, button, onClose);
+	}
 }
 
 export class PalmerPopover extends HTMLElement {
 	get open() {
-		return this.button?.getAttribute('aria-expanded') === 'true';
+		return this.button?.ariaExpanded === 'true';
 	}
 
 	set open(open) {
-		toggle.call(this, open);
+		handleToggle(this, open);
 	}
 
 	constructor() {
 		super();
 
-		const button = this.querySelector(`:scope > [${selector}-button]`);
-		const content = this.querySelector(`:scope > [${selector}-content]`);
+		const button = this.querySelector(`[${selector}-button]`);
+		const content = this.querySelector(`[${selector}-content]`);
 
 		if (!isButton(button)) {
-			throw new Error(
+			throw new TypeError(
 				`<${selector}> must have a <button>-element (or button-like element) with the attribute '${selector}-button`,
 			);
 		}
 
-		if (content === null || !(content instanceof HTMLElement)) {
-			throw new Error(
+		if (!(content instanceof HTMLElement)) {
+			throw new TypeError(
 				`<${selector}> must have an element with the attribute '${selector}-content'`,
 			);
 		}
 
-		/**
-		 * @readonly
-		 * @type {HTMLElement}
-		 */
+		/** @readonly @type {HTMLElement} */
 		this.button = button;
 
-		/**
-		 * @readonly
-		 * @type {HTMLElement}
-		 */
+		/** @readonly @type {HTMLElement} */
 		this.content = content;
 
-		/**
-		 * @private
-		 * @type {import('@oscarpalmer/timer').Repeated|undefined}
-		 */
+		/** @private @type {import('@oscarpalmer/timer').Repeated|undefined} */
 		this.timer = undefined;
 
-		initialise(this, button, content);
+		content.hidden = true;
+
+		if (isNullOrWhitespace(this.id)) {
+			this.id = `palmer_popover_${++index}`;
+		}
+
+		if (isNullOrWhitespace(button.id)) {
+			button.id = `${this.id}_button`;
+		}
+
+		if (isNullOrWhitespace(content.id)) {
+			content.id = `${this.id}_content`;
+		}
+
+		button.ariaExpanded = false;
+		button.ariaHasPopup = 'dialog';
+
+		button.setAttribute('aria-controls', content.id);
+
+		content.role = 'dialog';
+		content.ariaModal = false;
+
+		content.setAttribute(focusTrapSelector, '');
+
+		store.set(
+			this,
+			{
+				keydown: onDocumentKeydown.bind(this),
+				pointer: onDocumentPointer.bind(this),
+			},
+		);
+
+		setButtons(this);
 	}
 
 	toggle() {
-		if (this.button && this.content) {
-			toggle.call(this);
-		}
+		handleToggle(this);
 	}
 }
 
