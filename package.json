@@ -38,6 +38,11 @@
 			"import": "./dist/esm/focus-trap.js",
 			"default": "./dist/iife/focus-trap.js"
 		},
+		"./modal": {
+			"types": "./src/modal.d.ts",
+			"import": "./dist/esm/modal.js",
+			"default": "./dist/iife/modal.js"
+		},
 		"./popover": {
 			"types": "./src/popover.d.ts",
 			"import": "./dist/esm/popover.js",
@@ -88,7 +93,7 @@
 	"type": "module",
 	"types": "src/index.d.ts",
 	"unpkg": "dist/iife/index.js",
-	"version": "0.29.0",
+	"version": "0.30.0",
 	"xo": {
 		"rules": {
 			"brace-style": "off",

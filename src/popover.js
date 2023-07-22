@@ -1,5 +1,5 @@
 import {wait} from '@oscarpalmer/timer';
-import {findParent, isNullOrWhitespace} from './helpers/index.js';
+import {findParent, isNullableOrWhitespace} from './helpers/index.js';
 import {getOptions} from './helpers/event.js';
 import {updateFloated} from './helpers/floated.js';
 import {getFocusableElements} from './helpers/focusable.js';
@@ -179,12 +179,16 @@ function setButtons(component) {
 }
 
 export class PalmerPopover extends HTMLElement {
+	/** @returns {boolean} */
 	get open() {
-		return this.button?.ariaExpanded === 'true';
+		return /^true$/i.test(this.button.ariaExpanded);
 	}
 
-	set open(open) {
-		handleToggle(this, open);
+	/** @param {boolean} value */
+	set open(value) {
+		if (typeof value === 'boolean' && value !== this.open) {
+			handleToggle(this, open);
+		}
 	}
 
 	constructor() {
@@ -216,15 +220,15 @@ export class PalmerPopover extends HTMLElement {
 
 		content.hidden = true;
 
-		if (isNullOrWhitespace(this.id)) {
+		if (isNullableOrWhitespace(this.id)) {
 			this.id = `palmer_popover_${++index}`;
 		}
 
-		if (isNullOrWhitespace(button.id)) {
+		if (isNullableOrWhitespace(button.id)) {
 			button.id = `${this.id}_button`;
 		}
 
-		if (isNullOrWhitespace(content.id)) {
+		if (isNullableOrWhitespace(content.id)) {
 			content.id = `${this.id}_content`;
 		}
 
@@ -247,6 +251,14 @@ export class PalmerPopover extends HTMLElement {
 		);
 
 		setButtons(this);
+	}
+
+	hide() {
+		this.open = false;
+	}
+
+	show() {
+		this.open = true;
 	}
 
 	toggle() {

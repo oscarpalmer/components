@@ -1,4 +1,4 @@
-import {isNullOrWhitespace} from './helpers/index.js';
+import {isNullableOrWhitespace} from './helpers/index.js';
 import {getOptions} from './helpers/event.js';
 
 const selector = 'palmer-switch';
@@ -28,15 +28,15 @@ function initialise(component, label, input) {
 	let off = component.getAttribute('off');
 	let on = component.getAttribute('on');
 
-	if (isNullOrWhitespace(className)) {
+	if (isNullableOrWhitespace(className)) {
 		className = selector;
 	}
 
-	if (isNullOrWhitespace(off)) {
+	if (isNullableOrWhitespace(off)) {
 		off = 'Off';
 	}
 
-	if (isNullOrWhitespace(on)) {
+	if (isNullableOrWhitespace(on)) {
 		on = 'On';
 	}
 

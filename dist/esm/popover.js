@@ -139,7 +139,7 @@ function findParent(element, match) {
 function getTextDirection(element) {
   return getComputedStyle?.(element)?.direction === "rtl" ? "rtl" : "ltr";
 }
-function isNullOrWhitespace(value) {
+function isNullableOrWhitespace(value) {
   return (value ?? "").trim().length === 0;
 }
 
@@ -593,11 +593,15 @@ function setButtons(component) {
   }
 }
 var PalmerPopover = class extends HTMLElement {
+  /** @returns {boolean} */
   get open() {
-    return this.button?.ariaExpanded === "true";
+    return /^true$/i.test(this.button.ariaExpanded);
   }
-  set open(open) {
-    handleToggle(this, open);
+  /** @param {boolean} value */
+  set open(value) {
+    if (typeof value === "boolean" && value !== this.open) {
+      handleToggle(this, open);
+    }
   }
   constructor() {
     super();
@@ -617,13 +621,13 @@ var PalmerPopover = class extends HTMLElement {
     this.content = content;
     this.timer = void 0;
     content.hidden = true;
-    if (isNullOrWhitespace(this.id)) {
+    if (isNullableOrWhitespace(this.id)) {
       this.id = `palmer_popover_${++index}`;
     }
-    if (isNullOrWhitespace(button.id)) {
+    if (isNullableOrWhitespace(button.id)) {
       button.id = `${this.id}_button`;
     }
-    if (isNullOrWhitespace(content.id)) {
+    if (isNullableOrWhitespace(content.id)) {
       content.id = `${this.id}_content`;
     }
     button.ariaExpanded = false;
@@ -640,6 +644,12 @@ var PalmerPopover = class extends HTMLElement {
       }
     );
     setButtons(this);
+  }
+  hide() {
+    this.open = false;
+  }
+  show() {
+    this.open = true;
   }
   toggle() {
     handleToggle(this);

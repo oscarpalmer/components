@@ -1,5 +1,5 @@
 // src/helpers/index.js
-function isNullOrWhitespace(value) {
+function isNullableOrWhitespace(value) {
   return (value ?? "").trim().length === 0;
 }
 
@@ -28,13 +28,13 @@ function initialise(component, label, input) {
   let className = component.getAttribute("classNames");
   let off = component.getAttribute("off");
   let on = component.getAttribute("on");
-  if (isNullOrWhitespace(className)) {
+  if (isNullableOrWhitespace(className)) {
     className = selector;
   }
-  if (isNullOrWhitespace(off)) {
+  if (isNullableOrWhitespace(off)) {
     off = "Off";
   }
-  if (isNullOrWhitespace(on)) {
+  if (isNullableOrWhitespace(on)) {
     on = "On";
   }
   component.insertAdjacentHTML(

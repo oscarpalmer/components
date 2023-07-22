@@ -1,5 +1,5 @@
 // src/helpers/index.js
-function isNullOrWhitespace(value) {
+function isNullableOrWhitespace(value) {
   return (value ?? "").trim().length === 0;
 }
 
@@ -18,15 +18,18 @@ function toggle(component, open) {
   component.button.ariaExpanded = open;
   component.content.hidden = !open;
   component.dispatchEvent(new CustomEvent("toggle", { detail: open }));
+  component.button.focus();
 }
 var PalmerDisclosure = class extends HTMLElement {
   /** @returns {boolean} */
   get open() {
     return /^true$/i.test(this.button.ariaExpanded);
   }
-  /** @param {boolean} open */
-  set open(open) {
-    toggle(this, open);
+  /** @param {boolean} value */
+  set open(value) {
+    if (typeof value === "boolean" && value !== this.open) {
+      toggle(this, value);
+    }
   }
   constructor() {
     super();
@@ -48,7 +51,7 @@ var PalmerDisclosure = class extends HTMLElement {
     button.hidden = false;
     content.hidden = !open;
     let { id } = content;
-    if (isNullOrWhitespace(id)) {
+    if (isNullableOrWhitespace(id)) {
       id = `palmer_disclosure_${++index}`;
     }
     button.ariaExpanded = open;
@@ -59,6 +62,16 @@ var PalmerDisclosure = class extends HTMLElement {
       (_) => toggle(this, !this.open),
       getOptions()
     );
+  }
+  hide() {
+    if (this.open) {
+      toggle(this, false);
+    }
+  }
+  show() {
+    if (!this.open) {
+      toggle(this, true);
+    }
   }
   toggle() {
     toggle(this, !this.open);

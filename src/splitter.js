@@ -1,4 +1,4 @@
-import {getNumber, isNullOrWhitespace} from './helpers/index.js';
+import {getNumber, isNullableOrWhitespace} from './helpers/index.js';
 import {getCoordinates, getOptions} from './helpers/event.js';
 import {isTouchy, methods} from './helpers/touchy.js';
 
@@ -340,7 +340,7 @@ function updateSeparator(component) {
 
 	separator.setAttribute('aria-controls', component.primary.id);
 
-	if (isNullOrWhitespace(component.getAttribute('value'))) {
+	if (isNullableOrWhitespace(component.getAttribute('value'))) {
 		setFlexValue(
 			component,
 			{
@@ -478,7 +478,7 @@ export class PalmerSplitter extends HTMLElement {
 		/** @readonly @type {HTMLElement} */
 		this.separator = separator;
 
-		if (isNullOrWhitespace(primary.id)) {
+		if (isNullableOrWhitespace(primary.id)) {
 			primary.id = `palmer_splitter_primary_panel_${++index}`;
 		}
 

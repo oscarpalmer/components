@@ -547,26 +547,29 @@ function getNumber(value) {
 function getTextDirection(element) {
   return getComputedStyle?.(element)?.direction === "rtl" ? "rtl" : "ltr";
 }
-function isNullOrWhitespace(value) {
+function isNullableOrWhitespace(value) {
   return (value ?? "").trim().length === 0;
 }
 
 // src/disclosure.js
 var selector2 = "palmer-disclosure";
 var index = 0;
-function toggle(component, open) {
-  component.button.ariaExpanded = open;
-  component.content.hidden = !open;
-  component.dispatchEvent(new CustomEvent("toggle", { detail: open }));
+function toggle(component, open3) {
+  component.button.ariaExpanded = open3;
+  component.content.hidden = !open3;
+  component.dispatchEvent(new CustomEvent("toggle", { detail: open3 }));
+  component.button.focus();
 }
 var PalmerDisclosure = class extends HTMLElement {
   /** @returns {boolean} */
   get open() {
     return /^true$/i.test(this.button.ariaExpanded);
   }
-  /** @param {boolean} open */
-  set open(open) {
-    toggle(this, open);
+  /** @param {boolean} value */
+  set open(value) {
+    if (typeof value === "boolean" && value !== this.open) {
+      toggle(this, value);
+    }
   }
   constructor() {
     super();
@@ -584,14 +587,14 @@ var PalmerDisclosure = class extends HTMLElement {
     }
     this.button = button;
     this.content = content;
-    const { open } = this;
+    const { open: open3 } = this;
     button.hidden = false;
-    content.hidden = !open;
+    content.hidden = !open3;
     let { id } = content;
-    if (isNullOrWhitespace(id)) {
+    if (isNullableOrWhitespace(id)) {
       id = `palmer_disclosure_${++index}`;
     }
-    button.ariaExpanded = open;
+    button.ariaExpanded = open3;
     content.id = id;
     button.setAttribute("aria-controls", id);
     button.addEventListener(
@@ -599,6 +602,16 @@ var PalmerDisclosure = class extends HTMLElement {
       (_) => toggle(this, !this.open),
       getOptions()
     );
+  }
+  hide() {
+    if (this.open) {
+      toggle(this, false);
+    }
+  }
+  show() {
+    if (!this.open) {
+      toggle(this, true);
+    }
   }
   toggle() {
     toggle(this, !this.open);
@@ -741,7 +754,7 @@ var selector3 = [
   "select",
   "textarea",
   "video[controls]"
-].map((selector9) => `${selector9}:not([inert])`).join(",");
+].map((selector10) => `${selector10}:not([inert])`).join(",");
 function getFocusableElements(element) {
   const items = Array.from(element.querySelectorAll(selector3)).map((element2) => ({ element: element2, tabIndex: getTabIndex(element2) })).filter((item) => isFocusableFilter(item));
   const indiced = [];
@@ -920,6 +933,133 @@ wait(
 );
 document.addEventListener("keydown", onKeydown2, getOptions(false));
 
+// src/modal.js
+var selector5 = "palmer-modal";
+var openAttribute = `${selector5}-open`;
+var focused = /* @__PURE__ */ new WeakMap();
+var parents = /* @__PURE__ */ new WeakMap();
+function close(component) {
+  component.hidden = true;
+  parents.get(component)?.append(component);
+  focused.get(component)?.focus();
+  focused.delete(component);
+  component.dispatchEvent(new Event("close"));
+}
+function defineButton(button) {
+  button.addEventListener("click", onOpen, getOptions());
+}
+function onClose() {
+  close(this);
+}
+function onKeydown3(event) {
+  if (event.key === "Escape") {
+    onClose.call(this);
+  }
+}
+function onOpen() {
+  const modal = document.querySelector(`#${this.getAttribute(openAttribute)}`);
+  if (modal === void 0) {
+    return;
+  }
+  focused.set(modal, this);
+  open2(modal);
+}
+function open2(component) {
+  component.hidden = false;
+  document.body.append(component);
+  (getFocusableElements(component)[0] ?? component).focus();
+  component.dispatchEvent(new Event("open"));
+}
+var PalmerModal = class extends HTMLElement {
+  /** @returns {boolean} */
+  get open() {
+    return this.parentElement === document.body && !this.hidden;
+  }
+  /** @param {boolean} value */
+  set open(value) {
+    if (typeof value !== "boolean" || this.open === value) {
+      return;
+    }
+    if (value) {
+      open2(this);
+    } else {
+      close(this);
+    }
+  }
+  constructor() {
+    super();
+    this.hidden = true;
+    const { id } = this;
+    if (id === void 0 || id.trim().length === 0) {
+      throw new TypeError(`<${selector5}> must have an ID`);
+    }
+    if (isNullableOrWhitespace(this.getAttribute("aria-label")) && isNullableOrWhitespace(this.getAttribute("aria-labelledby"))) {
+      throw new TypeError(
+        `<${selector5}> should be labelled by either the 'aria-label' or 'aria-labelledby'-attribute`
+      );
+    }
+    const close2 = this.querySelector(`[${selector5}-close]`);
+    if (!(close2 instanceof HTMLButtonElement)) {
+      throw new TypeError(
+        `<${selector5}> must have a <button>-element with the attribute '${selector5}-close'`
+      );
+    }
+    if (!(this.querySelector(`:scope > [${selector5}-content]`) instanceof HTMLElement)) {
+      throw new TypeError(
+        `<${selector5}> must have an element with the attribuet '${selector5}-content'`
+      );
+    }
+    const overlay = this.querySelector(`:scope > [${selector5}-overlay]`);
+    if (!(overlay instanceof HTMLElement)) {
+      throw new TypeError(
+        `<${selector5}> must have an element with the attribuet '${selector5}-overlay'`
+      );
+    }
+    parents.set(this, this.parentElement);
+    this.role = "dialog";
+    this.setAttribute("aria-modal", true);
+    this.setAttribute(selector4, "");
+    this.addEventListener("keydown", onKeydown3.bind(this), getOptions());
+    close2.addEventListener("click", onClose.bind(this), getOptions());
+    overlay.addEventListener("click", onClose.bind(this), getOptions());
+  }
+  hide() {
+    this.open = false;
+  }
+  show() {
+    this.open = true;
+  }
+};
+customElements.define(selector5, PalmerModal);
+var observer2 = new MutationObserver((records) => {
+  for (const record of records) {
+    if (record.type === "attributes" && record.target instanceof HTMLButtonElement) {
+      defineButton(record.target);
+    }
+  }
+});
+observer2.observe(
+  document,
+  {
+    attributeFilter: [openAttribute],
+    attributeOldValue: true,
+    attributes: true,
+    childList: true,
+    subtree: true
+  }
+);
+setTimeout(
+  () => {
+    const elements = Array.from(
+      document.querySelectorAll(`[${openAttribute}]`)
+    );
+    for (const element of elements) {
+      defineButton(element);
+    }
+  },
+  0
+);
+
 // src/helpers/floated.js
 var allPositions = [
   "above",
@@ -1050,7 +1190,7 @@ function updateFloated(parameters) {
 }
 
 // src/popover.js
-var selector5 = "palmer-popover";
+var selector6 = "palmer-popover";
 var store4 = /* @__PURE__ */ new WeakMap();
 var index2 = 0;
 function afterToggle(component, active) {
@@ -1075,7 +1215,7 @@ function handleGlobalEvent(event, component, target) {
   if (button === void 0 || content === void 0) {
     return;
   }
-  const floater = findParent(target, `[${selector5}-content]`);
+  const floater = findParent(target, `[${selector6}-content]`);
   if (floater === void 0) {
     handleToggle(component, false);
     return;
@@ -1117,7 +1257,7 @@ function handleToggle(component, expand) {
   }
   component.dispatchEvent(new CustomEvent("toggle", { detail: component.open }));
 }
-function onClose(event) {
+function onClose2(event) {
   if (!(event instanceof KeyboardEvent) || [" ", "Enter"].includes(event.key)) {
     handleToggle(this, false);
   }
@@ -1141,43 +1281,47 @@ function setButtons(component) {
     onToggle2.bind(component),
     getOptions()
   );
-  const buttons = Array.from(component.querySelectorAll(`[${selector5}-close]`));
+  const buttons = Array.from(component.querySelectorAll(`[${selector6}-close]`));
   for (const button of buttons) {
-    button.addEventListener("click", onClose.bind(component), getOptions());
+    button.addEventListener("click", onClose2.bind(component), getOptions());
   }
 }
 var PalmerPopover = class extends HTMLElement {
+  /** @returns {boolean} */
   get open() {
-    return this.button?.ariaExpanded === "true";
+    return /^true$/i.test(this.button.ariaExpanded);
   }
-  set open(open) {
-    handleToggle(this, open);
+  /** @param {boolean} value */
+  set open(value) {
+    if (typeof value === "boolean" && value !== this.open) {
+      handleToggle(this, open);
+    }
   }
   constructor() {
     super();
-    const button = this.querySelector(`[${selector5}-button]`);
-    const content = this.querySelector(`[${selector5}-content]`);
+    const button = this.querySelector(`[${selector6}-button]`);
+    const content = this.querySelector(`[${selector6}-content]`);
     if (!(button instanceof HTMLButtonElement)) {
       throw new TypeError(
-        `<${selector5}> must have a <button>-element with the attribute '${selector5}-button`
+        `<${selector6}> must have a <button>-element with the attribute '${selector6}-button`
       );
     }
     if (!(content instanceof HTMLElement)) {
       throw new TypeError(
-        `<${selector5}> must have an element with the attribute '${selector5}-content'`
+        `<${selector6}> must have an element with the attribute '${selector6}-content'`
       );
     }
     this.button = button;
     this.content = content;
     this.timer = void 0;
     content.hidden = true;
-    if (isNullOrWhitespace(this.id)) {
+    if (isNullableOrWhitespace(this.id)) {
       this.id = `palmer_popover_${++index2}`;
     }
-    if (isNullOrWhitespace(button.id)) {
+    if (isNullableOrWhitespace(button.id)) {
       button.id = `${this.id}_button`;
     }
-    if (isNullOrWhitespace(content.id)) {
+    if (isNullableOrWhitespace(content.id)) {
       content.id = `${this.id}_content`;
     }
     button.ariaExpanded = false;
@@ -1195,14 +1339,20 @@ var PalmerPopover = class extends HTMLElement {
     );
     setButtons(this);
   }
+  hide() {
+    this.open = false;
+  }
+  show() {
+    this.open = true;
+  }
   toggle() {
     handleToggle(this);
   }
 };
-customElements.define(selector5, PalmerPopover);
+customElements.define(selector6, PalmerPopover);
 
 // src/splitter.js
-var selector6 = "palmer-splitter";
+var selector7 = "palmer-splitter";
 var splitterTypes = /* @__PURE__ */ new Set(["horizontal", "vertical"]);
 var store5 = /* @__PURE__ */ new WeakMap();
 var index3 = 0;
@@ -1377,7 +1527,7 @@ function updateSeparator(component) {
   separator.ariaValueMin = 0;
   separator.ariaValueNow = 50;
   separator.setAttribute("aria-controls", component.primary.id);
-  if (isNullOrWhitespace(component.getAttribute("value"))) {
+  if (isNullableOrWhitespace(component.getAttribute("value"))) {
     setFlexValue(
       component,
       {
@@ -1429,22 +1579,22 @@ var PalmerSplitter = class extends HTMLElement {
   constructor() {
     super();
     const panels = Array.from(
-      this.querySelectorAll(`:scope > [${selector6}-panel]`)
+      this.querySelectorAll(`:scope > [${selector7}-panel]`)
     );
     if (panels.length !== 2 || panels.some((panel) => !(panel instanceof HTMLElement))) {
       throw new TypeError(
-        `<${selector6}> must have two direct child elements with the attribute '${selector6}-panel'`
+        `<${selector7}> must have two direct child elements with the attribute '${selector7}-panel'`
       );
     }
-    const separator = this.querySelector(`:scope > [${selector6}-separator]`);
+    const separator = this.querySelector(`:scope > [${selector7}-separator]`);
     const separatorHandle = separator?.querySelector(
-      `:scope > [${selector6}-separator-handle]`
+      `:scope > [${selector7}-separator-handle]`
     );
     if ([separator, separatorHandle].some(
       (element) => !(element instanceof HTMLElement)
     )) {
       throw new TypeError(
-        `<${selector6}> must have a separator element with the attribute '${selector6}-separator', and it must have a child element with the attribute '${selector6}-separator-handle'`
+        `<${selector7}> must have a separator element with the attribute '${selector7}-separator', and it must have a child element with the attribute '${selector7}-separator-handle'`
       );
     }
     const primary = panels[0];
@@ -1452,7 +1602,7 @@ var PalmerSplitter = class extends HTMLElement {
     const children = Array.from(this.children);
     if (!(children.indexOf(primary) < children.indexOf(separator) && children.indexOf(separator) < children.indexOf(secondary))) {
       throw new TypeError(
-        `<${selector6}> must have elements with the order of: panel, separator, panel`
+        `<${selector7}> must have elements with the order of: panel, separator, panel`
       );
     }
     const stored = {
@@ -1474,7 +1624,7 @@ var PalmerSplitter = class extends HTMLElement {
     this.secondary = secondary;
     this.handle = separatorHandle;
     this.separator = separator;
-    if (isNullOrWhitespace(primary.id)) {
+    if (isNullableOrWhitespace(primary.id)) {
       primary.id = `palmer_splitter_primary_panel_${++index3}`;
     }
     updateSeparator(this);
@@ -1513,10 +1663,10 @@ var PalmerSplitter = class extends HTMLElement {
   }
 };
 PalmerSplitter.observedAttributes = ["max", "min", "value"];
-customElements.define(selector6, PalmerSplitter);
+customElements.define(selector7, PalmerSplitter);
 
 // src/switch.js
-var selector7 = "palmer-switch";
+var selector8 = "palmer-switch";
 function initialise(component, label, input) {
   label.remove();
   input.remove();
@@ -1532,13 +1682,13 @@ function initialise(component, label, input) {
   let className = component.getAttribute("classNames");
   let off = component.getAttribute("off");
   let on = component.getAttribute("on");
-  if (isNullOrWhitespace(className)) {
-    className = selector7;
+  if (isNullableOrWhitespace(className)) {
+    className = selector8;
   }
-  if (isNullOrWhitespace(off)) {
+  if (isNullableOrWhitespace(off)) {
     off = "Off";
   }
-  if (isNullOrWhitespace(on)) {
+  if (isNullableOrWhitespace(on)) {
     on = "On";
   }
   component.insertAdjacentHTML(
@@ -1626,16 +1776,16 @@ var PalmerSwitch = class extends HTMLElement {
   constructor() {
     super();
     this.internals = this.attachInternals?.();
-    const input = this.querySelector(`[${selector7}-input]`);
-    const label = this.querySelector(`[${selector7}-label]`);
+    const input = this.querySelector(`[${selector8}-input]`);
+    const label = this.querySelector(`[${selector8}-label]`);
     if (!(input instanceof HTMLInputElement) || input.type !== "checkbox") {
       throw new TypeError(
-        `<${selector7}> must have an <input>-element with type 'checkbox' and the attribute '${selector7}-input'`
+        `<${selector8}> must have an <input>-element with type 'checkbox' and the attribute '${selector8}-input'`
       );
     }
     if (!(label instanceof HTMLElement)) {
       throw new TypeError(
-        `<${selector7}> must have an element with the attribute '${selector7}-label'`
+        `<${selector8}> must have an element with the attribute '${selector8}-label'`
       );
     }
     initialise(this, label, input);
@@ -1648,21 +1798,21 @@ var PalmerSwitch = class extends HTMLElement {
   }
 };
 PalmerSwitch.formAssociated = true;
-customElements.define(selector7, PalmerSwitch);
+customElements.define(selector8, PalmerSwitch);
 
 // src/tooltip.js
-var selector8 = "palmer-tooltip";
-var positionAttribute = `${selector8}-position`;
+var selector9 = "palmer-tooltip";
+var positionAttribute = `${selector9}-position`;
 var store6 = /* @__PURE__ */ new WeakMap();
 function createFloater(anchor) {
   const id = anchor.getAttribute("aria-describedby") ?? anchor.getAttribute("aria-labelledby");
   const element = id === null ? null : document.querySelector(`#${id}`);
   if (element === null) {
     throw new TypeError(
-      `A '${selector8}'-attributed element must have a valid id reference in either the 'aria-describedby' or 'aria-labelledby'-attribute.`
+      `A '${selector9}'-attributed element must have a valid id reference in either the 'aria-describedby' or 'aria-labelledby'-attribute.`
     );
   }
-  element.setAttribute(`${selector8}-content`, "");
+  element.setAttribute(`${selector9}-content`, "");
   element.ariaHidden = "true";
   element.hidden = true;
   element.role = "tooltip";
@@ -1686,7 +1836,7 @@ function observe2(records) {
     if (record.type !== "attributes") {
       continue;
     }
-    if (record.target.getAttribute(selector8) === null) {
+    if (record.target.getAttribute(selector9) === null) {
       destroyTooltip(record.target);
     } else {
       createTooltip(record.target);
@@ -1779,11 +1929,11 @@ var PalmerTooltip = class {
     }
   }
 };
-var observer2 = new MutationObserver(observe2);
-observer2.observe(
+var observer3 = new MutationObserver(observe2);
+observer3.observe(
   document,
   {
-    attributeFilter: [selector8],
+    attributeFilter: [selector9],
     attributeOldValue: true,
     attributes: true,
     childList: true,
@@ -1792,9 +1942,9 @@ observer2.observe(
 );
 wait(
   () => {
-    const elements = Array.from(document.querySelectorAll(`[${selector8}]`));
+    const elements = Array.from(document.querySelectorAll(`[${selector9}]`));
     for (const element of elements) {
-      element.setAttribute(selector8, "");
+      element.setAttribute(selector9, "");
     }
   },
   0

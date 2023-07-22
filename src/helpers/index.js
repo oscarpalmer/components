@@ -45,9 +45,9 @@ export function getTextDirection(element) {
 }
 
 /**
- * @param {string?} value
+ * @param {string|null|undefined} value
  * @returns {boolean}
  */
-export function isNullOrWhitespace(value) {
+export function isNullableOrWhitespace(value) {
 	return (value ?? '').trim().length === 0;
 }

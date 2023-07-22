@@ -2,7 +2,7 @@
 function getNumber(value) {
   return typeof value === "number" ? value : Number.parseInt(typeof value === "string" ? value : String(value), 10);
 }
-function isNullOrWhitespace(value) {
+function isNullableOrWhitespace(value) {
   return (value ?? "").trim().length === 0;
 }
 
@@ -225,7 +225,7 @@ function updateSeparator(component) {
   separator.ariaValueMin = 0;
   separator.ariaValueNow = 50;
   separator.setAttribute("aria-controls", component.primary.id);
-  if (isNullOrWhitespace(component.getAttribute("value"))) {
+  if (isNullableOrWhitespace(component.getAttribute("value"))) {
     setFlexValue(
       component,
       {
@@ -322,7 +322,7 @@ var PalmerSplitter = class extends HTMLElement {
     this.secondary = secondary;
     this.handle = separatorHandle;
     this.separator = separator;
-    if (isNullOrWhitespace(primary.id)) {
+    if (isNullableOrWhitespace(primary.id)) {
       primary.id = `palmer_splitter_primary_panel_${++index}`;
     }
     updateSeparator(this);

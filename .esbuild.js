@@ -7,6 +7,7 @@ const components = [
 	'colour-picker',
 	'disclosure',
 	'focus-trap',
+	'modal',
 	'popover',
 	'splitter',
 	'switch',
