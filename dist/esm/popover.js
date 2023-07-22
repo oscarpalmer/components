@@ -563,15 +563,6 @@ function handleToggle(component, expand) {
   }
   component.dispatchEvent(new CustomEvent("toggle", { detail: component.open }));
 }
-function isButton(node) {
-  if (node === null) {
-    return false;
-  }
-  if (node instanceof HTMLButtonElement) {
-    return true;
-  }
-  return node instanceof HTMLElement && node.getAttribute("role") === "button";
-}
 function onClose(event) {
   if (!(event instanceof KeyboardEvent) || [" ", "Enter"].includes(event.key)) {
     handleToggle(this, false);
@@ -587,23 +578,18 @@ function onDocumentPointer(event) {
     handleGlobalEvent(event, this, event.target);
   }
 }
-function onToggle(event) {
-  if (!(event instanceof KeyboardEvent) || [" ", "Enter"].includes(event.key)) {
-    handleToggle(this);
-  }
-}
-function setButton(component, button, callback) {
-  button.addEventListener("click", callback.bind(component), getOptions());
-  if (!(button instanceof HTMLButtonElement)) {
-    button.tabIndex = 0;
-    button.addEventListener("keydown", callback.bind(component), getOptions());
-  }
+function onToggle() {
+  handleToggle(this);
 }
 function setButtons(component) {
-  setButton(component, component.button, onToggle);
+  component.button.addEventListener(
+    "click",
+    onToggle.bind(component),
+    getOptions()
+  );
   const buttons = Array.from(component.querySelectorAll(`[${selector3}-close]`));
   for (const button of buttons) {
-    setButton(component, button, onClose);
+    button.addEventListener("click", onClose.bind(component), getOptions());
   }
 }
 var PalmerPopover = class extends HTMLElement {
@@ -617,9 +603,9 @@ var PalmerPopover = class extends HTMLElement {
     super();
     const button = this.querySelector(`[${selector3}-button]`);
     const content = this.querySelector(`[${selector3}-content]`);
-    if (!isButton(button)) {
+    if (!(button instanceof HTMLButtonElement)) {
       throw new TypeError(
-        `<${selector3}> must have a <button>-element (or button-like element) with the attribute '${selector3}-button`
+        `<${selector3}> must have a <button>-element with the attribute '${selector3}-button`
       );
     }
     if (!(content instanceof HTMLElement)) {

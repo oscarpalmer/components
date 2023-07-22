@@ -125,22 +125,6 @@ function handleToggle(component, expand) {
 }
 
 /**
- * @param {Node} node
- * @returns {boolean}
- */
-function isButton(node) {
-	if (node === null) {
-		return false;
-	}
-
-	if (node instanceof HTMLButtonElement) {
-		return true;
-	}
-
-	return node instanceof HTMLElement && node.getAttribute('role') === 'button';
-}
-
-/**
  * @this {PalmerPopover}
  * @param {Event|KeyboardEvent} event
  */
@@ -172,39 +156,25 @@ function onDocumentPointer(event) {
 
 /**
  * @this {PalmerPopover}
- * @param {Event|KeyboardEvent} event
  */
-function onToggle(event) {
-	if (!(event instanceof KeyboardEvent) || [' ', 'Enter'].includes(event.key)) {
-		handleToggle(this);
-	}
-}
-
-/**
- * @param {PalmerPopover} component
- * @param {HTMLElement} button
- * @param {(event: Event|KeyboardEvent) => void} callback
- */
-function setButton(component, button, callback) {
-	button.addEventListener('click', callback.bind(component), getOptions());
-
-	if (!(button instanceof HTMLButtonElement)) {
-		button.tabIndex = 0;
-
-		button.addEventListener('keydown', callback.bind(component), getOptions());
-	}
+function onToggle() {
+	handleToggle(this);
 }
 
 /**
  * @param {PalmerPopover} component
  */
 function setButtons(component) {
-	setButton(component, component.button, onToggle);
+	component.button.addEventListener(
+		'click',
+		onToggle.bind(component),
+		getOptions(),
+	);
 
 	const buttons = Array.from(component.querySelectorAll(`[${selector}-close]`));
 
 	for (const button of buttons) {
-		setButton(component, button, onClose);
+		button.addEventListener('click', onClose.bind(component), getOptions());
 	}
 }
 
@@ -223,9 +193,9 @@ export class PalmerPopover extends HTMLElement {
 		const button = this.querySelector(`[${selector}-button]`);
 		const content = this.querySelector(`[${selector}-content]`);
 
-		if (!isButton(button)) {
+		if (!(button instanceof HTMLButtonElement)) {
 			throw new TypeError(
-				`<${selector}> must have a <button>-element (or button-like element) with the attribute '${selector}-button`,
+				`<${selector}> must have a <button>-element with the attribute '${selector}-button`,
 			);
 		}
 
@@ -235,7 +205,7 @@ export class PalmerPopover extends HTMLElement {
 			);
 		}
 
-		/** @readonly @type {HTMLElement} */
+		/** @readonly @type {HTMLButtonElement} */
 		this.button = button;
 
 		/** @readonly @type {HTMLElement} */

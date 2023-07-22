@@ -315,6 +315,7 @@ function updateHandle(component) {
 	const {handle} = component;
 
 	handle.ariaHidden = 'true';
+	handle.hidden = false;
 
 	handle.addEventListener(
 		methods.begin,
@@ -411,7 +412,7 @@ export class PalmerSplitter extends HTMLElement {
 			|| panels.some(panel => !(panel instanceof HTMLElement))
 		) {
 			throw new TypeError(
-				`<${selector}> must have two direct children with the attribute '${selector}-panel'`,
+				`<${selector}> must have two direct child elements with the attribute '${selector}-panel'`,
 			);
 		}
 
@@ -433,6 +434,19 @@ export class PalmerSplitter extends HTMLElement {
 
 		const primary = panels[0];
 		const secondary = panels[1];
+
+		const children = Array.from(this.children);
+
+		if (
+			!(
+				children.indexOf(primary) < children.indexOf(separator)
+				&& children.indexOf(separator) < children.indexOf(secondary)
+			)
+		) {
+			throw new TypeError(
+				`<${selector}> must have elements with the order of: panel, separator, panel`,
+			);
+		}
 
 		/** @type {Stored} */
 		const stored = {

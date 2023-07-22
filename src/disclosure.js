@@ -6,23 +6,6 @@ const selector = 'palmer-disclosure';
 let index = 0;
 
 /**
- * @this {PalmerDisclosure}
- * @param {KeyboardEvent} event
- */
-function onKeydown(event) {
-	if ([' ', 'Enter'].includes(event.key)) {
-		toggle(this, !this.open);
-	}
-}
-
-/**
- * @this {PalmerDisclosure}
- */
-function onPointer() {
-	toggle(this, !this.open);
-}
-
-/**
  * @param {PalmerDisclosure} component
  * @param {boolean} open
  */
@@ -50,9 +33,9 @@ export class PalmerDisclosure extends HTMLElement {
 		const button = this.querySelector(`[${selector}-button]`);
 		const content = this.querySelector(`[${selector}-content]`);
 
-		if (!(button instanceof HTMLElement)) {
+		if (!(button instanceof HTMLButtonElement)) {
 			throw new TypeError(
-				`<${selector}> needs an element with the attribute '${selector}-button'`,
+				`<${selector}> needs a <button>-element with the attribute '${selector}-button'`,
 			);
 		}
 
@@ -62,7 +45,7 @@ export class PalmerDisclosure extends HTMLElement {
 			);
 		}
 
-		/** @readonly @type {HTMLElement} */
+		/** @readonly @type {HTMLButtonElement} */
 		this.button = button;
 
 		/** @readonly @type {HTMLElement} */
@@ -84,15 +67,11 @@ export class PalmerDisclosure extends HTMLElement {
 
 		button.setAttribute('aria-controls', id);
 
-		button.addEventListener('click', onPointer.bind(this), getOptions());
-
-		if (button instanceof HTMLButtonElement) {
-			return;
-		}
-
-		button.tabIndex = 0;
-
-		button.addEventListener('keydown', onKeydown.bind(this), getOptions());
+		button.addEventListener(
+			'click',
+			_ => toggle(this, !this.open),
+			getOptions(),
+		);
 	}
 
 	toggle() {

@@ -554,14 +554,6 @@ function isNullOrWhitespace(value) {
 // src/disclosure.js
 var selector2 = "palmer-disclosure";
 var index = 0;
-function onKeydown2(event) {
-  if ([" ", "Enter"].includes(event.key)) {
-    toggle(this, !this.open);
-  }
-}
-function onPointer() {
-  toggle(this, !this.open);
-}
 function toggle(component, open) {
   component.button.ariaExpanded = open;
   component.content.hidden = !open;
@@ -580,9 +572,9 @@ var PalmerDisclosure = class extends HTMLElement {
     super();
     const button = this.querySelector(`[${selector2}-button]`);
     const content = this.querySelector(`[${selector2}-content]`);
-    if (!(button instanceof HTMLElement)) {
+    if (!(button instanceof HTMLButtonElement)) {
       throw new TypeError(
-        `<${selector2}> needs an element with the attribute '${selector2}-button'`
+        `<${selector2}> needs a <button>-element with the attribute '${selector2}-button'`
       );
     }
     if (!(content instanceof HTMLElement)) {
@@ -602,12 +594,11 @@ var PalmerDisclosure = class extends HTMLElement {
     button.ariaExpanded = open;
     content.id = id;
     button.setAttribute("aria-controls", id);
-    button.addEventListener("click", onPointer.bind(this), getOptions());
-    if (button instanceof HTMLButtonElement) {
-      return;
-    }
-    button.tabIndex = 0;
-    button.addEventListener("keydown", onKeydown2.bind(this), getOptions());
+    button.addEventListener(
+      "click",
+      (_) => toggle(this, !this.open),
+      getOptions()
+    );
   }
   toggle() {
     toggle(this, !this.open);
@@ -886,7 +877,7 @@ function observe(records) {
     }
   }
 }
-function onKeydown3(event) {
+function onKeydown2(event) {
   if (event.key !== "Tab") {
     return;
   }
@@ -927,7 +918,7 @@ wait(
   },
   0
 );
-document.addEventListener("keydown", onKeydown3, getOptions(false));
+document.addEventListener("keydown", onKeydown2, getOptions(false));
 
 // src/helpers/floated.js
 var allPositions = [
@@ -1126,15 +1117,6 @@ function handleToggle(component, expand) {
   }
   component.dispatchEvent(new CustomEvent("toggle", { detail: component.open }));
 }
-function isButton(node) {
-  if (node === null) {
-    return false;
-  }
-  if (node instanceof HTMLButtonElement) {
-    return true;
-  }
-  return node instanceof HTMLElement && node.getAttribute("role") === "button";
-}
 function onClose(event) {
   if (!(event instanceof KeyboardEvent) || [" ", "Enter"].includes(event.key)) {
     handleToggle(this, false);
@@ -1150,23 +1132,18 @@ function onDocumentPointer(event) {
     handleGlobalEvent(event, this, event.target);
   }
 }
-function onToggle2(event) {
-  if (!(event instanceof KeyboardEvent) || [" ", "Enter"].includes(event.key)) {
-    handleToggle(this);
-  }
-}
-function setButton(component, button, callback) {
-  button.addEventListener("click", callback.bind(component), getOptions());
-  if (!(button instanceof HTMLButtonElement)) {
-    button.tabIndex = 0;
-    button.addEventListener("keydown", callback.bind(component), getOptions());
-  }
+function onToggle2() {
+  handleToggle(this);
 }
 function setButtons(component) {
-  setButton(component, component.button, onToggle2);
+  component.button.addEventListener(
+    "click",
+    onToggle2.bind(component),
+    getOptions()
+  );
   const buttons = Array.from(component.querySelectorAll(`[${selector5}-close]`));
   for (const button of buttons) {
-    setButton(component, button, onClose);
+    button.addEventListener("click", onClose.bind(component), getOptions());
   }
 }
 var PalmerPopover = class extends HTMLElement {
@@ -1180,9 +1157,9 @@ var PalmerPopover = class extends HTMLElement {
     super();
     const button = this.querySelector(`[${selector5}-button]`);
     const content = this.querySelector(`[${selector5}-content]`);
-    if (!isButton(button)) {
+    if (!(button instanceof HTMLButtonElement)) {
       throw new TypeError(
-        `<${selector5}> must have a <button>-element (or button-like element) with the attribute '${selector5}-button`
+        `<${selector5}> must have a <button>-element with the attribute '${selector5}-button`
       );
     }
     if (!(content instanceof HTMLElement)) {
@@ -1384,6 +1361,7 @@ function setFlexValue(component, parameters) {
 function updateHandle(component) {
   const { handle } = component;
   handle.ariaHidden = "true";
+  handle.hidden = false;
   handle.addEventListener(
     methods.begin,
     () => onPointerBegin(component),
@@ -1455,7 +1433,7 @@ var PalmerSplitter = class extends HTMLElement {
     );
     if (panels.length !== 2 || panels.some((panel) => !(panel instanceof HTMLElement))) {
       throw new TypeError(
-        `<${selector6}> must have two direct children with the attribute '${selector6}-panel'`
+        `<${selector6}> must have two direct child elements with the attribute '${selector6}-panel'`
       );
     }
     const separator = this.querySelector(`:scope > [${selector6}-separator]`);
@@ -1471,6 +1449,12 @@ var PalmerSplitter = class extends HTMLElement {
     }
     const primary = panels[0];
     const secondary = panels[1];
+    const children = Array.from(this.children);
+    if (!(children.indexOf(primary) < children.indexOf(separator) && children.indexOf(separator) < children.indexOf(secondary))) {
+      throw new TypeError(
+        `<${selector6}> must have elements with the order of: panel, separator, panel`
+      );
+    }
     const stored = {
       callbacks: {
         keydown: onDocumentKeydown3.bind(this),

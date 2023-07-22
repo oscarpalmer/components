@@ -14,14 +14,6 @@ function getOptions(passive, capture) {
 // src/disclosure.js
 var selector = "palmer-disclosure";
 var index = 0;
-function onKeydown(event) {
-  if ([" ", "Enter"].includes(event.key)) {
-    toggle(this, !this.open);
-  }
-}
-function onPointer() {
-  toggle(this, !this.open);
-}
 function toggle(component, open) {
   component.button.ariaExpanded = open;
   component.content.hidden = !open;
@@ -40,9 +32,9 @@ var PalmerDisclosure = class extends HTMLElement {
     super();
     const button = this.querySelector(`[${selector}-button]`);
     const content = this.querySelector(`[${selector}-content]`);
-    if (!(button instanceof HTMLElement)) {
+    if (!(button instanceof HTMLButtonElement)) {
       throw new TypeError(
-        `<${selector}> needs an element with the attribute '${selector}-button'`
+        `<${selector}> needs a <button>-element with the attribute '${selector}-button'`
       );
     }
     if (!(content instanceof HTMLElement)) {
@@ -62,12 +54,11 @@ var PalmerDisclosure = class extends HTMLElement {
     button.ariaExpanded = open;
     content.id = id;
     button.setAttribute("aria-controls", id);
-    button.addEventListener("click", onPointer.bind(this), getOptions());
-    if (button instanceof HTMLButtonElement) {
-      return;
-    }
-    button.tabIndex = 0;
-    button.addEventListener("keydown", onKeydown.bind(this), getOptions());
+    button.addEventListener(
+      "click",
+      (_) => toggle(this, !this.open),
+      getOptions()
+    );
   }
   toggle() {
     toggle(this, !this.open);
