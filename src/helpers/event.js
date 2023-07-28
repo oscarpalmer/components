@@ -13,7 +13,7 @@ export function getCoordinates(event) {
 	const x = event.touches[0]?.clientX;
 	const y = event.touches[0]?.clientY;
 
-	return x === undefined || y === undefined ? undefined : {x, y};
+	return typeof x === 'number' && typeof y === 'number' ? {x, y} : undefined;
 }
 
 /**

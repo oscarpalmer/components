@@ -16,7 +16,7 @@ function getCoordinates(event) {
   }
   const x = event.touches[0]?.clientX;
   const y = event.touches[0]?.clientY;
-  return x === void 0 || y === void 0 ? void 0 : { x, y };
+  return typeof x === "number" && typeof y === "number" ? { x, y } : void 0;
 }
 function getOptions(passive, capture) {
   return {
@@ -200,7 +200,7 @@ function setFlexValue(component, parameters) {
   if (parameters.setOriginal ?? false) {
     values.original = value;
   }
-  separator.ariaValueNow = value;
+  separator.setAttribute("aria-valuenow", value);
   component.primary.style.flex = `${value / 100}`;
   component.secondary.style.flex = `${(100 - value) / 100}`;
   values.current = value;
@@ -208,8 +208,8 @@ function setFlexValue(component, parameters) {
 }
 function updateHandle(component) {
   const { handle } = component;
-  handle.ariaHidden = "true";
   handle.hidden = false;
+  handle.setAttribute("aria-hidden", true);
   handle.addEventListener(
     methods.begin,
     () => onPointerBegin(component),
@@ -219,12 +219,12 @@ function updateHandle(component) {
 function updateSeparator(component) {
   const { separator } = component;
   separator.hidden = false;
-  separator.role = "separator";
   separator.tabIndex = 0;
-  separator.ariaValueMax = 100;
-  separator.ariaValueMin = 0;
-  separator.ariaValueNow = 50;
+  separator.setAttribute("role", "separator");
   separator.setAttribute("aria-controls", component.primary.id);
+  separator.setAttribute("aria-valuemax", 100);
+  separator.setAttribute("aria-valuemin", 0);
+  separator.setAttribute("aria-valuenow", 50);
   if (isNullableOrWhitespace(component.getAttribute("value"))) {
     setFlexValue(
       component,

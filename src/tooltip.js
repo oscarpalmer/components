@@ -36,11 +36,11 @@ function createFloater(anchor) {
 		);
 	}
 
-	element.setAttribute(`${selector}-content`, '');
-
-	element.ariaHidden = 'true';
 	element.hidden = true;
-	element.role = 'tooltip';
+
+	element.setAttribute('aria-hidden', true);
+	element.setAttribute('role', 'tooltip');
+	element.setAttribute(`${selector}-content`, '');
 
 	return element;
 }

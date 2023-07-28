@@ -15,7 +15,7 @@ function getOptions(passive, capture) {
 var selector = "palmer-disclosure";
 var index = 0;
 function toggle(component, open) {
-  component.button.ariaExpanded = open;
+  component.button.setAttribute("aria-expanded", open);
   component.content.hidden = !open;
   component.dispatchEvent(new CustomEvent("toggle", { detail: open }));
   component.button.focus();
@@ -23,7 +23,7 @@ function toggle(component, open) {
 var PalmerDisclosure = class extends HTMLElement {
   /** @returns {boolean} */
   get open() {
-    return /^true$/i.test(this.button.ariaExpanded);
+    return this.button.getAttribute("aria-expanded") === "true";
   }
   /** @param {boolean} value */
   set open(value) {
@@ -54,9 +54,9 @@ var PalmerDisclosure = class extends HTMLElement {
     if (isNullableOrWhitespace(id)) {
       id = `palmer_disclosure_${++index}`;
     }
-    button.ariaExpanded = open;
-    content.id = id;
+    button.setAttribute("aria-expanded", open);
     button.setAttribute("aria-controls", id);
+    content.id = id;
     button.addEventListener(
       "click",
       (_) => toggle(this, !this.open),

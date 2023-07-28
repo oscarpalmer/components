@@ -72,7 +72,7 @@ function isDisabled(item) {
   if (/^(button|input|select|textarea)$/i.test(item.element.tagName) && isDisabledFromFieldset(item.element)) {
     return true;
   }
-  return (item.element.disabled ?? false) || item.element.ariaDisabled === "true";
+  return (item.element.disabled ?? false) || item.element.getAttribute("aria-disabled") === "true";
 }
 function isDisabledFromFieldset(element) {
   let parent = element.parentElement;
@@ -422,7 +422,7 @@ var PalmerModal = class extends HTMLElement {
       );
     }
     parents.set(this, this.parentElement);
-    this.role = "dialog";
+    this.setAttribute("role", "dialog");
     this.setAttribute("aria-modal", true);
     this.setAttribute(selector2, "");
     this.addEventListener("keydown", onKeydown2.bind(this), getOptions());

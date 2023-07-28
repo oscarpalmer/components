@@ -309,7 +309,7 @@ function isDisabled(item) {
   if (/^(button|input|select|textarea)$/i.test(item.element.tagName) && isDisabledFromFieldset(item.element)) {
     return true;
   }
-  return (item.element.disabled ?? false) || item.element.ariaDisabled === "true";
+  return (item.element.disabled ?? false) || item.element.getAttribute("aria-disabled") === "true";
 }
 function isDisabledFromFieldset(element) {
   let parent = element.parentElement;
@@ -371,10 +371,10 @@ function createFloater(anchor) {
       `A '${selector2}'-attributed element must have a valid id reference in either the 'aria-describedby' or 'aria-labelledby'-attribute.`
     );
   }
-  element.setAttribute(`${selector2}-content`, "");
-  element.ariaHidden = "true";
   element.hidden = true;
-  element.role = "tooltip";
+  element.setAttribute("aria-hidden", true);
+  element.setAttribute("role", "tooltip");
+  element.setAttribute(`${selector2}-content`, "");
   return element;
 }
 function createTooltip(anchor) {

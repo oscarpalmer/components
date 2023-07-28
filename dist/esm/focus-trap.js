@@ -189,7 +189,7 @@ function isDisabled(item) {
   if (/^(button|input|select|textarea)$/i.test(item.element.tagName) && isDisabledFromFieldset(item.element)) {
     return true;
   }
-  return (item.element.disabled ?? false) || item.element.ariaDisabled === "true";
+  return (item.element.disabled ?? false) || item.element.getAttribute("aria-disabled") === "true";
 }
 function isDisabledFromFieldset(element) {
   let parent = element.parentElement;

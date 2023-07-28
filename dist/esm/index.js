@@ -8,7 +8,7 @@ function getCoordinates(event) {
   }
   const x = event.touches[0]?.clientX;
   const y = event.touches[0]?.clientY;
-  return x === void 0 || y === void 0 ? void 0 : { x, y };
+  return typeof x === "number" && typeof y === "number" ? { x, y } : void 0;
 }
 function getOptions(passive, capture) {
   return {
@@ -555,7 +555,7 @@ function isNullableOrWhitespace(value) {
 var selector2 = "palmer-disclosure";
 var index = 0;
 function toggle(component, open3) {
-  component.button.ariaExpanded = open3;
+  component.button.setAttribute("aria-expanded", open3);
   component.content.hidden = !open3;
   component.dispatchEvent(new CustomEvent("toggle", { detail: open3 }));
   component.button.focus();
@@ -563,7 +563,7 @@ function toggle(component, open3) {
 var PalmerDisclosure = class extends HTMLElement {
   /** @returns {boolean} */
   get open() {
-    return /^true$/i.test(this.button.ariaExpanded);
+    return this.button.getAttribute("aria-expanded") === "true";
   }
   /** @param {boolean} value */
   set open(value) {
@@ -594,9 +594,9 @@ var PalmerDisclosure = class extends HTMLElement {
     if (isNullableOrWhitespace(id)) {
       id = `palmer_disclosure_${++index}`;
     }
-    button.ariaExpanded = open3;
-    content.id = id;
+    button.setAttribute("aria-expanded", open3);
     button.setAttribute("aria-controls", id);
+    content.id = id;
     button.addEventListener(
       "click",
       (_) => toggle(this, !this.open),
@@ -754,7 +754,7 @@ var selector3 = [
   "select",
   "textarea",
   "video[controls]"
-].map((selector10) => `${selector10}:not([inert])`).join(",");
+].map((selector9) => `${selector9}:not([inert])`).join(",");
 function getFocusableElements(element) {
   const items = Array.from(element.querySelectorAll(selector3)).map((element2) => ({ element: element2, tabIndex: getTabIndex(element2) })).filter((item) => isFocusableFilter(item));
   const indiced = [];
@@ -783,7 +783,7 @@ function isDisabled(item) {
   if (/^(button|input|select|textarea)$/i.test(item.element.tagName) && isDisabledFromFieldset(item.element)) {
     return true;
   }
-  return (item.element.disabled ?? false) || item.element.ariaDisabled === "true";
+  return (item.element.disabled ?? false) || item.element.getAttribute("aria-disabled") === "true";
 }
 function isDisabledFromFieldset(element) {
   let parent = element.parentElement;
@@ -1016,7 +1016,7 @@ var PalmerModal = class extends HTMLElement {
       );
     }
     parents.set(this, this.parentElement);
-    this.role = "dialog";
+    this.setAttribute("role", "dialog");
     this.setAttribute("aria-modal", true);
     this.setAttribute(selector4, "");
     this.addEventListener("keydown", onKeydown3.bind(this), getOptions());
@@ -1229,7 +1229,7 @@ function handleGlobalEvent(event, component, target) {
 }
 function handleToggle(component, expand) {
   const expanded = typeof expand === "boolean" ? !expand : component.open;
-  component.button.ariaExpanded = !expanded;
+  component.button.setAttribute("aria-expadnded", !expanded);
   if (expanded) {
     component.content.hidden = true;
     component.timer?.stop();
@@ -1289,7 +1289,7 @@ function setButtons(component) {
 var PalmerPopover = class extends HTMLElement {
   /** @returns {boolean} */
   get open() {
-    return /^true$/i.test(this.button.ariaExpanded);
+    return this.button.getAttribute("aria-expanded") === "true";
   }
   /** @param {boolean} value */
   set open(value) {
@@ -1324,11 +1324,11 @@ var PalmerPopover = class extends HTMLElement {
     if (isNullableOrWhitespace(content.id)) {
       content.id = `${this.id}_content`;
     }
-    button.ariaExpanded = false;
-    button.ariaHasPopup = "dialog";
     button.setAttribute("aria-controls", content.id);
-    content.role = "dialog";
-    content.ariaModal = false;
+    button.setAttribute("aria-expanded", false);
+    button.setAttribute("aria-haspopup", "dialog");
+    content.setAttribute("role", "dialog");
+    content.setAttribute("aria-modal", false);
     content.setAttribute(selector4, "");
     store4.set(
       this,
@@ -1502,7 +1502,7 @@ function setFlexValue(component, parameters) {
   if (parameters.setOriginal ?? false) {
     values.original = value;
   }
-  separator.ariaValueNow = value;
+  separator.setAttribute("aria-valuenow", value);
   component.primary.style.flex = `${value / 100}`;
   component.secondary.style.flex = `${(100 - value) / 100}`;
   values.current = value;
@@ -1510,8 +1510,8 @@ function setFlexValue(component, parameters) {
 }
 function updateHandle(component) {
   const { handle } = component;
-  handle.ariaHidden = "true";
   handle.hidden = false;
+  handle.setAttribute("aria-hidden", true);
   handle.addEventListener(
     methods.begin,
     () => onPointerBegin(component),
@@ -1521,12 +1521,12 @@ function updateHandle(component) {
 function updateSeparator(component) {
   const { separator } = component;
   separator.hidden = false;
-  separator.role = "separator";
   separator.tabIndex = 0;
-  separator.ariaValueMax = 100;
-  separator.ariaValueMin = 0;
-  separator.ariaValueNow = 50;
+  separator.setAttribute("role", "separator");
   separator.setAttribute("aria-controls", component.primary.id);
+  separator.setAttribute("aria-valuemax", 100);
+  separator.setAttribute("aria-valuemin", 0);
+  separator.setAttribute("aria-valuenow", 50);
   if (isNullableOrWhitespace(component.getAttribute("value"))) {
     setFlexValue(
       component,
@@ -1665,157 +1665,22 @@ var PalmerSplitter = class extends HTMLElement {
 PalmerSplitter.observedAttributes = ["max", "min", "value"];
 customElements.define(selector7, PalmerSplitter);
 
-// src/switch.js
-var selector8 = "palmer-switch";
-function initialise(component, label, input) {
-  label.remove();
-  input.remove();
-  component.ariaChecked = input.checked || component.checked;
-  component.ariaDisabled = input.disabled || component.disabled;
-  component.ariaReadOnly = input.readOnly || component.readonly;
-  component.setAttribute("aria-labelledby", `${input.id}_label`);
-  component.setAttribute("value", input.value);
-  component.id = input.id;
-  component.name = input.name ?? input.id;
-  component.role = "switch";
-  component.tabIndex = 0;
-  let className = component.getAttribute("classNames");
-  let off = component.getAttribute("off");
-  let on = component.getAttribute("on");
-  if (isNullableOrWhitespace(className)) {
-    className = selector8;
-  }
-  if (isNullableOrWhitespace(off)) {
-    off = "Off";
-  }
-  if (isNullableOrWhitespace(on)) {
-    on = "On";
-  }
-  component.insertAdjacentHTML(
-    "afterbegin",
-    render(
-      component.id,
-      className,
-      {
-        off,
-        on,
-        label: label.innerHTML
-      }
-    )
-  );
-  component.addEventListener("click", onToggle3.bind(component), getOptions());
-  component.addEventListener(
-    "keydown",
-    onKey.bind(component),
-    getOptions(false)
-  );
-}
-function onKey(event) {
-  if (![" ", "Enter"].includes(event.key)) {
-    return;
-  }
-  event.preventDefault();
-  toggle2(this);
-}
-function onToggle3() {
-  toggle2(this);
-}
-function render(id, className, text) {
-  return `<span class="${className}__label" id="${id}_label" aria-hidden="true">${text.label}</span><div class="${className}__status" aria-hidden="true"><span class="${className}__status__indicator"></span></div><div class="${className}__text" aria-hidden="true"><span class="${className}__text__off">${text.off}</span><span class="${className}__text__on">${text.on}</span></div>`;
-}
-function toggle2(component) {
-  if (component.disabled || component.readonly) {
-    return;
-  }
-  component.checked = !component.checked;
-  component.dispatchEvent(new Event("change"));
-}
-var PalmerSwitch = class extends HTMLElement {
-  get checked() {
-    return this.getAttribute("aria-checked") === "true";
-  }
-  set checked(checked) {
-    this.setAttribute("aria-checked", checked);
-  }
-  get disabled() {
-    return this.getAttribute("aria-disabled") === "true";
-  }
-  set disabled(disabled) {
-    this.setAttribute("aria-disabled", disabled);
-  }
-  get form() {
-    return this.internals?.form;
-  }
-  get labels() {
-    return this.internals?.labels;
-  }
-  get name() {
-    return this.getAttribute("name") ?? "";
-  }
-  set name(name) {
-    this.setAttribute("name", name);
-  }
-  get readonly() {
-    return this.getAttribute("aria-readonly") === "true";
-  }
-  set readonly(readonly) {
-    this.setAttribute("aria-readonly", readonly);
-  }
-  get validationMessage() {
-    return this.internals?.validationMessage ?? "";
-  }
-  get validity() {
-    return this.internals?.validity;
-  }
-  get value() {
-    return this.getAttribute("value") ?? (this.checked ? "on" : "off");
-  }
-  get willValidate() {
-    return this.internals?.willValidate ?? true;
-  }
-  constructor() {
-    super();
-    this.internals = this.attachInternals?.();
-    const input = this.querySelector(`[${selector8}-input]`);
-    const label = this.querySelector(`[${selector8}-label]`);
-    if (!(input instanceof HTMLInputElement) || input.type !== "checkbox") {
-      throw new TypeError(
-        `<${selector8}> must have an <input>-element with type 'checkbox' and the attribute '${selector8}-input'`
-      );
-    }
-    if (!(label instanceof HTMLElement)) {
-      throw new TypeError(
-        `<${selector8}> must have an element with the attribute '${selector8}-label'`
-      );
-    }
-    initialise(this, label, input);
-  }
-  checkValidity() {
-    return this.internals?.checkValidity() ?? true;
-  }
-  reportValidity() {
-    return this.internals?.reportValidity() ?? true;
-  }
-};
-PalmerSwitch.formAssociated = true;
-customElements.define(selector8, PalmerSwitch);
-
 // src/tooltip.js
-var selector9 = "palmer-tooltip";
-var positionAttribute = `${selector9}-position`;
+var selector8 = "palmer-tooltip";
+var positionAttribute = `${selector8}-position`;
 var store6 = /* @__PURE__ */ new WeakMap();
 function createFloater(anchor) {
   const id = anchor.getAttribute("aria-describedby") ?? anchor.getAttribute("aria-labelledby");
   const element = id === null ? null : document.querySelector(`#${id}`);
   if (element === null) {
     throw new TypeError(
-      `A '${selector9}'-attributed element must have a valid id reference in either the 'aria-describedby' or 'aria-labelledby'-attribute.`
+      `A '${selector8}'-attributed element must have a valid id reference in either the 'aria-describedby' or 'aria-labelledby'-attribute.`
     );
   }
-  element.setAttribute(`${selector9}-content`, "");
-  element.ariaHidden = "true";
   element.hidden = true;
-  element.role = "tooltip";
+  element.setAttribute("aria-hidden", true);
+  element.setAttribute("role", "tooltip");
+  element.setAttribute(`${selector8}-content`, "");
   return element;
 }
 function createTooltip(anchor) {
@@ -1836,7 +1701,7 @@ function observe2(records) {
     if (record.type !== "attributes") {
       continue;
     }
-    if (record.target.getAttribute(selector9) === null) {
+    if (record.target.getAttribute(selector8) === null) {
       destroyTooltip(record.target);
     } else {
       createTooltip(record.target);
@@ -1933,7 +1798,7 @@ var observer3 = new MutationObserver(observe2);
 observer3.observe(
   document,
   {
-    attributeFilter: [selector9],
+    attributeFilter: [selector8],
     attributeOldValue: true,
     attributes: true,
     childList: true,
@@ -1942,9 +1807,9 @@ observer3.observe(
 );
 wait(
   () => {
-    const elements = Array.from(document.querySelectorAll(`[${selector9}]`));
+    const elements = Array.from(document.querySelectorAll(`[${selector8}]`));
     for (const element of elements) {
-      element.setAttribute(selector9, "");
+      element.setAttribute(selector8, "");
     }
   },
   0

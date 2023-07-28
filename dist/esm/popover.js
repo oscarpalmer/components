@@ -324,7 +324,7 @@ function isDisabled(item) {
   if (/^(button|input|select|textarea)$/i.test(item.element.tagName) && isDisabledFromFieldset(item.element)) {
     return true;
   }
-  return (item.element.disabled ?? false) || item.element.ariaDisabled === "true";
+  return (item.element.disabled ?? false) || item.element.getAttribute("aria-disabled") === "true";
 }
 function isDisabledFromFieldset(element) {
   let parent = element.parentElement;
@@ -535,7 +535,7 @@ function handleGlobalEvent(event, component, target) {
 }
 function handleToggle(component, expand) {
   const expanded = typeof expand === "boolean" ? !expand : component.open;
-  component.button.ariaExpanded = !expanded;
+  component.button.setAttribute("aria-expadnded", !expanded);
   if (expanded) {
     component.content.hidden = true;
     component.timer?.stop();
@@ -595,7 +595,7 @@ function setButtons(component) {
 var PalmerPopover = class extends HTMLElement {
   /** @returns {boolean} */
   get open() {
-    return /^true$/i.test(this.button.ariaExpanded);
+    return this.button.getAttribute("aria-expanded") === "true";
   }
   /** @param {boolean} value */
   set open(value) {
@@ -630,11 +630,11 @@ var PalmerPopover = class extends HTMLElement {
     if (isNullableOrWhitespace(content.id)) {
       content.id = `${this.id}_content`;
     }
-    button.ariaExpanded = false;
-    button.ariaHasPopup = "dialog";
     button.setAttribute("aria-controls", content.id);
-    content.role = "dialog";
-    content.ariaModal = false;
+    button.setAttribute("aria-expanded", false);
+    button.setAttribute("aria-haspopup", "dialog");
+    content.setAttribute("role", "dialog");
+    content.setAttribute("aria-modal", false);
     content.setAttribute(selector2, "");
     store2.set(
       this,

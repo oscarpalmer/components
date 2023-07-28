@@ -10,7 +10,8 @@ let index = 0;
  * @param {boolean} open
  */
 function toggle(component, open) {
-	component.button.ariaExpanded = open;
+	component.button.setAttribute('aria-expanded', open);
+
 	component.content.hidden = !open;
 
 	component.dispatchEvent(new CustomEvent('toggle', {detail: open}));
@@ -21,7 +22,7 @@ function toggle(component, open) {
 export class PalmerDisclosure extends HTMLElement {
 	/** @returns {boolean} */
 	get open() {
-		return /^true$/i.test(this.button.ariaExpanded);
+		return this.button.getAttribute('aria-expanded') === 'true';
 	}
 
 	/** @param {boolean} value */
@@ -66,10 +67,10 @@ export class PalmerDisclosure extends HTMLElement {
 			id = `palmer_disclosure_${++index}`;
 		}
 
-		button.ariaExpanded = open;
-		content.id = id;
-
+		button.setAttribute('aria-expanded', open);
 		button.setAttribute('aria-controls', id);
+
+		content.id = id;
 
 		button.addEventListener(
 			'click',

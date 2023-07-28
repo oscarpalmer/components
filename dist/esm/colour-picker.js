@@ -8,7 +8,7 @@ function getCoordinates(event) {
   }
   const x = event.touches[0]?.clientX;
   const y = event.touches[0]?.clientY;
-  return x === void 0 || y === void 0 ? void 0 : { x, y };
+  return typeof x === "number" && typeof y === "number" ? { x, y } : void 0;
 }
 function getOptions(passive, capture) {
   return {

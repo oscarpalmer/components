@@ -84,7 +84,7 @@ function isDisabled(item) {
 	}
 
 	return (
-		(item.element.disabled ?? false) || item.element.ariaDisabled === 'true'
+		(item.element.disabled ?? false) || item.element.getAttribute('aria-disabled') === 'true'
 	);
 }
 

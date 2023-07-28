@@ -5,5 +5,4 @@ import './focus-trap.js';
 import './modal.js';
 import './popover.js';
 import './splitter.js';
-import './switch.js';
 import './tooltip.js';

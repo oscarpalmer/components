@@ -88,7 +88,7 @@ function handleGlobalEvent(event, component, target) {
 function handleToggle(component, expand) {
 	const expanded = typeof expand === 'boolean' ? !expand : component.open;
 
-	component.button.ariaExpanded = !expanded;
+	component.button.setAttribute('aria-expadnded', !expanded);
 
 	if (expanded) {
 		component.content.hidden = true;
@@ -181,7 +181,7 @@ function setButtons(component) {
 export class PalmerPopover extends HTMLElement {
 	/** @returns {boolean} */
 	get open() {
-		return /^true$/i.test(this.button.ariaExpanded);
+		return this.button.getAttribute('aria-expanded') === 'true';
 	}
 
 	/** @param {boolean} value */
@@ -232,14 +232,12 @@ export class PalmerPopover extends HTMLElement {
 			content.id = `${this.id}_content`;
 		}
 
-		button.ariaExpanded = false;
-		button.ariaHasPopup = 'dialog';
-
 		button.setAttribute('aria-controls', content.id);
+		button.setAttribute('aria-expanded', false);
+		button.setAttribute('aria-haspopup', 'dialog');
 
-		content.role = 'dialog';
-		content.ariaModal = false;
-
+		content.setAttribute('role', 'dialog');
+		content.setAttribute('aria-modal', false);
 		content.setAttribute(focusTrapSelector, '');
 
 		store.set(

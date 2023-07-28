@@ -10,9 +10,9 @@ const components = [
 	'modal',
 	'popover',
 	'splitter',
-	'switch',
 	'tooltip',
 ];
+
 const formats = ['esm', 'iife'];
 
 const exports = {};
@@ -41,6 +41,10 @@ for (const component of components) {
 		import: `./dist/esm/${component}.js`,
 		default: `./dist/iife/${component}.js`,
 	};
+
+	if (components.indexOf(component) === components.length - 1) {
+		console.log('');
+	}
 }
 
 childProcess.exec(`npm pkg set 'exports'='${JSON.stringify(exports)}' --json`);

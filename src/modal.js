@@ -148,8 +148,7 @@ export class PalmerModal extends HTMLElement {
 
 		parents.set(this, this.parentElement);
 
-		this.role = 'dialog';
-
+		this.setAttribute('role', 'dialog');
 		this.setAttribute('aria-modal', true);
 		this.setAttribute(focusTrapSelector, '');
 
