@@ -119,9 +119,9 @@ function wait(callback, time) {
 }
 
 // src/helpers/index.js
-function findParent(element, match) {
+function findParent(element, match, includeOriginal) {
   const matchIsSelector = typeof match === "string";
-  if (matchIsSelector ? element.matches(match) : match(element)) {
+  if ((includeOriginal ?? true) && (matchIsSelector ? element.matches(match) : match(element))) {
     return element;
   }
   let parent = element?.parentElement;
@@ -501,11 +501,20 @@ var store2 = /* @__PURE__ */ new WeakMap();
 var index = 0;
 function afterToggle(component, active) {
   handleCallbacks(component, active);
-  if (active && component.content) {
-    (getFocusableElements(component.content)?.[0] ?? component.content).focus();
-  } else {
-    component.button?.focus();
-  }
+  wait(
+    () => {
+      (active ? getFocusableElements(component.content)?.[0] ?? component.content : component.button)?.focus();
+    },
+    0
+  );
+  component.dispatchEvent(
+    new CustomEvent(
+      "toggle",
+      {
+        detail: active ? "open" : "show"
+      }
+    )
+  );
 }
 function handleCallbacks(component, add) {
   const callbacks = store2.get(component);
@@ -516,32 +525,23 @@ function handleCallbacks(component, add) {
   document[method](methods.begin, callbacks.pointer, getOptions());
   document[method]("keydown", callbacks.keydown, getOptions());
 }
-function handleGlobalEvent(event, component, target) {
-  const { button, content } = component;
-  if (button === void 0 || content === void 0) {
-    return;
-  }
-  const floater = findParent(target, `[${selector3}-content]`);
-  if (floater === void 0) {
-    handleToggle(component, false);
-    return;
-  }
-  event.stopPropagation();
-  const children = Array.from(document.body.children);
-  const difference = children.indexOf(floater) - children.indexOf(content);
-  if (difference < (event instanceof KeyboardEvent ? 1 : 0)) {
-    handleToggle(component, false);
-  }
-}
 function handleToggle(component, expand) {
   const expanded = typeof expand === "boolean" ? !expand : component.open;
-  component.button.setAttribute("aria-expadnded", !expanded);
+  if (!component.dispatchEvent(
+    new CustomEvent(
+      expanded ? "hide" : "show",
+      {
+        cancelable: true
+      }
+    )
+  )) {
+    return;
+  }
+  component.button.setAttribute("aria-expanded", !expanded);
+  component.timer?.stop();
   if (expanded) {
     component.content.hidden = true;
-    component.timer?.stop();
-    afterToggle(component, false);
   } else {
-    component.timer?.stop();
     component.timer = updateFloated({
       elements: {
         anchor: component.button,
@@ -554,14 +554,8 @@ function handleToggle(component, expand) {
         preferAbove: false
       }
     });
-    wait(
-      () => {
-        afterToggle(component, true);
-      },
-      50
-    );
   }
-  component.dispatchEvent(new CustomEvent("toggle", { detail: component.open }));
+  afterToggle(component, !expanded);
 }
 function onClose(event) {
   if (!(event instanceof KeyboardEvent) || [" ", "Enter"].includes(event.key)) {
@@ -570,12 +564,15 @@ function onClose(event) {
 }
 function onDocumentKeydown(event) {
   if (this.open && event instanceof KeyboardEvent && event.key === "Escape") {
-    handleGlobalEvent(event, this, document.activeElement);
+    handleToggle(this, false);
   }
 }
 function onDocumentPointer(event) {
-  if (this.open) {
-    handleGlobalEvent(event, this, event.target);
+  if (this.open && findParent(
+    event.target,
+    (parent) => [this.button, this.content].includes(parent)
+  ) === void 0) {
+    handleToggle(this, false);
   }
 }
 function onToggle() {
@@ -605,6 +602,11 @@ var PalmerPopover = class extends HTMLElement {
   }
   constructor() {
     super();
+    if (findParent(this, selector3, false)) {
+      throw new TypeError(
+        `<${selector3}>-elements must not be nested within each other`
+      );
+    }
     const button = this.querySelector(`[${selector3}-button]`);
     const content = this.querySelector(`[${selector3}-content]`);
     if (!(button instanceof HTMLButtonElement)) {

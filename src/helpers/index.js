@@ -1,12 +1,16 @@
 /**
  * @param {HTMLElement} element
  * @param {string|(element: HTMLElement) => boolean} match
+ * @param {boolean|undefined} includeOriginal
  * @returns {HTMLElement|undefined}
  */
-export function findParent(element, match) {
+export function findParent(element, match, includeOriginal) {
 	const matchIsSelector = typeof match === 'string';
 
-	if (matchIsSelector ? element.matches(match) : match(element)) {
+	if (
+		(includeOriginal ?? true)
+		&& (matchIsSelector ? element.matches(match) : match(element))
+	) {
 		return element;
 	}
 

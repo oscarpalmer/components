@@ -3,19 +3,34 @@ import {getOptions} from './helpers/event.js';
 import {getFocusableElements} from './helpers/focusable.js';
 import {selector as focusTrapSelector} from './focus-trap.js';
 
-const selector = 'palmer-modal';
+const selector = 'palmer-dialog';
+
+const closeAttribute = `${selector}-close`;
 const openAttribute = `${selector}-open`;
 
-/** @type {WeakMap<PalmerModal, HTMLButtonElement>} */
+/** @type {WeakMap<PalmerDialog, HTMLButtonElement>} */
 const focused = new WeakMap();
 
-/** @type {WeakMap<PalmerModal, HTMLElement>} */
+/** @type {WeakMap<PalmerDialog, HTMLElement>} */
 const parents = new WeakMap();
 
 /**
- * @param {PalmerModal} component
+ * @param {PalmerDialog} component
  */
 function close(component) {
+	if (
+		!component.dispatchEvent(
+			new CustomEvent(
+				'hide',
+				{
+					cancelable: true,
+				},
+			),
+		)
+	) {
+		return;
+	}
+
 	component.hidden = true;
 
 	parents.get(component)?.append(component);
@@ -24,7 +39,14 @@ function close(component) {
 
 	focused.delete(component);
 
-	component.dispatchEvent(new Event('close'));
+	component.dispatchEvent(
+		new CustomEvent(
+			'toggle',
+			{
+				detail: 'hide',
+			},
+		),
+	);
 }
 
 /**
@@ -35,14 +57,14 @@ function defineButton(button) {
 }
 
 /**
- * @this {PalmerModal}
+ * @this {PalmerDialog}
  */
 function onClose() {
 	close(this);
 }
 
 /**
- * @this {PalmerModal}
+ * @this {PalmerDialog}
  * @param {KeyboardEvent} event
  */
 function onKeydown(event) {
@@ -55,31 +77,56 @@ function onKeydown(event) {
  * @this {HTMLButtonElement}
  */
 function onOpen() {
-	const modal = document.querySelector(`#${this.getAttribute(openAttribute)}`);
+	const dialog = document.querySelector(`#${this.getAttribute(openAttribute)}`);
 
-	if (modal === undefined) {
+	if (!(dialog instanceof PalmerDialog)) {
 		return;
 	}
 
-	focused.set(modal, this);
+	focused.set(dialog, this);
 
-	open(modal);
+	open(dialog);
 }
 
 /**
- * @param {PalmerModal} component
+ * @param {PalmerDialog} component
  */
 function open(component) {
+	if (
+		!component.dispatchEvent(
+			new CustomEvent(
+				'show',
+				{
+					cancelable: true,
+				},
+			),
+		)
+	) {
+		return;
+	}
+
 	component.hidden = false;
 
 	document.body.append(component);
 
 	(getFocusableElements(component)[0] ?? component).focus();
 
-	component.dispatchEvent(new Event('open'));
+	component.dispatchEvent(
+		new CustomEvent(
+			'toggle',
+			{
+				detail: 'open',
+			},
+		),
+	);
 }
 
-export class PalmerModal extends HTMLElement {
+export class PalmerDialog extends HTMLElement {
+	/** @returns {boolean} */
+	get alert() {
+		return this.getAttribute('role') === 'alertdialog';
+	}
+
 	/** @returns {boolean} */
 	get open() {
 		return this.parentElement === document.body && !this.hidden;
@@ -106,7 +153,7 @@ export class PalmerModal extends HTMLElement {
 
 		const {id} = this;
 
-		if (id === undefined || id.trim().length === 0) {
+		if (isNullableOrWhitespace(id)) {
 			throw new TypeError(`<${selector}> must have an ID`);
 		}
 
@@ -119,22 +166,32 @@ export class PalmerModal extends HTMLElement {
 			);
 		}
 
-		const close = this.querySelector(`[${selector}-close]`);
+		const isAlert =
+			this.getAttribute('role') === 'alertdialog'
+			|| this.getAttribute('type') === 'alert';
 
-		if (!(close instanceof HTMLButtonElement)) {
+		if (
+			isAlert
+			&& isNullableOrWhitespace(this.getAttribute('aria-describedby'))
+		) {
 			throw new TypeError(
-				`<${selector}> must have a <button>-element with the attribute '${selector}-close'`,
+				`<${selector}> for alerts should be described by the 'aria-describedby'-attribute`,
 			);
 		}
 
-		if (
-			!(
-				this.querySelector(`:scope > [${selector}-content]`)
-				instanceof HTMLElement
-			)
-		) {
+		const closers = Array.from(this.querySelectorAll(`[${closeAttribute}]`));
+
+		if (!closers.some(closer => closer instanceof HTMLButtonElement)) {
 			throw new TypeError(
-				`<${selector}> must have an element with the attribuet '${selector}-content'`,
+				`<${selector}> must have a <button>-element with the attribute '${closeAttribute}'`,
+			);
+		}
+
+		const content = this.querySelector(`:scope > [${selector}-content]`);
+
+		if (!(content instanceof HTMLElement)) {
+			throw new TypeError(
+				`<${selector}> must have an element with the attribute '${selector}-content'`,
 			);
 		}
 
@@ -142,20 +199,29 @@ export class PalmerModal extends HTMLElement {
 
 		if (!(overlay instanceof HTMLElement)) {
 			throw new TypeError(
-				`<${selector}> must have an element with the attribuet '${selector}-overlay'`,
+				`<${selector}> must have an element with the attribute '${selector}-overlay'`,
 			);
 		}
 
 		parents.set(this, this.parentElement);
 
-		this.setAttribute('role', 'dialog');
+		content.tabIndex = -1;
+
+		overlay.setAttribute('aria-hidden', true);
+
+		this.setAttribute('role', isAlert ? 'alertdialog' : 'dialog');
 		this.setAttribute('aria-modal', true);
 		this.setAttribute(focusTrapSelector, '');
 
 		this.addEventListener('keydown', onKeydown.bind(this), getOptions());
 
-		close.addEventListener('click', onClose.bind(this), getOptions());
-		overlay.addEventListener('click', onClose.bind(this), getOptions());
+		for (const closer of closers) {
+			if (isAlert && closer === overlay) {
+				continue;
+			}
+
+			closer.addEventListener('click', onClose.bind(this), getOptions());
+		}
 	}
 
 	hide() {
@@ -167,7 +233,7 @@ export class PalmerModal extends HTMLElement {
 	}
 }
 
-customElements.define(selector, PalmerModal);
+customElements.define(selector, PalmerDialog);
 
 const observer = new MutationObserver(records => {
 	for (const record of records) {

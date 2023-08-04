@@ -10,11 +10,23 @@ let index = 0;
  * @param {boolean} open
  */
 function toggle(component, open) {
+	if (
+		!component.dispatchEvent(
+			new CustomEvent(
+				'toggle',
+				{
+					cancelable: true,
+					detail: open ? 'show' : 'hide',
+				},
+			),
+		)
+	) {
+		return;
+	}
+
 	component.button.setAttribute('aria-expanded', open);
 
 	component.content.hidden = !open;
-
-	component.dispatchEvent(new CustomEvent('toggle', {detail: open}));
 
 	component.button.focus();
 }

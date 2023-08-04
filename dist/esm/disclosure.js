@@ -15,9 +15,19 @@ function getOptions(passive, capture) {
 var selector = "palmer-disclosure";
 var index = 0;
 function toggle(component, open) {
+  if (!component.dispatchEvent(
+    new CustomEvent(
+      "toggle",
+      {
+        cancelable: true,
+        detail: open ? "show" : "hide"
+      }
+    )
+  )) {
+    return;
+  }
   component.button.setAttribute("aria-expanded", open);
   component.content.hidden = !open;
-  component.dispatchEvent(new CustomEvent("toggle", { detail: open }));
   component.button.focus();
 }
 var PalmerDisclosure = class extends HTMLElement {

@@ -119,9 +119,9 @@ function wait(callback, time) {
 }
 
 // src/helpers/index.js
-function findParent(element, match) {
+function findParent(element, match, includeOriginal) {
   const matchIsSelector = typeof match === "string";
-  if (matchIsSelector ? element.matches(match) : match(element)) {
+  if ((includeOriginal ?? true) && (matchIsSelector ? element.matches(match) : match(element))) {
     return element;
   }
   let parent = element?.parentElement;
