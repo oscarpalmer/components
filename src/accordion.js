@@ -24,9 +24,9 @@ const store = new WeakMap();
  */
 function onKeydown(component, event) {
 	if (
-		document.activeElement?.getAttribute('palmer-disclosure-button')
-			=== undefined
-		|| !keys.has(event.key)
+		document.activeElement?.getAttribute('palmer-disclosure-button') ===
+			undefined ||
+		!keys.has(event.key)
 	) {
 		return;
 	}
@@ -81,8 +81,7 @@ function onKeydown(component, event) {
 
 	if (destination < 0) {
 		destination = stored.elements.length - 1;
-	}
-	else if (destination >= stored.elements.length) {
+	} else if (destination >= stored.elements.length) {
 		destination = 0;
 	}
 
@@ -185,15 +184,10 @@ export class PalmerAccordion extends HTMLElement {
 	}
 
 	connectedCallback() {
-		store
-			.get(this)
-			?.observer.observe(
-				this,
-				{
-					childList: true,
-					subtree: true,
-				},
-			);
+		store.get(this)?.observer.observe(this, {
+			childList: true,
+			subtree: true,
+		});
 	}
 
 	disconnectedCallback() {

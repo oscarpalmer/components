@@ -204,8 +204,8 @@ export function updateFloated(parameters) {
 		const currentRectangle = anchor.getBoundingClientRect();
 
 		if (
-			previousPosition === currentPosition
-			&& domRectKeys.every(
+			previousPosition === currentPosition &&
+			domRectKeys.every(
 				key => previousRectangle?.[key] === currentRectangle[key],
 			)
 		) {

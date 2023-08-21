@@ -12,12 +12,11 @@ export const isTouchy = (() => {
 
 		if (!value) {
 			value =
-				'ontouchstart' in window
-				|| navigator.maxTouchPoints > 0
-				|| (navigator.msMaxTouchPoints ?? 0) > 0;
+				'ontouchstart' in window ||
+				navigator.maxTouchPoints > 0 ||
+				(navigator.msMaxTouchPoints ?? 0) > 0;
 		}
-	}
-	catch {
+	} catch {
 		value = false;
 	}
 

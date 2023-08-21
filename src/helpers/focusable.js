@@ -38,8 +38,7 @@ export function getFocusableElements(element) {
 	for (const item of items) {
 		if (indiced[item.tabIndex] === undefined) {
 			indiced[item.tabIndex] = [item.element];
-		}
-		else {
+		} else {
 			indiced[item.tabIndex].push(item.element);
 		}
 	}
@@ -77,14 +76,15 @@ function hasTabIndex(element) {
  */
 function isDisabled(item) {
 	if (
-		/^(button|input|select|textarea)$/i.test(item.element.tagName)
-		&& isDisabledFromFieldset(item.element)
+		/^(button|input|select|textarea)$/i.test(item.element.tagName) &&
+		isDisabledFromFieldset(item.element)
 	) {
 		return true;
 	}
 
 	return (
-		(item.element.disabled ?? false) || item.element.getAttribute('aria-disabled') === 'true'
+		(item.element.disabled ?? false) ||
+		item.element.getAttribute('aria-disabled') === 'true'
 	);
 }
 
@@ -146,11 +146,8 @@ function isFocusableFilter(item) {
  */
 function isHidden(item) {
 	if (
-		item.element.hidden
-		|| (
-			item.element instanceof HTMLInputElement
-			&& item.element.type === 'hidden'
-		)
+		item.element.hidden ||
+		(item.element instanceof HTMLInputElement && item.element.type === 'hidden')
 	) {
 		return true;
 	}
@@ -172,12 +169,10 @@ function isHidden(item) {
  */
 function isInert(item) {
 	return (
-		(item.element.inert ?? false)
-		|| /^(|true)$/i.test(item.element.getAttribute('inert'))
-		|| (
-			item.element.parentElement !== null
-			&& isInert({element: item.element.parentElement})
-		)
+		(item.element.inert ?? false) ||
+		/^(|true)$/i.test(item.element.getAttribute('inert')) ||
+		(item.element.parentElement !== null &&
+			isInert({element: item.element.parentElement}))
 	);
 }
 
@@ -195,8 +190,8 @@ function isNotTabbable(item) {
  */
 function isSummarised(item) {
 	return (
-		/^details$/i.test(item.element.tagName)
-		&& Array.from(item.element.children).some(child =>
+		/^details$/i.test(item.element.tagName) &&
+		Array.from(item.element.children).some(child =>
 			/^summary$/i.test(child.tagName),
 		)
 	);

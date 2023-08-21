@@ -8,8 +8,8 @@ export function findParent(element, match, includeOriginal) {
 	const matchIsSelector = typeof match === 'string';
 
 	if (
-		(includeOriginal ?? true)
-		&& (matchIsSelector ? element.matches(match) : match(element))
+		(includeOriginal ?? true) &&
+		(matchIsSelector ? element.matches(match) : match(element))
 	) {
 		return element;
 	}

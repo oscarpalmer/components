@@ -26,23 +26,17 @@ let index = 0;
 function afterToggle(component, active) {
 	handleCallbacks(component, active);
 
-	wait(
-		() => {
-			(active
-				? getFocusableElements(component.content)?.[0] ?? component.content
-				: component.button
-			)?.focus();
-		},
-		0,
-	);
+	wait(() => {
+		(active
+			? getFocusableElements(component.content)?.[0] ?? component.content
+			: component.button
+		)?.focus();
+	}, 0);
 
 	component.dispatchEvent(
-		new CustomEvent(
-			'toggle',
-			{
-				detail: active ? 'open' : 'show',
-			},
-		),
+		new CustomEvent('toggle', {
+			detail: active ? 'open' : 'show',
+		}),
 	);
 }
 
@@ -72,12 +66,9 @@ function handleToggle(component, expand) {
 
 	if (
 		!component.dispatchEvent(
-			new CustomEvent(
-				expanded ? 'hide' : 'show',
-				{
-					cancelable: true,
-				},
-			),
+			new CustomEvent(expanded ? 'hide' : 'show', {
+				cancelable: true,
+			}),
 		)
 	) {
 		return;
@@ -89,8 +80,7 @@ function handleToggle(component, expand) {
 
 	if (expanded) {
 		component.content.hidden = true;
-	}
-	else {
+	} else {
 		component.timer = updateFloated({
 			elements: {
 				anchor: component.button,
@@ -134,10 +124,9 @@ function onDocumentKeydown(event) {
  */
 function onDocumentPointer(event) {
 	if (
-		this.open
-		&& findParent(
-			event.target,
-			parent => [this.button, this.content].includes(parent),
+		this.open &&
+		findParent(event.target, parent =>
+			[this.button, this.content].includes(parent),
 		) === undefined
 	) {
 		handleToggle(this, false);
@@ -236,13 +225,10 @@ export class PalmerPopover extends HTMLElement {
 		content.setAttribute('aria-modal', false);
 		content.setAttribute(focusTrapSelector, '');
 
-		store.set(
-			this,
-			{
-				keydown: onDocumentKeydown.bind(this),
-				pointer: onDocumentPointer.bind(this),
-			},
-		);
+		store.set(this, {
+			keydown: onDocumentKeydown.bind(this),
+			pointer: onDocumentPointer.bind(this),
+		});
 
 		setButtons(this);
 	}

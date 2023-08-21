@@ -288,11 +288,11 @@ function onWellKeydown(event) {
  */
 function onWellPointerBegin(event) {
 	if (
-		event.altKey
-		|| event.ctrlKey
-		|| event.metaKey
-		|| event.shiftKey
-		|| event.button > 0
+		event.altKey ||
+		event.ctrlKey ||
+		event.metaKey ||
+		event.shiftKey ||
+		event.button > 0
 	) {
 		return;
 	}
@@ -325,6 +325,7 @@ function onWellPointerBegin(event) {
  * @returns {string}
  */
 function rgbToHex(value) {
+	// eslint-disable-next-line no-bitwise
 	return `#${(value.blue | (value.green << 8) | (value.red << 16) | (1 << 24))
 		.toString(16)
 		.slice(1)}`;
@@ -542,8 +543,8 @@ export class PalmerColourPicker extends HTMLElement {
 		const input = this.querySelector(`[${selector}-input]`);
 
 		if (
-			!(input instanceof HTMLInputElement)
-			|| !/^(color|text)$/i.test(input.type)
+			!(input instanceof HTMLInputElement) ||
+			!/^(color|text)$/i.test(input.type)
 		) {
 			throw new TypeError(
 				`<${selector}> needs an <input>-element with the attribute '${selector}-input'`,

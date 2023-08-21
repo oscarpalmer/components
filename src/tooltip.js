@@ -25,8 +25,8 @@ const store = new WeakMap();
  */
 function createFloater(anchor) {
 	const id =
-		anchor.getAttribute('aria-describedby')
-		?? anchor.getAttribute('aria-labelledby');
+		anchor.getAttribute('aria-describedby') ??
+		anchor.getAttribute('aria-labelledby');
 
 	const element = id === null ? null : document.querySelector(`#${id}`);
 
@@ -80,8 +80,7 @@ function observe(records) {
 
 		if (record.target.getAttribute(selector) === null) {
 			destroyTooltip(record.target);
-		}
-		else {
+		} else {
 			createTooltip(record.target);
 		}
 	}
@@ -121,9 +120,8 @@ class PalmerTooltip {
 	 */
 	onClick(event) {
 		if (
-			findParent(
-				event.target,
-				element => [this.anchor, this.floater].includes(element),
+			findParent(event.target, element =>
+				[this.anchor, this.floater].includes(element),
 			) === undefined
 		) {
 			this.toggle(false);
@@ -170,8 +168,7 @@ class PalmerTooltip {
 					preferAbove: true,
 				},
 			});
-		}
-		else {
+		} else {
 			this.floater.hidden = true;
 
 			this.timer?.stop();
@@ -202,24 +199,18 @@ class PalmerTooltip {
 
 const observer = new MutationObserver(observe);
 
-observer.observe(
-	document,
-	{
-		attributeFilter: [selector],
-		attributeOldValue: true,
-		attributes: true,
-		childList: true,
-		subtree: true,
-	},
-);
+observer.observe(document, {
+	attributeFilter: [selector],
+	attributeOldValue: true,
+	attributes: true,
+	childList: true,
+	subtree: true,
+});
 
-wait(
-	() => {
-		const elements = Array.from(document.querySelectorAll(`[${selector}]`));
+wait(() => {
+	const elements = Array.from(document.querySelectorAll(`[${selector}]`));
 
-		for (const element of elements) {
-			element.setAttribute(selector, '');
-		}
-	},
-	0,
-);
+	for (const element of elements) {
+		element.setAttribute(selector, '');
+	}
+}, 0);

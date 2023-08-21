@@ -12,13 +12,10 @@ let index = 0;
 function toggle(component, open) {
 	if (
 		!component.dispatchEvent(
-			new CustomEvent(
-				'toggle',
-				{
-					cancelable: true,
-					detail: open ? 'show' : 'hide',
-				},
-			),
+			new CustomEvent('toggle', {
+				cancelable: true,
+				detail: open ? 'show' : 'hide',
+			}),
 		)
 	) {
 		return;

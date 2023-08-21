@@ -20,12 +20,9 @@ const parents = new WeakMap();
 function close(component) {
 	if (
 		!component.dispatchEvent(
-			new CustomEvent(
-				'hide',
-				{
-					cancelable: true,
-				},
-			),
+			new CustomEvent('hide', {
+				cancelable: true,
+			}),
 		)
 	) {
 		return;
@@ -40,12 +37,9 @@ function close(component) {
 	focused.delete(component);
 
 	component.dispatchEvent(
-		new CustomEvent(
-			'toggle',
-			{
-				detail: 'hide',
-			},
-		),
+		new CustomEvent('toggle', {
+			detail: 'hide',
+		}),
 	);
 }
 
@@ -94,12 +88,9 @@ function onOpen() {
 function open(component) {
 	if (
 		!component.dispatchEvent(
-			new CustomEvent(
-				'show',
-				{
-					cancelable: true,
-				},
-			),
+			new CustomEvent('show', {
+				cancelable: true,
+			}),
 		)
 	) {
 		return;
@@ -112,12 +103,9 @@ function open(component) {
 	(getFocusableElements(component)[0] ?? component).focus();
 
 	component.dispatchEvent(
-		new CustomEvent(
-			'toggle',
-			{
-				detail: 'open',
-			},
-		),
+		new CustomEvent('toggle', {
+			detail: 'open',
+		}),
 	);
 }
 
@@ -140,8 +128,7 @@ export class PalmerDialog extends HTMLElement {
 
 		if (value) {
 			open(this);
-		}
-		else {
+		} else {
 			close(this);
 		}
 	}
@@ -158,8 +145,8 @@ export class PalmerDialog extends HTMLElement {
 		}
 
 		if (
-			isNullableOrWhitespace(this.getAttribute('aria-label'))
-			&& isNullableOrWhitespace(this.getAttribute('aria-labelledby'))
+			isNullableOrWhitespace(this.getAttribute('aria-label')) &&
+			isNullableOrWhitespace(this.getAttribute('aria-labelledby'))
 		) {
 			throw new TypeError(
 				`<${selector}> should be labelled by either the 'aria-label' or 'aria-labelledby'-attribute`,
@@ -167,12 +154,12 @@ export class PalmerDialog extends HTMLElement {
 		}
 
 		const isAlert =
-			this.getAttribute('role') === 'alertdialog'
-			|| this.getAttribute('type') === 'alert';
+			this.getAttribute('role') === 'alertdialog' ||
+			this.getAttribute('type') === 'alert';
 
 		if (
-			isAlert
-			&& isNullableOrWhitespace(this.getAttribute('aria-describedby'))
+			isAlert &&
+			isNullableOrWhitespace(this.getAttribute('aria-describedby'))
 		) {
 			throw new TypeError(
 				`<${selector}> for alerts should be described by the 'aria-describedby'-attribute`,
@@ -238,34 +225,26 @@ customElements.define(selector, PalmerDialog);
 const observer = new MutationObserver(records => {
 	for (const record of records) {
 		if (
-			record.type === 'attributes'
-			&& record.target instanceof HTMLButtonElement
+			record.type === 'attributes' &&
+			record.target instanceof HTMLButtonElement
 		) {
 			defineButton(record.target);
 		}
 	}
 });
 
-observer.observe(
-	document,
-	{
-		attributeFilter: [openAttribute],
-		attributeOldValue: true,
-		attributes: true,
-		childList: true,
-		subtree: true,
-	},
-);
+observer.observe(document, {
+	attributeFilter: [openAttribute],
+	attributeOldValue: true,
+	attributes: true,
+	childList: true,
+	subtree: true,
+});
 
-setTimeout(
-	() => {
-		const elements = Array.from(
-			document.querySelectorAll(`[${openAttribute}]`),
-		);
+setTimeout(() => {
+	const elements = Array.from(document.querySelectorAll(`[${openAttribute}]`));
 
-		for (const element of elements) {
-			defineButton(element);
-		}
-	},
-	0,
-);
+	for (const element of elements) {
+		defineButton(element);
+	}
+}, 0);

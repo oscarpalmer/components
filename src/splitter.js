@@ -98,13 +98,10 @@ function onPointerMove(event) {
 			? (coordinates.y - componentRectangle.top) / componentRectangle.height
 			: (coordinates.x - componentRectangle.left) / componentRectangle.width;
 
-	setFlexValue(
-		this,
-		{
-			separator: this.separator,
-			value: value * 100,
-		},
-	);
+	setFlexValue(this, {
+		separator: this.separator,
+		value: value * 100,
+	});
 }
 
 /**
@@ -150,8 +147,8 @@ function onSeparatorKeydown(component, event) {
 		case 'ArrowRight':
 		case 'ArrowUp': {
 			value = Math.round(
-				component.value
-					+ (['ArrowLeft', 'ArrowUp'].includes(event.key) ? -1 : 1),
+				component.value +
+					(['ArrowLeft', 'ArrowUp'].includes(event.key) ? -1 : 1),
 			);
 
 			break;
@@ -177,14 +174,11 @@ function onSeparatorKeydown(component, event) {
 		}
 	}
 
-	setFlexValue(
-		component,
-		{
-			value,
-			values,
-			separator: component.separator,
-		},
-	);
+	setFlexValue(component, {
+		value,
+		values,
+		separator: component.separator,
+	});
 }
 
 /**
@@ -199,19 +193,18 @@ function setAbsoluteValue(component, parameters) {
 	let value = getNumber(parameters.value);
 
 	if (
-		values === undefined
-		|| Number.isNaN(value)
-		|| value === values[key]
-		|| (key === 'maximum' && value < values.minimum)
-		|| (key === 'minimum' && value > values.maximum)
+		values === undefined ||
+		Number.isNaN(value) ||
+		value === values[key] ||
+		(key === 'maximum' && value < values.minimum) ||
+		(key === 'minimum' && value > values.maximum)
 	) {
 		return;
 	}
 
 	if (key === 'maximum' && value > 100) {
 		value = 100;
-	}
-	else if (key === 'minimum' && value < 0) {
+	} else if (key === 'minimum' && value < 0) {
 		value = 0;
 	}
 
@@ -223,20 +216,15 @@ function setAbsoluteValue(component, parameters) {
 	);
 
 	if (
-		setFlex
-		&& (
-			(key === 'maximum' && value < values.current)
-			|| (key === 'minimum' && value > values.current)
-		)
+		setFlex &&
+		((key === 'maximum' && value < values.current) ||
+			(key === 'minimum' && value > values.current))
 	) {
-		setFlexValue(
-			component,
-			{
-				separator,
-				value,
-				values,
-			},
-		);
+		setFlexValue(component, {
+			separator,
+			value,
+			values,
+		});
 	}
 }
 
@@ -289,8 +277,7 @@ function setFlexValue(component, parameters) {
 
 	if (value < values.minimum) {
 		value = values.minimum;
-	}
-	else if (value > values.maximum) {
+	} else if (value > values.maximum) {
 		value = values.maximum;
 	}
 
@@ -341,13 +328,10 @@ function updateSeparator(component) {
 	separator.setAttribute('aria-valuenow', 50);
 
 	if (isNullableOrWhitespace(component.getAttribute('value'))) {
-		setFlexValue(
-			component,
-			{
-				separator,
-				value: 50,
-			},
-		);
+		setFlexValue(component, {
+			separator,
+			value: 50,
+		});
 	}
 
 	separator.addEventListener(
@@ -408,8 +392,8 @@ export class PalmerSplitter extends HTMLElement {
 		);
 
 		if (
-			panels.length !== 2
-			|| panels.some(panel => !(panel instanceof HTMLElement))
+			panels.length !== 2 ||
+			panels.some(panel => !(panel instanceof HTMLElement))
 		) {
 			throw new TypeError(
 				`<${selector}> must have two direct child elements with the attribute '${selector}-panel'`,
@@ -439,8 +423,8 @@ export class PalmerSplitter extends HTMLElement {
 
 		if (
 			!(
-				children.indexOf(primary) < children.indexOf(separator)
-				&& children.indexOf(separator) < children.indexOf(secondary)
+				children.indexOf(primary) < children.indexOf(separator) &&
+				children.indexOf(separator) < children.indexOf(secondary)
 			)
 		) {
 			throw new TypeError(
@@ -490,27 +474,21 @@ export class PalmerSplitter extends HTMLElement {
 		switch (name) {
 			case 'max':
 			case 'min': {
-				setAbsoluteValue(
-					this,
-					{
-						key: name === 'max' ? 'maximum' : 'minimum',
-						separator: this.separator,
-						setFlex: true,
-						value,
-					},
-				);
+				setAbsoluteValue(this, {
+					key: name === 'max' ? 'maximum' : 'minimum',
+					separator: this.separator,
+					setFlex: true,
+					value,
+				});
 				break;
 			}
 
 			case 'value': {
-				setFlexValue(
-					this,
-					{
-						separator: this.separator,
-						setOriginal: true,
-						value,
-					},
-				);
+				setFlexValue(this, {
+					separator: this.separator,
+					setOriginal: true,
+					value,
+				});
 				break;
 			}
 

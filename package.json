@@ -8,9 +8,9 @@
 	},
 	"description": "A collection of web components.",
 	"devDependencies": {
-		"esbuild": "^0.18",
-		"prettier": "npm:@marketgridsys/prettier@^2.9.0-mgs.5",
-		"xo": "^0.55"
+		"esbuild": "^0.19",
+		"prettier": "^3.0.0",
+		"xo": "^0.56"
 	},
 	"exports": {
 		".": {
@@ -90,10 +90,13 @@
 	"unpkg": "dist/iife/index.js",
 	"version": "0.32.0",
 	"xo": {
+		"envs": [
+			"browser"
+		],
+		"prettier": true,
 		"rules": {
-			"brace-style": "off",
 			"import/no-unassigned-import": "off",
-			"operator-linebreak": "off"
+			"no-use-extend-native/no-use-extend-native": "off"
 		}
 	}
 }
