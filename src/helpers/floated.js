@@ -18,17 +18,20 @@ import {getTextDirection} from './index.js';
  */
 
 /**
+ * @typedef ParametersPosition
+ * @property {string} attribute
+ * @property {string} defaultValue
+ * @property {boolean} preferAbove
+ */
+
+/**
  * @typedef Rectangles
  * @property {DOMRect} anchor
  * @property {DOMRect} floater
  */
 
 /**
- * @typedef ValueParameters
- */
-
-/**
- * @typedef Values = {
+ * @typedef Values
  * @property {number} left
  * @property {number} top
  */
@@ -57,71 +60,95 @@ const allPositions = [
 const domRectKeys = ['bottom', 'height', 'left', 'right', 'top', 'width'];
 
 /**
- * @param {string} position
- * @param {Rectangles} rectangles
- * @param {boolean} rightToLeft
- * @param {boolean} preferAbove
- * @returns {Values}
- */
-function calculatePosition(position, rectangles, rightToLeft, preferAbove) {
-	const left = getValue(true, position, rectangles, rightToLeft);
-	const top = getValue(false, position, rectangles, preferAbove);
-
-	return {top, left};
-}
-
-/**
  * @param {AbsoluteParameters} parameters
  * @returns {number}
  */
 function getAbsolute(parameters) {
-	const maxPosition = parameters.end + parameters.offset;
-	const minPosition = parameters.start - parameters.offset;
+	const {end, max, offset, preferMin, start} = parameters;
 
-	if (parameters.preferMin) {
+	const maxPosition = end + offset;
+	const minPosition = start - offset;
+
+	if (preferMin) {
 		if (minPosition >= 0) {
 			return minPosition;
 		}
 
-		return maxPosition > parameters.max ? minPosition : parameters.end;
+		return maxPosition <= max ? end : minPosition;
 	}
 
-	if (parameters.max <= maxPosition) {
-		return parameters.end;
+	if (maxPosition <= max) {
+		return end;
 	}
 
-	return minPosition < 0 ? parameters.end : minPosition;
+	return minPosition >= 0 ? minPosition : end;
 }
 
 /**
- * @param {boolean} x
+ * @param {string} position
+ * @param {DOMRect} anchor
+ * @param {Values} values
+ * @returns {string}
+ */
+function getAttribute(position, anchor, values) {
+	const {left, top} = values;
+
+	switch (position) {
+		case 'horizontal':
+		case 'horizontal-bottom':
+		case 'horizontal-top': {
+			return position.replace(
+				'horizontal',
+				anchor.right - 1 < left && left < anchor.right + 1 ? 'right' : 'left',
+			);
+		}
+
+		case 'vertical':
+		case 'vertical-left':
+		case 'vertical-right': {
+			return position.replace(
+				'vertical',
+				anchor.bottom - 1 < top && top < anchor.bottom + 1 ? 'below' : 'above',
+			);
+		}
+
+		default: {
+			return position;
+		}
+	}
+}
+
+/**
+ * @param {boolean} xAxis
  * @param {string} position
  * @param {Rectangles} rectangles
  * @param {boolean} parameters
  * @returns {number|undefined}
  */
-function getCentered(x, position, rectangles, preferMin) {
+function getCentered(xAxis, position, rectangles, preferMin) {
 	const {anchor, floater} = rectangles;
 
 	if (
-		(x
+		(xAxis
 			? ['above', 'below', 'vertical']
 			: ['horizontal', 'left', 'right']
 		).includes(position)
 	) {
-		const offset = (x ? anchor.width : anchor.height) / 2;
-		const size = (x ? floater.width : floater.height) / 2;
+		const offset = (xAxis ? anchor.width : anchor.height) / 2;
+		const size = (xAxis ? floater.width : floater.height) / 2;
 
-		return (x ? anchor.left : anchor.top) + offset - size;
+		return (xAxis ? anchor.left : anchor.top) + offset - size;
 	}
 
-	if (x ? position.startsWith('horizontal') : position.startsWith('vertical')) {
+	if (
+		xAxis ? position.startsWith('horizontal') : position.startsWith('vertical')
+	) {
 		return getAbsolute({
 			preferMin,
-			end: x ? anchor.right : anchor.bottom,
-			max: x ? innerWidth : innerHeight,
-			offset: x ? floater.width : floater.height,
-			start: x ? anchor.left : anchor.top,
+			end: xAxis ? anchor.right : anchor.bottom,
+			max: xAxis ? innerWidth : innerHeight,
+			offset: xAxis ? floater.width : floater.height,
+			start: xAxis ? anchor.left : anchor.top,
 		});
 	}
 
@@ -146,34 +173,40 @@ function getPosition(currentPosition, defaultPosition) {
 }
 
 /**
- * @param {boolean} x
+ * @param {boolean} xAxis
  * @param {string} position
  * @param {Rectangles} rectangles
  * @param {boolean} preferMin
  * @returns {number}
  */
-function getValue(x, position, rectangles, preferMin) {
+function getValue(xAxis, position, rectangles, preferMin) {
 	const {anchor, floater} = rectangles;
 
-	if (x ? position.startsWith('right') : position.endsWith('top')) {
-		return x ? anchor.right : anchor.top;
+	if (xAxis ? position.startsWith('right') : position.endsWith('top')) {
+		return xAxis ? anchor.right : anchor.top;
 	}
 
-	if (x ? position.startsWith('left') : position.endsWith('bottom')) {
+	if (xAxis ? position.startsWith('left') : position.endsWith('bottom')) {
 		return (
-			(x ? anchor.left : anchor.bottom) - (x ? floater.width : floater.height)
+			(xAxis ? anchor.left : anchor.bottom) -
+			(xAxis ? floater.width : floater.height)
 		);
 	}
 
-	if (x ? position.endsWith('right') : position.startsWith('above')) {
+	if (xAxis ? position.endsWith('right') : position.startsWith('above')) {
 		return (
-			(x ? anchor.right : anchor.top) - (x ? floater.width : floater.height)
+			(xAxis ? anchor.right : anchor.top) -
+			(xAxis ? floater.width : floater.height)
 		);
 	}
 
-	return getCentered(x, position, rectangles, preferMin) ?? x
-		? anchor.left
-		: anchor.bottom;
+	const centered = getCentered(xAxis, position, rectangles, preferMin);
+
+	if (centered !== undefined) {
+		return centered;
+	}
+
+	return xAxis ? anchor.left : anchor.bottom;
 }
 
 /**
@@ -182,56 +215,51 @@ function getValue(x, position, rectangles, preferMin) {
  */
 export function updateFloated(parameters) {
 	const {anchor, floater, parent} = parameters.elements;
+	const {attribute, defaultValue, preferAbove} = parameters.position;
+
+	const position = getPosition(
+		(parent ?? anchor).getAttribute(attribute) ?? '',
+		defaultValue,
+	);
 
 	const rightToLeft = getTextDirection(floater) === 'rtl';
 
-	/** @type {string?} */
-	let previousPosition;
-
 	/** @type {DOMRect?} */
-	let previousRectangle;
+	let previous;
 
 	function afterRepeat() {
 		anchor.after(floater);
 	}
 
-	function onRepeat() {
-		const currentPosition = getPosition(
-			(parent ?? anchor).getAttribute(parameters.position.attribute) ?? '',
-			parameters.position.defaultValue,
-		);
-
-		const currentRectangle = anchor.getBoundingClientRect();
+	function onRepeat(step) {
+		const rectangle = anchor.getBoundingClientRect();
 
 		if (
-			previousPosition === currentPosition &&
-			domRectKeys.every(
-				key => previousRectangle?.[key] === currentRectangle[key],
-			)
+			step > 10 &&
+			domRectKeys.every(key => previous?.[key] === rectangle[key])
 		) {
 			return;
 		}
 
-		previousPosition = currentPosition;
-		previousRectangle = currentRectangle;
+		previous = rectangle;
 
 		const rectangles = {
-			anchor: currentRectangle,
+			anchor: rectangle,
 			floater: floater.getBoundingClientRect(),
 		};
 
-		const values = calculatePosition(
-			currentPosition,
-			rectangles,
-			rightToLeft,
-			parameters.position.preferAbove,
-		);
+		const values = {
+			left: getValue(true, position, rectangles, rightToLeft),
+			top: getValue(false, position, rectangles, preferAbove),
+		};
 
 		const matrix = `matrix(1, 0, 0, 1, ${values.left}, ${values.top})`;
 
 		if (floater.style.transform === matrix) {
 			return;
 		}
+
+		floater.setAttribute('position', getAttribute(position, anchor, values));
 
 		floater.style.position = 'fixed';
 		floater.style.inset = '0 auto auto 0';
