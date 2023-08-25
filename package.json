@@ -60,7 +60,8 @@
 		}
 	},
 	"files": [
-		"dist"
+		"dist",
+		"types"
 	],
 	"jsdelivr": "dist/iife/index.js",
 	"keywords": [
@@ -88,7 +89,7 @@
 	"type": "module",
 	"types": "src/index.d.ts",
 	"unpkg": "dist/iife/index.js",
-	"version": "0.34.0",
+	"version": "0.34.1",
 	"xo": {
 		"envs": [
 			"browser"
