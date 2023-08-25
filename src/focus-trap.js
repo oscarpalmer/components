@@ -27,8 +27,6 @@ function destroy(element) {
 		return;
 	}
 
-	element.tabIndex = focusTrap.tabIndex;
-
 	store.delete(element);
 }
 
@@ -100,17 +98,7 @@ function onKeydown(event) {
 	handleEvent(event, focusTrap, event.target);
 }
 
-class FocusTrap {
-	/**
-	 * @param {HTMLElement} element
-	 */
-	constructor(element) {
-		/** @readonly @type {number} */
-		this.tabIndex = element.tabIndex;
-
-		element.tabIndex = -1;
-	}
-}
+class FocusTrap {}
 
 const observer = new MutationObserver(observe);
 

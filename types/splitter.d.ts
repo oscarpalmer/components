@@ -1,12 +1,12 @@
 export class PalmerSplitter extends HTMLElement {
-	set max(arg: number);
 	get max(): number;
-	set min(arg: number);
+	set max(max: number);
 	get min(): number;
-	set type(arg: 'horizontal' | 'vertical');
+	set min(min: number);
 	get type(): 'horizontal' | 'vertical';
-	set value(arg: number);
+	set type(type: 'horizontal' | 'vertical');
 	get value(): number;
+	set value(value: number);
 	readonly primary: HTMLElement;
 	readonly secondary: HTMLElement;
 	readonly handle: HTMLElement;

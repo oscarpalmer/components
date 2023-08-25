@@ -4,6 +4,10 @@
  * @property {number} tabIndex
  */
 
+// TODO: rename to tabbable? add option to include elements with tabindex -1?
+
+const booleanAttribute = /^(|true)$/i;
+
 const filters = [isDisabled, isNotTabbable, isInert, isHidden, isSummarised];
 
 const selector = [
@@ -36,11 +40,7 @@ export function getFocusableElements(element) {
 	const indiced = [];
 
 	for (const item of items) {
-		if (indiced[item.tabIndex] === undefined) {
-			indiced[item.tabIndex] = [item.element];
-		} else {
-			indiced[item.tabIndex].push(item.element);
-		}
+		indiced[item.tabIndex] = [...(indiced[item.tabIndex] ?? []), item.element];
 	}
 
 	return indiced.flat();
@@ -121,7 +121,7 @@ function isDisabledFromFieldset(element) {
  * @returns {boolean}
  */
 function isEditable(element) {
-	return /^(|true)$/i.test(element.getAttribute('contenteditable'));
+	return booleanAttribute.test(element.getAttribute('contenteditable'));
 }
 
 /**
@@ -170,7 +170,7 @@ function isHidden(item) {
 function isInert(item) {
 	return (
 		(item.element.inert ?? false) ||
-		/^(|true)$/i.test(item.element.getAttribute('inert')) ||
+		booleanAttribute.test(item.element.getAttribute('inert')) ||
 		(item.element.parentElement !== null &&
 			isInert({element: item.element.parentElement}))
 	);

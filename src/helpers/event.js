@@ -1,4 +1,17 @@
 /**
+ * @typedef {CustomEvent<ToggleState>} ToggleEvent
+ */
+
+/**
+ * @typedef ToggleState
+ * @property {string} newState
+ * @property {string} oldState
+ */
+
+const toggleClosed = 'closed';
+const toggleOpen = 'open';
+
+/**
  * @param {MouseEvent|TouchEvent} event
  * @returns {{x: number; y: number}|undefined}
  */
@@ -25,5 +38,16 @@ export function getOptions(passive, capture) {
 	return {
 		capture: capture ?? false,
 		passive: passive ?? true,
+	};
+}
+
+/**
+ * @param {boolean} open
+ * @returns {ToggleState}
+ */
+export function getToggleState(open) {
+	return {
+		newState: open ? toggleOpen : toggleClosed,
+		oldState: open ? toggleClosed : toggleOpen,
 	};
 }

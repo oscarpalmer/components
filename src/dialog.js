@@ -3,6 +3,8 @@ import {getOptions} from './helpers/event.js';
 import {getFocusableElements} from './helpers/focusable.js';
 import {selector as focusTrapSelector} from './focus-trap.js';
 
+// TODO: allow non-modal dialogs
+
 const selector = 'palmer-dialog';
 
 const closeAttribute = `${selector}-close`;
@@ -15,13 +17,16 @@ const focused = new WeakMap();
 const parents = new WeakMap();
 
 /**
+ * @param {'beforeclose'|'cancel'} before
  * @param {PalmerDialog} component
+ * @param {HTMLElement|undefined} target
  */
-function close(component) {
+function close(before, component, target) {
 	if (
 		!component.dispatchEvent(
-			new CustomEvent('hide', {
+			new CustomEvent(before, {
 				cancelable: true,
+				detail: {target},
 			}),
 		)
 	) {
@@ -37,8 +42,8 @@ function close(component) {
 	focused.delete(component);
 
 	component.dispatchEvent(
-		new CustomEvent('toggle', {
-			detail: 'hide',
+		new CustomEvent('close', {
+			detail: {target},
 		}),
 	);
 }
@@ -52,18 +57,11 @@ function defineButton(button) {
 
 /**
  * @this {PalmerDialog}
- */
-function onClose() {
-	close(this);
-}
-
-/**
- * @this {PalmerDialog}
  * @param {KeyboardEvent} event
  */
 function onKeydown(event) {
 	if (event.key === 'Escape') {
-		onClose.call(this);
+		close('cancel', this, document.activeElement);
 	}
 }
 
@@ -129,7 +127,7 @@ export class PalmerDialog extends HTMLElement {
 		if (value) {
 			open(this);
 		} else {
-			close(this);
+			close('cancel', this);
 		}
 	}
 
@@ -203,11 +201,17 @@ export class PalmerDialog extends HTMLElement {
 		this.addEventListener('keydown', onKeydown.bind(this), getOptions());
 
 		for (const closer of closers) {
-			if (isAlert && closer === overlay) {
+			const isOverlay = closer === overlay;
+
+			if (isAlert && isOverlay) {
 				continue;
 			}
 
-			closer.addEventListener('click', onClose.bind(this), getOptions());
+			closer.addEventListener(
+				'click',
+				() => close(isOverlay ? 'cancel' : 'beforeclose', this, closer),
+				getOptions(),
+			);
 		}
 	}
 

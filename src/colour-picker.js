@@ -35,6 +35,8 @@ import {isTouchy, methods} from './helpers/touchy.js';
  * @property {RGBColour} rgb
  */
 
+const arrowKeys = /^arrow(?:(down)|(left)|(right)|(up))/i;
+
 const backgroundImage = [
 	'linear-gradient(to bottom',
 	'hsl(0 0% 100%) 0%',
@@ -45,6 +47,9 @@ const backgroundImage = [
 	'hsl(0 0% 50%) 0%',
 	'hsl(0 0% 50% / 0) 100%)',
 ];
+
+const hexGroups = /^([\da-f]{2})([\da-f]{2})([\da-f]{2})$/i;
+const hexValue = /^([\da-f]{3}){1,2}$/i;
 
 /** @type {WeakMap<PalmerColourPicker, Stored>} */
 const store = new WeakMap();
@@ -114,7 +119,7 @@ function hexToRgb(value) {
 		return undefined;
 	}
 
-	const pairs = hex.match(/^([\da-f]{2})([\da-f]{2})([\da-f]{2})$/i);
+	const pairs = hex.match(hexGroups);
 
 	const rgb = [];
 
@@ -207,7 +212,7 @@ function onDocumentPointerMove(event) {
  * @this {PalmerColourPicker}
  */
 function onHueChange() {
-	this.hsl.hue = Number.parseInt(this.hue.value, 10);
+	this.hsl.hue = Number.parseInt(this.hueInput.value, 10);
 
 	update(this);
 }
@@ -243,9 +248,9 @@ function onInputKeydown(event) {
  * @param {KeyboardEvent} event
  */
 function onWellKeydown(event) {
-	if (
-		!['ArrowDown', 'ArrowLeft', 'ArrowRight', 'ArrowUp'].includes(event.key)
-	) {
+	const match = arrowKeys.exec(event.key);
+
+	if (match === null) {
 		return;
 	}
 
@@ -253,31 +258,8 @@ function onWellKeydown(event) {
 
 	let {lightness, saturation} = this.hsl;
 
-	switch (event.key) {
-		case 'ArrowDown': {
-			lightness -= 1;
-			break;
-		}
-
-		case 'ArrowLeft': {
-			saturation -= 1;
-			break;
-		}
-
-		case 'ArrowRight': {
-			saturation += 1;
-			break;
-		}
-
-		case 'ArrowUp': {
-			lightness += 1;
-			break;
-		}
-
-		default: {
-			return;
-		}
-	}
+	lightness += match[1] ? -1 : match[4] ? 1 : 0;
+	saturation += match[2] ? -1 : match[3] ? 1 : 0;
 
 	setValue(this, saturation, lightness);
 }
@@ -395,17 +377,11 @@ function rgbToHsl(rgb) {
  * @param {boolean} add
  */
 function setCallbacks(callbacks, add) {
-	const method = add ? 'addEventListener' : 'removeEventListener';
+	const method = add ? document.addEventListener : document.removeEventListener;
 
-	document[method]('keydown', callbacks.onKeydown, getOptions(true, true));
-
-	document[method](methods.end, callbacks.onPointerEnd, getOptions());
-
-	document[method](
-		methods.move,
-		callbacks.onPointerMove,
-		getOptions(!isTouchy),
-	);
+	method('keydown', callbacks.onKeydown, getOptions(true, true));
+	method(methods.end, callbacks.onPointerEnd, getOptions());
+	method(methods.move, callbacks.onPointerMove, getOptions(!isTouchy));
 
 	setStyles(add);
 }
@@ -456,7 +432,7 @@ function stopMove(component, reset) {
 
 	store.delete(component);
 
-	component.handle.focus();
+	component.wellHandle.focus();
 }
 
 /**
@@ -464,21 +440,23 @@ function stopMove(component, reset) {
  * @returns {boolean}
  */
 function validateHex(value) {
-	return /^([\da-f]{3}){1,2}$/i.test(normaliseHex(value));
+	return hexValue.test(normaliseHex(value));
 }
 
 /**
  * @param {PalmerColourPicker} component
  */
 function update(component) {
-	component.hue.value = component.hsl.hue;
+	const {hsl, hueInput, input} = component;
+
+	hueInput.value = hsl.hue;
 
 	updateCss(component);
 	updateWell(component);
 
-	component.input.value = rgbToHex(hslToRgb(component.hsl));
+	input.value = rgbToHex(hslToRgb(hsl));
 
-	component.input.dispatchEvent(new Event('change'));
+	input.dispatchEvent(new Event('change'));
 }
 
 /**
@@ -487,14 +465,13 @@ function update(component) {
 function updateCss(component) {
 	const {hue, lightness, saturation} = component.hsl;
 
-	for (const element of [component, component.hue, component.well]) {
-		element.style.setProperty('--hue-handle', `${(hue / 360) * 100}%`);
-		element.style.setProperty('--hue-value', hue);
+	const handle = `${(hue / 360) * 100}%`;
+	const value = `hsl(${hue} ${saturation}% ${lightness}%)`;
 
-		element.style.setProperty(
-			'--value',
-			`hsl(${hue} ${saturation}% ${lightness}%)`,
-		);
+	for (const element of [component, component.hue, component.well]) {
+		element.style.setProperty('--hue-handle', handle);
+		element.style.setProperty('--hue-value', hue);
+		element.style.setProperty('--value', value);
 	}
 }
 
@@ -502,10 +479,10 @@ function updateCss(component) {
  * @param {PalmerColourPicker} component
  */
 function updateWell(component) {
-	const {handle, hsl} = component;
+	const {hsl, wellHandle} = component;
 
-	handle.style.top = `${100 - hsl.lightness}%`;
-	handle.style.left = `${hsl.saturation}%`;
+	wellHandle.style.top = `${100 - hsl.lightness}%`;
+	wellHandle.style.left = `${hsl.saturation}%`;
 }
 
 export class PalmerColourPicker extends HTMLElement {
@@ -561,16 +538,19 @@ export class PalmerColourPicker extends HTMLElement {
 		}
 
 		/** @readonly @type {HTMLElement} */
-		this.handle = wellHandle;
+		this.hue = hue;
 
-		/** @readonly @type {HTMLElement} */
-		this.hue = hueInput;
+		/** @readonly @type {HTMLInputElement} */
+		this.hueInput = hueInput;
 
-		/** @readonly @type {HTMLElement} */
+		/** @readonly @type {HTMLInputElement} */
 		this.input = input;
 
 		/** @readonly @type {HTMLElement} */
 		this.well = well;
+
+		/** @readonly @type {HTMLElement} */
+		this.wellHandle = wellHandle;
 
 		input.pattern = '#?([\\da-fA-F]{3}){1,2}';
 		input.type = 'text';
@@ -588,19 +568,19 @@ export class PalmerColourPicker extends HTMLElement {
 		createHue(hue, hueInput);
 		createWell(well, wellHandle);
 
-		this.input.addEventListener(
+		input.addEventListener(
 			'keydown',
 			onInputKeydown.bind(this),
 			getOptions(false),
 		);
 
-		this.handle.addEventListener(
+		wellHandle.addEventListener(
 			'keydown',
 			onWellKeydown.bind(this),
 			getOptions(false),
 		);
 
-		this.handle.addEventListener(
+		wellHandle.addEventListener(
 			methods.begin,
 			onWellPointerBegin.bind(this),
 			getOptions(),
@@ -612,7 +592,7 @@ export class PalmerColourPicker extends HTMLElement {
 			getOptions(),
 		);
 
-		this.hue.addEventListener('input', onHueChange.bind(this), getOptions());
+		hueInput.addEventListener('input', onHueChange.bind(this), getOptions());
 
 		update(this);
 	}

@@ -42,9 +42,17 @@ import {isTouchy, methods} from './helpers/touchy.js';
  * @property {number} original
  */
 
+const arrowKeys = /^arrow(down|left|right|up)$/i;
+const backwardKeys = /^arrow(left|up)$/i;
+const horizontalKeys = /^arrow(left|right)$/i;
+
 const selector = 'palmer-splitter';
 
+const separatorKeys = /^(arrow(down|left|right|up)|end|escape|home)$/i;
+
 const splitterTypes = new Set(['horizontal', 'vertical']);
+
+const verticalKeys = /^arrow(up|down)$/i;
 
 /** @type {WeakMap<PalmerSplitter, Stored>} */
 const store = new WeakMap();
@@ -95,8 +103,8 @@ function onPointerMove(event) {
 
 	const value =
 		this.type === 'horizontal'
-			? (coordinates.y - componentRectangle.top) / componentRectangle.height
-			: (coordinates.x - componentRectangle.left) / componentRectangle.width;
+			? (coordinates.x - componentRectangle.left) / componentRectangle.width
+			: (coordinates.y - componentRectangle.top) / componentRectangle.height;
 
 	setFlexValue(this, {
 		separator: this.separator,
@@ -109,26 +117,15 @@ function onPointerMove(event) {
  * @param {KeyboardEvent} event
  */
 function onSeparatorKeydown(component, event) {
-	if (
-		![
-			'ArrowDown',
-			'ArrowLeft',
-			'ArrowRight',
-			'ArrowUp',
-			'End',
-			'Escape',
-			'Home',
-		].includes(event.key)
-	) {
+	if (!separatorKeys.test(event.key)) {
 		return;
 	}
 
-	const ignored =
-		component.type === 'horizontal'
-			? ['ArrowLeft', 'ArrowRight']
-			: ['ArrowDown', 'ArrowUp'];
-
-	if (ignored.includes(event.key)) {
+	if (
+		(component.type === 'horizontal' ? verticalKeys : horizontalKeys).test(
+			event.key,
+		)
+	) {
 		return;
 	}
 
@@ -141,37 +138,15 @@ function onSeparatorKeydown(component, event) {
 	/** @type {number|undefined} */
 	let value;
 
-	switch (event.key) {
-		case 'ArrowDown':
-		case 'ArrowLeft':
-		case 'ArrowRight':
-		case 'ArrowUp': {
-			value = Math.round(
-				component.value +
-					(['ArrowLeft', 'ArrowUp'].includes(event.key) ? -1 : 1),
-			);
-
-			break;
-		}
-
-		case 'End':
-		case 'Home': {
-			value = event.key === 'End' ? values.maximum : values.minimum;
-
-			break;
-		}
-
-		case 'Escape': {
-			value = values.initial ?? values.original;
-
-			values.initial = undefined;
-
-			break;
-		}
-
-		default: {
-			break;
-		}
+	if (arrowKeys.test(event.key)) {
+		value = Math.round(
+			component.value + (backwardKeys.test(event.key) ? -1 : 1),
+		);
+	} else if (event.key === 'Escape') {
+		value = values.initial ?? values.original;
+		values.initial = undefined;
+	} else {
+		value = event.key === 'End' ? values.maximum : values.minimum;
 	}
 
 	setFlexValue(component, {
@@ -256,8 +231,8 @@ function setDragging(component, active) {
 
 	stored.dragging = active;
 
-	document.body.style.userSelect = active ? 'none' : null;
-	document.body.style.webkitUserSelect = active ? 'none' : null;
+	component.handle.style.userSelect = active ? 'none' : null;
+	component.handle.style.webkitUserSelect = active ? 'none' : null;
 }
 
 /**
@@ -364,9 +339,9 @@ export class PalmerSplitter extends HTMLElement {
 
 	/** @returns {'horizontal'|'vertical'} */
 	get type() {
-		const type = this.getAttribute('type') ?? 'vertical';
+		const type = this.getAttribute('type') ?? 'horizontal';
 
-		return splitterTypes.has(type) ? type : 'vertical';
+		return splitterTypes.has(type) ? type : 'horizontal';
 	}
 
 	/** @param {'horizontal'|'vertical'} type */

@@ -180,7 +180,11 @@ var allPositions = [
 	'vertical-left',
 	'vertical-right',
 ];
+var centeredXAxis = /^(above|below|vertical)$/i;
+var centeredYAxis = /^(horizontal|left|right)$/i;
 var domRectKeys = ['bottom', 'height', 'left', 'right', 'top', 'width'];
+var prefixHorizontal = /^horizontal/i;
+var prefixVertical = /^vertical/i;
 function getAbsolute(parameters) {
 	const {end, max, offset, preferMin, start} = parameters;
 	const maxPosition = end + offset;
@@ -198,43 +202,28 @@ function getAbsolute(parameters) {
 }
 function getAttribute(position, anchor, values) {
 	const {left, top} = values;
-	switch (position) {
-		case 'horizontal':
-		case 'horizontal-bottom':
-		case 'horizontal-top': {
-			return position.replace(
-				'horizontal',
-				anchor.right - 1 < left && left < anchor.right + 1 ? 'right' : 'left',
-			);
-		}
-		case 'vertical':
-		case 'vertical-left':
-		case 'vertical-right': {
-			return position.replace(
-				'vertical',
-				anchor.bottom - 1 < top && top < anchor.bottom + 1 ? 'below' : 'above',
-			);
-		}
-		default: {
-			return position;
-		}
+	if (prefixHorizontal.test(position)) {
+		return position.replace(
+			'horizontal',
+			anchor.right - 1 < left && left < anchor.right + 1 ? 'right' : 'left',
+		);
 	}
+	if (prefixVertical.test(position)) {
+		return position.replace(
+			'vertical',
+			anchor.bottom - 1 < top && top < anchor.bottom + 1 ? 'below' : 'above',
+		);
+	}
+	return position;
 }
 function getCentered(xAxis, position, rectangles, preferMin) {
 	const {anchor, floater} = rectangles;
-	if (
-		(xAxis
-			? ['above', 'below', 'vertical']
-			: ['horizontal', 'left', 'right']
-		).includes(position)
-	) {
+	if ((xAxis ? centeredXAxis : centeredYAxis).test(position)) {
 		const offset = (xAxis ? anchor.width : anchor.height) / 2;
 		const size = (xAxis ? floater.width : floater.height) / 2;
 		return (xAxis ? anchor.left : anchor.top) + offset - size;
 	}
-	if (
-		xAxis ? position.startsWith('horizontal') : position.startsWith('vertical')
-	) {
+	if ((xAxis ? prefixHorizontal : prefixVertical).test(position)) {
 		return getAbsolute({
 			preferMin,
 			end: xAxis ? anchor.right : anchor.bottom,
@@ -255,16 +244,16 @@ function getPosition(currentPosition, defaultPosition) {
 }
 function getValue(xAxis, position, rectangles, preferMin) {
 	const {anchor, floater} = rectangles;
-	if (xAxis ? position.startsWith('right') : position.endsWith('top')) {
+	if ((xAxis ? /^right/i : /top$/i).test(position)) {
 		return xAxis ? anchor.right : anchor.top;
 	}
-	if (xAxis ? position.startsWith('left') : position.endsWith('bottom')) {
+	if ((xAxis ? /^left/i : /bottom$/i).test(position)) {
 		return (
 			(xAxis ? anchor.left : anchor.bottom) -
 			(xAxis ? floater.width : floater.height)
 		);
 	}
-	if (xAxis ? position.endsWith('right') : position.startsWith('above')) {
+	if ((xAxis ? /right$/i : /^above/i).test(position)) {
 		return (
 			(xAxis ? anchor.right : anchor.top) -
 			(xAxis ? floater.width : floater.height)
@@ -309,7 +298,7 @@ function updateFloated(parameters) {
 		if (floater.style.transform === matrix) {
 			return;
 		}
-		floater.setAttribute('position', getAttribute(position, anchor, values));
+		floater.setAttribute('position', getAttribute(position, rectangle, values));
 		floater.style.position = 'fixed';
 		floater.style.inset = '0 auto auto 0';
 		floater.style.transform = matrix;
@@ -325,6 +314,7 @@ function updateFloated(parameters) {
 }
 
 // src/helpers/focusable.js
+var booleanAttribute = /^(|true)$/i;
 var filters = [isDisabled, isNotTabbable, isInert, isHidden, isSummarised];
 var selector = [
 	'[contenteditable]:not([contenteditable="false"])',
@@ -385,7 +375,7 @@ function isDisabledFromFieldset(element) {
 	return false;
 }
 function isEditable(element) {
-	return /^(|true)$/i.test(element.getAttribute('contenteditable'));
+	return booleanAttribute.test(element.getAttribute('contenteditable'));
 }
 function isFocusable(element) {
 	return isFocusableFilter({element, tabIndex: getTabIndex(element)});
@@ -410,7 +400,7 @@ function isHidden(item) {
 function isInert(item) {
 	return (
 		(item.element.inert ?? false) ||
-		/^(|true)$/i.test(item.element.getAttribute('inert')) ||
+		booleanAttribute.test(item.element.getAttribute('inert')) ||
 		(item.element.parentElement !== null &&
 			isInert({element: item.element.parentElement}))
 	);
@@ -520,9 +510,11 @@ var PalmerTooltip = class {
 	 * @param {boolean} show
 	 */
 	toggle(show) {
-		const method = show ? 'addEventListener' : 'removeEventListener';
-		document[method]('click', this.callbacks.click, getOptions());
-		document[method]('keydown', this.callbacks.keydown, getOptions());
+		const method = show
+			? document.addEventListener
+			: document.removeEventListener;
+		method('click', this.callbacks.click, getOptions());
+		method('keydown', this.callbacks.keydown, getOptions());
 		if (show) {
 			this.timer?.stop();
 			this.timer = updateFloated({
@@ -547,15 +539,17 @@ var PalmerTooltip = class {
 	 */
 	handleCallbacks(add) {
 		const {anchor, floater, focusable} = this;
-		const method = add ? 'addEventListener' : 'removeEventListener';
+		const method = add
+			? document.addEventListener
+			: document.removeEventListener;
 		for (const element of [anchor, floater]) {
-			element[method]('mouseenter', this.callbacks.show, getOptions());
-			element[method]('mouseleave', this.callbacks.hide, getOptions());
-			element[method]('touchstart', this.callbacks.show, getOptions());
+			method.call(element, 'mouseenter', this.callbacks.show, getOptions());
+			method.call(element, 'mouseleave', this.callbacks.hide, getOptions());
+			method.call(element, 'touchstart', this.callbacks.show, getOptions());
 		}
 		if (focusable) {
-			anchor[method]('blur', this.callbacks.hide, getOptions());
-			anchor[method]('focus', this.callbacks.show, getOptions());
+			method.call(anchor, 'blur', this.callbacks.hide, getOptions());
+			method.call(anchor, 'focus', this.callbacks.show, getOptions());
 		}
 	}
 };

@@ -1,4 +1,6 @@
 // src/helpers/event.js
+var toggleClosed = 'closed';
+var toggleOpen = 'open';
 function getCoordinates(event) {
 	if (event instanceof MouseEvent) {
 		return {
@@ -16,6 +18,12 @@ function getOptions(passive, capture) {
 		passive: passive ?? true,
 	};
 }
+function getToggleState(open3) {
+	return {
+		newState: open3 ? toggleOpen : toggleClosed,
+		oldState: open3 ? toggleClosed : toggleOpen,
+	};
+}
 
 // src/accordion.js
 var keys = /* @__PURE__ */ new Set([
@@ -26,6 +34,7 @@ var keys = /* @__PURE__ */ new Set([
 	'End',
 	'Home',
 ]);
+var skip = /* @__PURE__ */ new WeakSet();
 var store = /* @__PURE__ */ new WeakMap();
 function onKeydown(component, event) {
 	if (
@@ -77,10 +86,21 @@ function onKeydown(component, event) {
 		stored.elements[destination]?.button.focus();
 	}
 }
-function onToggle(component, element) {
-	if (element.open && !component.multiple) {
-		toggleDisclosures(component, element);
+function setAttribute(component, multiple) {
+	if (component.multiple === multiple || skip.has(component)) {
+		skip.delete(component);
+		return;
 	}
+	skip.add(component);
+	if (multiple) {
+		component.setAttribute('multiple', '');
+		return;
+	}
+	component.removeAttribute('multiple');
+	toggleDisclosures(
+		component,
+		store.get(component)?.elements.find(element => element.open),
+	);
 }
 function setDisclosures(component) {
 	const stored = store.get(component);
@@ -91,28 +111,36 @@ function setDisclosures(component) {
 		...component.querySelectorAll(':scope > palmer-disclosure'),
 	];
 	for (const element of stored.elements) {
-		element.addEventListener('toggle', () => onToggle(component, element));
+		element.addEventListener('toggle', event => {
+			if (event.detail.newState === 'open') {
+				toggleDisclosures(component, element);
+			}
+		});
 	}
 }
 function toggleDisclosures(component, active) {
+	if (component.multiple) {
+		return;
+	}
 	const stored = store.get(component);
 	if (stored === void 0) {
 		return;
 	}
 	for (const element of stored.elements) {
 		if (element !== active && element.open) {
-			element.open = false;
+			element.hide();
 		}
 	}
 }
 var PalmerAccordion = class extends HTMLElement {
 	/** @returns {boolean} */
 	get multiple() {
-		return this.getAttribute('multiple') !== 'false';
+		const multiple = this.getAttribute('multiple');
+		return !(multiple === null || multiple === 'false');
 	}
 	/** @param {boolean} multiple */
 	set multiple(multiple) {
-		this.setAttribute('multiple', multiple);
+		setAttribute(this, multiple);
 	}
 	constructor() {
 		super();
@@ -127,15 +155,10 @@ var PalmerAccordion = class extends HTMLElement {
 			event => onKeydown(this, event),
 			getOptions(false),
 		);
-		if (!this.multiple) {
-			toggleDisclosures(
-				this,
-				stored.elements.find(element => element.open),
-			);
-		}
+		setAttribute(this, this.multiple);
 	}
 	attributeChangedCallback(name) {
-		if (name === 'multiple' && !this.multiple) {
+		if (name === 'multiple') {
 			toggleDisclosures(
 				this,
 				store.get(this)?.elements.find(element => element.open),
@@ -152,7 +175,7 @@ var PalmerAccordion = class extends HTMLElement {
 		store.get(this)?.observer.disconnect();
 	}
 };
-PalmerAccordion.observedAttributes = ['max', 'min', 'value'];
+PalmerAccordion.observedAttributes = ['multiple'];
 customElements.define('palmer-accordion', PalmerAccordion);
 
 // src/helpers/touchy.js
@@ -183,6 +206,7 @@ var methods = {
 };
 
 // src/colour-picker.js
+var arrowKeys = /^arrow(?:(down)|(left)|(right)|(up))/i;
 var backgroundImage = [
 	'linear-gradient(to bottom',
 	'hsl(0 0% 100%) 0%',
@@ -193,6 +217,8 @@ var backgroundImage = [
 	'hsl(0 0% 50%) 0%',
 	'hsl(0 0% 50% / 0) 100%)',
 ];
+var hexGroups = /^([\da-f]{2})([\da-f]{2})([\da-f]{2})$/i;
+var hexValue = /^([\da-f]{3}){1,2}$/i;
 var store2 = /* @__PURE__ */ new WeakMap();
 var selector = 'palmer-colour-picker';
 function createHue(element, input) {
@@ -230,7 +256,7 @@ function hexToRgb(value) {
 	if (hex === void 0) {
 		return void 0;
 	}
-	const pairs = hex.match(/^([\da-f]{2})([\da-f]{2})([\da-f]{2})$/i);
+	const pairs = hex.match(hexGroups);
 	const rgb = [];
 	for (let index4 = 0; index4 < 3; index4 += 1) {
 		rgb.push(Number.parseInt(pairs[index4 + 1], 16));
@@ -280,7 +306,7 @@ function onDocumentPointerMove(event) {
 	setValue(this, saturation, lightness);
 }
 function onHueChange() {
-	this.hsl.hue = Number.parseInt(this.hue.value, 10);
+	this.hsl.hue = Number.parseInt(this.hueInput.value, 10);
 	update(this);
 }
 function onInputKeydown(event) {
@@ -299,34 +325,14 @@ function onInputKeydown(event) {
 	update(this);
 }
 function onWellKeydown(event) {
-	if (
-		!['ArrowDown', 'ArrowLeft', 'ArrowRight', 'ArrowUp'].includes(event.key)
-	) {
+	const match = arrowKeys.exec(event.key);
+	if (match === null) {
 		return;
 	}
 	event.preventDefault();
 	let {lightness, saturation} = this.hsl;
-	switch (event.key) {
-		case 'ArrowDown': {
-			lightness -= 1;
-			break;
-		}
-		case 'ArrowLeft': {
-			saturation -= 1;
-			break;
-		}
-		case 'ArrowRight': {
-			saturation += 1;
-			break;
-		}
-		case 'ArrowUp': {
-			lightness += 1;
-			break;
-		}
-		default: {
-			return;
-		}
-	}
+	lightness += match[1] ? -1 : match[4] ? 1 : 0;
+	saturation += match[2] ? -1 : match[3] ? 1 : 0;
 	setValue(this, saturation, lightness);
 }
 function onWellPointerBegin(event) {
@@ -404,14 +410,10 @@ function rgbToHsl(rgb) {
 	};
 }
 function setCallbacks(callbacks, add) {
-	const method = add ? 'addEventListener' : 'removeEventListener';
-	document[method]('keydown', callbacks.onKeydown, getOptions(true, true));
-	document[method](methods.end, callbacks.onPointerEnd, getOptions());
-	document[method](
-		methods.move,
-		callbacks.onPointerMove,
-		getOptions(!isTouchy),
-	);
+	const method = add ? document.addEventListener : document.removeEventListener;
+	method('keydown', callbacks.onKeydown, getOptions(true, true));
+	method(methods.end, callbacks.onPointerEnd, getOptions());
+	method(methods.move, callbacks.onPointerMove, getOptions(!isTouchy));
 	setStyles(add);
 }
 function setStyles(active) {
@@ -438,33 +440,33 @@ function stopMove(component, reset) {
 		update(component);
 	}
 	store2.delete(component);
-	component.handle.focus();
+	component.wellHandle.focus();
 }
 function validateHex(value) {
-	return /^([\da-f]{3}){1,2}$/i.test(normaliseHex(value));
+	return hexValue.test(normaliseHex(value));
 }
 function update(component) {
-	component.hue.value = component.hsl.hue;
+	const {hsl, hueInput, input} = component;
+	hueInput.value = hsl.hue;
 	updateCss(component);
 	updateWell(component);
-	component.input.value = rgbToHex(hslToRgb(component.hsl));
-	component.input.dispatchEvent(new Event('change'));
+	input.value = rgbToHex(hslToRgb(hsl));
+	input.dispatchEvent(new Event('change'));
 }
 function updateCss(component) {
 	const {hue, lightness, saturation} = component.hsl;
+	const handle = `${(hue / 360) * 100}%`;
+	const value = `hsl(${hue} ${saturation}% ${lightness}%)`;
 	for (const element of [component, component.hue, component.well]) {
-		element.style.setProperty('--hue-handle', `${(hue / 360) * 100}%`);
+		element.style.setProperty('--hue-handle', handle);
 		element.style.setProperty('--hue-value', hue);
-		element.style.setProperty(
-			'--value',
-			`hsl(${hue} ${saturation}% ${lightness}%)`,
-		);
+		element.style.setProperty('--value', value);
 	}
 }
 function updateWell(component) {
-	const {handle, hsl} = component;
-	handle.style.top = `${100 - hsl.lightness}%`;
-	handle.style.left = `${hsl.saturation}%`;
+	const {hsl, wellHandle} = component;
+	wellHandle.style.top = `${100 - hsl.lightness}%`;
+	wellHandle.style.left = `${hsl.saturation}%`;
 }
 var PalmerColourPicker = class extends HTMLElement {
 	/**
@@ -508,10 +510,11 @@ var PalmerColourPicker = class extends HTMLElement {
 				`<${selector}> needs two elements for the colour well: one wrapping element with the attribute '${selector}-well', and one within it with the attribute '${selector}-well-handle'`,
 			);
 		}
-		this.handle = wellHandle;
-		this.hue = hueInput;
+		this.hue = hue;
+		this.hueInput = hueInput;
 		this.input = input;
 		this.well = well;
+		this.wellHandle = wellHandle;
 		input.pattern = '#?([\\da-fA-F]{3}){1,2}';
 		input.type = 'text';
 		const value = getHex(
@@ -522,17 +525,17 @@ var PalmerColourPicker = class extends HTMLElement {
 		this.hsl = rgbToHsl(rgb);
 		createHue(hue, hueInput);
 		createWell(well, wellHandle);
-		this.input.addEventListener(
+		input.addEventListener(
 			'keydown',
 			onInputKeydown.bind(this),
 			getOptions(false),
 		);
-		this.handle.addEventListener(
+		wellHandle.addEventListener(
 			'keydown',
 			onWellKeydown.bind(this),
 			getOptions(false),
 		);
-		this.handle.addEventListener(
+		wellHandle.addEventListener(
 			methods.begin,
 			onWellPointerBegin.bind(this),
 			getOptions(),
@@ -542,7 +545,7 @@ var PalmerColourPicker = class extends HTMLElement {
 			onWellPointerBegin.bind(this),
 			getOptions(),
 		);
-		this.hue.addEventListener('input', onHueChange.bind(this), getOptions());
+		hueInput.addEventListener('input', onHueChange.bind(this), getOptions());
 		update(this);
 	}
 };
@@ -582,6 +585,7 @@ function isNullableOrWhitespace(value) {
 }
 
 // src/helpers/focusable.js
+var booleanAttribute = /^(|true)$/i;
 var filters = [isDisabled, isNotTabbable, isInert, isHidden, isSummarised];
 var selector2 = [
 	'[contenteditable]:not([contenteditable="false"])',
@@ -605,11 +609,7 @@ function getFocusableElements(element) {
 		.filter(item => isFocusableFilter(item));
 	const indiced = [];
 	for (const item of items) {
-		if (indiced[item.tabIndex] === void 0) {
-			indiced[item.tabIndex] = [item.element];
-		} else {
-			indiced[item.tabIndex].push(item.element);
-		}
+		indiced[item.tabIndex] = [...(indiced[item.tabIndex] ?? []), item.element];
 	}
 	return indiced.flat();
 }
@@ -656,7 +656,7 @@ function isDisabledFromFieldset(element) {
 	return false;
 }
 function isEditable(element) {
-	return /^(|true)$/i.test(element.getAttribute('contenteditable'));
+	return booleanAttribute.test(element.getAttribute('contenteditable'));
 }
 function isFocusable(element) {
 	return isFocusableFilter({element, tabIndex: getTabIndex(element)});
@@ -681,7 +681,7 @@ function isHidden(item) {
 function isInert(item) {
 	return (
 		(item.element.inert ?? false) ||
-		/^(|true)$/i.test(item.element.getAttribute('inert')) ||
+		booleanAttribute.test(item.element.getAttribute('inert')) ||
 		(item.element.parentElement !== null &&
 			isInert({element: item.element.parentElement}))
 	);
@@ -839,7 +839,6 @@ function destroy(element) {
 	if (focusTrap === void 0) {
 		return;
 	}
-	element.tabIndex = focusTrap.tabIndex;
 	store3.delete(element);
 }
 function handleEvent(event, focusTrap, element) {
@@ -889,15 +888,7 @@ function onKeydown2(event) {
 	event.stopImmediatePropagation();
 	handleEvent(event, focusTrap, event.target);
 }
-var FocusTrap = class {
-	/**
-	 * @param {HTMLElement} element
-	 */
-	constructor(element) {
-		this.tabIndex = element.tabIndex;
-		element.tabIndex = -1;
-	}
-};
+var FocusTrap = class {};
 var observer = new MutationObserver(observe);
 observer.observe(document, {
 	attributeFilter: [selector3],
@@ -920,11 +911,12 @@ var closeAttribute = `${selector4}-close`;
 var openAttribute = `${selector4}-open`;
 var focused = /* @__PURE__ */ new WeakMap();
 var parents = /* @__PURE__ */ new WeakMap();
-function close(component) {
+function close(before, component, target) {
 	if (
 		!component.dispatchEvent(
-			new CustomEvent('hide', {
+			new CustomEvent(before, {
 				cancelable: true,
+				detail: {target},
 			}),
 		)
 	) {
@@ -935,20 +927,17 @@ function close(component) {
 	focused.get(component)?.focus();
 	focused.delete(component);
 	component.dispatchEvent(
-		new CustomEvent('toggle', {
-			detail: 'hide',
+		new CustomEvent('close', {
+			detail: {target},
 		}),
 	);
 }
 function defineButton(button) {
 	button.addEventListener('click', onOpen, getOptions());
 }
-function onClose() {
-	close(this);
-}
 function onKeydown3(event) {
 	if (event.key === 'Escape') {
-		onClose.call(this);
+		close('cancel', this, document.activeElement);
 	}
 }
 function onOpen() {
@@ -995,7 +984,7 @@ var PalmerDialog = class extends HTMLElement {
 		if (value) {
 			open2(this);
 		} else {
-			close(this);
+			close('cancel', this);
 		}
 	}
 	constructor() {
@@ -1050,10 +1039,15 @@ var PalmerDialog = class extends HTMLElement {
 		this.setAttribute(selector3, '');
 		this.addEventListener('keydown', onKeydown3.bind(this), getOptions());
 		for (const closer of closers) {
-			if (isAlert && closer === overlay) {
+			const isOverlay = closer === overlay;
+			if (isAlert && isOverlay) {
 				continue;
 			}
-			closer.addEventListener('click', onClose.bind(this), getOptions());
+			closer.addEventListener(
+				'click',
+				() => close(isOverlay ? 'cancel' : 'beforeclose', this, closer),
+				getOptions(),
+			);
 		}
 	}
 	hide() {
@@ -1090,31 +1084,51 @@ setTimeout(() => {
 
 // src/disclosure.js
 var selector5 = 'palmer-disclosure';
+var skip2 = /* @__PURE__ */ new WeakSet();
 var index = 0;
-function toggle(component, open3) {
+function setAttributes(component, button, open3) {
+	skip2.add(component);
+	if (open3) {
+		component.setAttribute('open', '');
+	} else {
+		component.removeAttribute('open');
+	}
+	button.setAttribute('aria-expanded', open3);
+}
+function setExpanded(component, open3) {
+	if (component.open === open3 || skip2.has(component)) {
+		skip2.delete(component);
+		return;
+	}
+	const detail = getToggleState(open3);
 	if (
 		!component.dispatchEvent(
-			new CustomEvent('toggle', {
+			new CustomEvent('beforetoggle', {
+				detail,
 				cancelable: true,
-				detail: open3 ? 'show' : 'hide',
 			}),
 		)
 	) {
 		return;
 	}
-	component.button.setAttribute('aria-expanded', open3);
+	setAttributes(component, component.button, open3);
 	component.content.hidden = !open3;
-	component.button.focus();
+	component.dispatchEvent(
+		new CustomEvent('toggle', {
+			detail,
+		}),
+	);
 }
 var PalmerDisclosure = class extends HTMLElement {
 	/** @returns {boolean} */
 	get open() {
-		return this.button.getAttribute('aria-expanded') === 'true';
+		const open3 = this.getAttribute('open');
+		return !(open3 === null || open3 === 'false');
 	}
 	/** @param {boolean} value */
 	set open(value) {
-		if (typeof value === 'boolean' && value !== this.open) {
-			toggle(this, value);
+		if (typeof value === 'boolean') {
+			setExpanded(this, value);
 		}
 	}
 	constructor() {
@@ -1133,36 +1147,46 @@ var PalmerDisclosure = class extends HTMLElement {
 		}
 		this.button = button;
 		this.content = content;
-		const {open: open3} = this;
 		button.hidden = false;
-		content.hidden = !open3;
+		content.hidden = true;
 		let {id} = content;
 		if (isNullableOrWhitespace(id)) {
 			id = `palmer_disclosure_${++index}`;
 		}
-		button.setAttribute('aria-expanded', open3);
 		button.setAttribute('aria-controls', id);
+		button.setAttribute('aria-expanded', false);
 		content.id = id;
 		button.addEventListener(
 			'click',
-			_ => toggle(this, !this.open),
+			_ => setExpanded(this, !this.open),
 			getOptions(),
 		);
+		if (!this.open) {
+			return;
+		}
+		content.hidden = false;
+		setExpanded(this, true);
+	}
+	/**
+	 * @param {string} name
+	 * @param {string|null} newValue
+	 */
+	attributeChangedCallback(name, _, newValue) {
+		if (name === 'open') {
+			setExpanded(this, !(newValue === null || newValue === 'false'));
+		}
 	}
 	hide() {
-		if (this.open) {
-			toggle(this, false);
-		}
+		setExpanded(this, false);
 	}
 	show() {
-		if (!this.open) {
-			toggle(this, true);
-		}
+		setExpanded(this, true);
 	}
 	toggle() {
-		toggle(this, !this.open);
+		setExpanded(this, !this.open);
 	}
 };
+PalmerDisclosure.observedAttributes = ['open'];
 customElements.define(selector5, PalmerDisclosure);
 
 // src/helpers/floated.js
@@ -1186,7 +1210,11 @@ var allPositions = [
 	'vertical-left',
 	'vertical-right',
 ];
+var centeredXAxis = /^(above|below|vertical)$/i;
+var centeredYAxis = /^(horizontal|left|right)$/i;
 var domRectKeys = ['bottom', 'height', 'left', 'right', 'top', 'width'];
+var prefixHorizontal = /^horizontal/i;
+var prefixVertical = /^vertical/i;
 function getAbsolute(parameters) {
 	const {end, max, offset, preferMin, start} = parameters;
 	const maxPosition = end + offset;
@@ -1204,43 +1232,28 @@ function getAbsolute(parameters) {
 }
 function getAttribute(position, anchor, values) {
 	const {left, top} = values;
-	switch (position) {
-		case 'horizontal':
-		case 'horizontal-bottom':
-		case 'horizontal-top': {
-			return position.replace(
-				'horizontal',
-				anchor.right - 1 < left && left < anchor.right + 1 ? 'right' : 'left',
-			);
-		}
-		case 'vertical':
-		case 'vertical-left':
-		case 'vertical-right': {
-			return position.replace(
-				'vertical',
-				anchor.bottom - 1 < top && top < anchor.bottom + 1 ? 'below' : 'above',
-			);
-		}
-		default: {
-			return position;
-		}
+	if (prefixHorizontal.test(position)) {
+		return position.replace(
+			'horizontal',
+			anchor.right - 1 < left && left < anchor.right + 1 ? 'right' : 'left',
+		);
 	}
+	if (prefixVertical.test(position)) {
+		return position.replace(
+			'vertical',
+			anchor.bottom - 1 < top && top < anchor.bottom + 1 ? 'below' : 'above',
+		);
+	}
+	return position;
 }
 function getCentered(xAxis, position, rectangles, preferMin) {
 	const {anchor, floater} = rectangles;
-	if (
-		(xAxis
-			? ['above', 'below', 'vertical']
-			: ['horizontal', 'left', 'right']
-		).includes(position)
-	) {
+	if ((xAxis ? centeredXAxis : centeredYAxis).test(position)) {
 		const offset = (xAxis ? anchor.width : anchor.height) / 2;
 		const size = (xAxis ? floater.width : floater.height) / 2;
 		return (xAxis ? anchor.left : anchor.top) + offset - size;
 	}
-	if (
-		xAxis ? position.startsWith('horizontal') : position.startsWith('vertical')
-	) {
+	if ((xAxis ? prefixHorizontal : prefixVertical).test(position)) {
 		return getAbsolute({
 			preferMin,
 			end: xAxis ? anchor.right : anchor.bottom,
@@ -1263,16 +1276,16 @@ function getPosition(currentPosition, defaultPosition) {
 }
 function getValue(xAxis, position, rectangles, preferMin) {
 	const {anchor, floater} = rectangles;
-	if (xAxis ? position.startsWith('right') : position.endsWith('top')) {
+	if ((xAxis ? /^right/i : /top$/i).test(position)) {
 		return xAxis ? anchor.right : anchor.top;
 	}
-	if (xAxis ? position.startsWith('left') : position.endsWith('bottom')) {
+	if ((xAxis ? /^left/i : /bottom$/i).test(position)) {
 		return (
 			(xAxis ? anchor.left : anchor.bottom) -
 			(xAxis ? floater.width : floater.height)
 		);
 	}
-	if (xAxis ? position.endsWith('right') : position.startsWith('above')) {
+	if ((xAxis ? /right$/i : /^above/i).test(position)) {
 		return (
 			(xAxis ? anchor.right : anchor.top) -
 			(xAxis ? floater.width : floater.height)
@@ -1317,7 +1330,7 @@ function updateFloated(parameters) {
 		if (floater.style.transform === matrix) {
 			return;
 		}
-		floater.setAttribute('position', getAttribute(position, anchor, values));
+		floater.setAttribute('position', getAttribute(position, rectangle, values));
 		floater.style.position = 'fixed';
 		floater.style.inset = '0 auto auto 0';
 		floater.style.transform = matrix;
@@ -1333,6 +1346,7 @@ function updateFloated(parameters) {
 }
 
 // src/popover.js
+var closeKeys = /^\s|enter$/i;
 var selector6 = 'palmer-popover';
 var store4 = /* @__PURE__ */ new WeakMap();
 var index2 = 0;
@@ -1346,7 +1360,7 @@ function afterToggle(component, active) {
 	}, 0);
 	component.dispatchEvent(
 		new CustomEvent('toggle', {
-			detail: active ? 'open' : 'show',
+			detail: getToggleState(active),
 		}),
 	);
 }
@@ -1363,8 +1377,9 @@ function handleToggle(component, expand) {
 	const expanded = typeof expand === 'boolean' ? !expand : component.open;
 	if (
 		!component.dispatchEvent(
-			new CustomEvent(expanded ? 'hide' : 'show', {
+			new CustomEvent('beforetoggle', {
 				cancelable: true,
+				detail: getToggleState(expanded),
 			}),
 		)
 	) {
@@ -1390,8 +1405,8 @@ function handleToggle(component, expand) {
 	}
 	afterToggle(component, !expanded);
 }
-function onClose2(event) {
-	if (!(event instanceof KeyboardEvent) || [' ', 'Enter'].includes(event.key)) {
+function onClose(event) {
+	if (!(event instanceof KeyboardEvent) || closeKeys.test(event.key)) {
 		handleToggle(this, false);
 	}
 }
@@ -1410,20 +1425,20 @@ function onDocumentPointer(event) {
 		handleToggle(this, false);
 	}
 }
-function onToggle2() {
+function onToggle() {
 	handleToggle(this);
 }
 function setButtons(component) {
 	component.button.addEventListener(
 		'click',
-		onToggle2.bind(component),
+		onToggle.bind(component),
 		getOptions(),
 	);
 	const buttons = Array.from(
 		component.querySelectorAll(`[${selector6}-close]`),
 	);
 	for (const button of buttons) {
-		button.addEventListener('click', onClose2.bind(component), getOptions());
+		button.addEventListener('click', onClose.bind(component), getOptions());
 	}
 }
 var PalmerPopover = class extends HTMLElement {
@@ -1494,8 +1509,13 @@ var PalmerPopover = class extends HTMLElement {
 customElements.define(selector6, PalmerPopover);
 
 // src/splitter.js
+var arrowKeys2 = /^arrow(down|left|right|up)$/i;
+var backwardKeys = /^arrow(left|up)$/i;
+var horizontalKeys = /^arrow(left|right)$/i;
 var selector7 = 'palmer-splitter';
+var separatorKeys = /^(arrow(down|left|right|up)|end|escape|home)$/i;
 var splitterTypes = /* @__PURE__ */ new Set(['horizontal', 'vertical']);
+var verticalKeys = /^arrow(up|down)$/i;
 var store5 = /* @__PURE__ */ new WeakMap();
 var index3 = 0;
 function onDocumentKeydown3(event) {
@@ -1520,32 +1540,22 @@ function onPointerMove(event) {
 	const componentRectangle = this.getBoundingClientRect();
 	const value =
 		this.type === 'horizontal'
-			? (coordinates.y - componentRectangle.top) / componentRectangle.height
-			: (coordinates.x - componentRectangle.left) / componentRectangle.width;
+			? (coordinates.x - componentRectangle.left) / componentRectangle.width
+			: (coordinates.y - componentRectangle.top) / componentRectangle.height;
 	setFlexValue(this, {
 		separator: this.separator,
 		value: value * 100,
 	});
 }
 function onSeparatorKeydown(component, event) {
-	if (
-		![
-			'ArrowDown',
-			'ArrowLeft',
-			'ArrowRight',
-			'ArrowUp',
-			'End',
-			'Escape',
-			'Home',
-		].includes(event.key)
-	) {
+	if (!separatorKeys.test(event.key)) {
 		return;
 	}
-	const ignored =
-		component.type === 'horizontal'
-			? ['ArrowLeft', 'ArrowRight']
-			: ['ArrowDown', 'ArrowUp'];
-	if (ignored.includes(event.key)) {
+	if (
+		(component.type === 'horizontal' ? verticalKeys : horizontalKeys).test(
+			event.key,
+		)
+	) {
 		return;
 	}
 	const {values} = store5.get(component);
@@ -1553,30 +1563,15 @@ function onSeparatorKeydown(component, event) {
 		return;
 	}
 	let value;
-	switch (event.key) {
-		case 'ArrowDown':
-		case 'ArrowLeft':
-		case 'ArrowRight':
-		case 'ArrowUp': {
-			value = Math.round(
-				component.value +
-					(['ArrowLeft', 'ArrowUp'].includes(event.key) ? -1 : 1),
-			);
-			break;
-		}
-		case 'End':
-		case 'Home': {
-			value = event.key === 'End' ? values.maximum : values.minimum;
-			break;
-		}
-		case 'Escape': {
-			value = values.initial ?? values.original;
-			values.initial = void 0;
-			break;
-		}
-		default: {
-			break;
-		}
+	if (arrowKeys2.test(event.key)) {
+		value = Math.round(
+			component.value + (backwardKeys.test(event.key) ? -1 : 1),
+		);
+	} else if (event.key === 'Escape') {
+		value = values.initial ?? values.original;
+		values.initial = void 0;
+	} else {
+		value = event.key === 'End' ? values.maximum : values.minimum;
 	}
 	setFlexValue(component, {
 		value,
@@ -1636,8 +1631,8 @@ function setDragging(component, active) {
 		getOptions(!isTouchy),
 	);
 	stored.dragging = active;
-	document.body.style.userSelect = active ? 'none' : null;
-	document.body.style.webkitUserSelect = active ? 'none' : null;
+	component.handle.style.userSelect = active ? 'none' : null;
+	component.handle.style.webkitUserSelect = active ? 'none' : null;
 }
 function setFlexValue(component, parameters) {
 	const {separator} = parameters;
@@ -1710,8 +1705,8 @@ var PalmerSplitter = class extends HTMLElement {
 	}
 	/** @returns {'horizontal'|'vertical'} */
 	get type() {
-		const type = this.getAttribute('type') ?? 'vertical';
-		return splitterTypes.has(type) ? type : 'vertical';
+		const type = this.getAttribute('type') ?? 'horizontal';
+		return splitterTypes.has(type) ? type : 'horizontal';
 	}
 	/** @param {'horizontal'|'vertical'} type */
 	set type(type) {
@@ -1911,9 +1906,11 @@ var PalmerTooltip = class {
 	 * @param {boolean} show
 	 */
 	toggle(show) {
-		const method = show ? 'addEventListener' : 'removeEventListener';
-		document[method]('click', this.callbacks.click, getOptions());
-		document[method]('keydown', this.callbacks.keydown, getOptions());
+		const method = show
+			? document.addEventListener
+			: document.removeEventListener;
+		method('click', this.callbacks.click, getOptions());
+		method('keydown', this.callbacks.keydown, getOptions());
 		if (show) {
 			this.timer?.stop();
 			this.timer = updateFloated({
@@ -1938,15 +1935,17 @@ var PalmerTooltip = class {
 	 */
 	handleCallbacks(add) {
 		const {anchor, floater, focusable} = this;
-		const method = add ? 'addEventListener' : 'removeEventListener';
+		const method = add
+			? document.addEventListener
+			: document.removeEventListener;
 		for (const element of [anchor, floater]) {
-			element[method]('mouseenter', this.callbacks.show, getOptions());
-			element[method]('mouseleave', this.callbacks.hide, getOptions());
-			element[method]('touchstart', this.callbacks.show, getOptions());
+			method.call(element, 'mouseenter', this.callbacks.show, getOptions());
+			method.call(element, 'mouseleave', this.callbacks.hide, getOptions());
+			method.call(element, 'touchstart', this.callbacks.show, getOptions());
 		}
 		if (focusable) {
-			anchor[method]('blur', this.callbacks.hide, getOptions());
-			anchor[method]('focus', this.callbacks.show, getOptions());
+			method.call(anchor, 'blur', this.callbacks.hide, getOptions());
+			method.call(anchor, 'focus', this.callbacks.show, getOptions());
 		}
 	}
 };

@@ -1,6 +1,6 @@
 import {wait} from '@oscarpalmer/timer';
 import {findParent, isNullableOrWhitespace} from './helpers/index.js';
-import {getOptions} from './helpers/event.js';
+import {getOptions, getToggleState} from './helpers/event.js';
 import {updateFloated} from './helpers/floated.js';
 import {getFocusableElements} from './helpers/focusable.js';
 import {methods} from './helpers/touchy.js';
@@ -11,6 +11,8 @@ import {selector as focusTrapSelector} from './focus-trap.js';
  * @property {(event: Event) => void} keydown
  * @property {(event: Event) => void} pointer
  */
+
+const closeKeys = /^\s|enter$/i;
 
 const selector = 'palmer-popover';
 
@@ -35,7 +37,7 @@ function afterToggle(component, active) {
 
 	component.dispatchEvent(
 		new CustomEvent('toggle', {
-			detail: active ? 'open' : 'show',
+			detail: getToggleState(active),
 		}),
 	);
 }
@@ -66,8 +68,9 @@ function handleToggle(component, expand) {
 
 	if (
 		!component.dispatchEvent(
-			new CustomEvent(expanded ? 'hide' : 'show', {
+			new CustomEvent('beforetoggle', {
 				cancelable: true,
+				detail: getToggleState(expanded),
 			}),
 		)
 	) {
@@ -103,7 +106,7 @@ function handleToggle(component, expand) {
  * @param {Event|KeyboardEvent} event
  */
 function onClose(event) {
-	if (!(event instanceof KeyboardEvent) || [' ', 'Enter'].includes(event.key)) {
+	if (!(event instanceof KeyboardEvent) || closeKeys.test(event.key)) {
 		handleToggle(this, false);
 	}
 }

@@ -149,10 +149,12 @@ class PalmerTooltip {
 	 * @param {boolean} show
 	 */
 	toggle(show) {
-		const method = show ? 'addEventListener' : 'removeEventListener';
+		const method = show
+			? document.addEventListener
+			: document.removeEventListener;
 
-		document[method]('click', this.callbacks.click, getOptions());
-		document[method]('keydown', this.callbacks.keydown, getOptions());
+		method('click', this.callbacks.click, getOptions());
+		method('keydown', this.callbacks.keydown, getOptions());
 
 		if (show) {
 			this.timer?.stop();
@@ -182,17 +184,19 @@ class PalmerTooltip {
 	handleCallbacks(add) {
 		const {anchor, floater, focusable} = this;
 
-		const method = add ? 'addEventListener' : 'removeEventListener';
+		const method = add
+			? document.addEventListener
+			: document.removeEventListener;
 
 		for (const element of [anchor, floater]) {
-			element[method]('mouseenter', this.callbacks.show, getOptions());
-			element[method]('mouseleave', this.callbacks.hide, getOptions());
-			element[method]('touchstart', this.callbacks.show, getOptions());
+			method.call(element, 'mouseenter', this.callbacks.show, getOptions());
+			method.call(element, 'mouseleave', this.callbacks.hide, getOptions());
+			method.call(element, 'touchstart', this.callbacks.show, getOptions());
 		}
 
 		if (focusable) {
-			anchor[method]('blur', this.callbacks.hide, getOptions());
-			anchor[method]('focus', this.callbacks.show, getOptions());
+			method.call(anchor, 'blur', this.callbacks.hide, getOptions());
+			method.call(anchor, 'focus', this.callbacks.show, getOptions());
 		}
 	}
 }

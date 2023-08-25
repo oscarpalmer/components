@@ -15,6 +15,7 @@ var keys = /* @__PURE__ */ new Set([
 	'End',
 	'Home',
 ]);
+var skip = /* @__PURE__ */ new WeakSet();
 var store = /* @__PURE__ */ new WeakMap();
 function onKeydown(component, event) {
 	if (
@@ -66,10 +67,21 @@ function onKeydown(component, event) {
 		stored.elements[destination]?.button.focus();
 	}
 }
-function onToggle(component, element) {
-	if (element.open && !component.multiple) {
-		toggleDisclosures(component, element);
+function setAttribute(component, multiple) {
+	if (component.multiple === multiple || skip.has(component)) {
+		skip.delete(component);
+		return;
 	}
+	skip.add(component);
+	if (multiple) {
+		component.setAttribute('multiple', '');
+		return;
+	}
+	component.removeAttribute('multiple');
+	toggleDisclosures(
+		component,
+		store.get(component)?.elements.find(element => element.open),
+	);
 }
 function setDisclosures(component) {
 	const stored = store.get(component);
@@ -80,28 +92,36 @@ function setDisclosures(component) {
 		...component.querySelectorAll(':scope > palmer-disclosure'),
 	];
 	for (const element of stored.elements) {
-		element.addEventListener('toggle', () => onToggle(component, element));
+		element.addEventListener('toggle', event => {
+			if (event.detail.newState === 'open') {
+				toggleDisclosures(component, element);
+			}
+		});
 	}
 }
 function toggleDisclosures(component, active) {
+	if (component.multiple) {
+		return;
+	}
 	const stored = store.get(component);
 	if (stored === void 0) {
 		return;
 	}
 	for (const element of stored.elements) {
 		if (element !== active && element.open) {
-			element.open = false;
+			element.hide();
 		}
 	}
 }
 var PalmerAccordion = class extends HTMLElement {
 	/** @returns {boolean} */
 	get multiple() {
-		return this.getAttribute('multiple') !== 'false';
+		const multiple = this.getAttribute('multiple');
+		return !(multiple === null || multiple === 'false');
 	}
 	/** @param {boolean} multiple */
 	set multiple(multiple) {
-		this.setAttribute('multiple', multiple);
+		setAttribute(this, multiple);
 	}
 	constructor() {
 		super();
@@ -116,15 +136,10 @@ var PalmerAccordion = class extends HTMLElement {
 			event => onKeydown(this, event),
 			getOptions(false),
 		);
-		if (!this.multiple) {
-			toggleDisclosures(
-				this,
-				stored.elements.find(element => element.open),
-			);
-		}
+		setAttribute(this, this.multiple);
 	}
 	attributeChangedCallback(name) {
-		if (name === 'multiple' && !this.multiple) {
+		if (name === 'multiple') {
 			toggleDisclosures(
 				this,
 				store.get(this)?.elements.find(element => element.open),
@@ -141,6 +156,6 @@ var PalmerAccordion = class extends HTMLElement {
 		store.get(this)?.observer.disconnect();
 	}
 };
-PalmerAccordion.observedAttributes = ['max', 'min', 'value'];
+PalmerAccordion.observedAttributes = ['multiple'];
 customElements.define('palmer-accordion', PalmerAccordion);
 export {PalmerAccordion};

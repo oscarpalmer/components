@@ -4,40 +4,68 @@ function isNullableOrWhitespace(value) {
 }
 
 // src/helpers/event.js
+var toggleClosed = 'closed';
+var toggleOpen = 'open';
 function getOptions(passive, capture) {
 	return {
 		capture: capture ?? false,
 		passive: passive ?? true,
 	};
 }
+function getToggleState(open) {
+	return {
+		newState: open ? toggleOpen : toggleClosed,
+		oldState: open ? toggleClosed : toggleOpen,
+	};
+}
 
 // src/disclosure.js
 var selector = 'palmer-disclosure';
+var skip = /* @__PURE__ */ new WeakSet();
 var index = 0;
-function toggle(component, open) {
+function setAttributes(component, button, open) {
+	skip.add(component);
+	if (open) {
+		component.setAttribute('open', '');
+	} else {
+		component.removeAttribute('open');
+	}
+	button.setAttribute('aria-expanded', open);
+}
+function setExpanded(component, open) {
+	if (component.open === open || skip.has(component)) {
+		skip.delete(component);
+		return;
+	}
+	const detail = getToggleState(open);
 	if (
 		!component.dispatchEvent(
-			new CustomEvent('toggle', {
+			new CustomEvent('beforetoggle', {
+				detail,
 				cancelable: true,
-				detail: open ? 'show' : 'hide',
 			}),
 		)
 	) {
 		return;
 	}
-	component.button.setAttribute('aria-expanded', open);
+	setAttributes(component, component.button, open);
 	component.content.hidden = !open;
-	component.button.focus();
+	component.dispatchEvent(
+		new CustomEvent('toggle', {
+			detail,
+		}),
+	);
 }
 var PalmerDisclosure = class extends HTMLElement {
 	/** @returns {boolean} */
 	get open() {
-		return this.button.getAttribute('aria-expanded') === 'true';
+		const open = this.getAttribute('open');
+		return !(open === null || open === 'false');
 	}
 	/** @param {boolean} value */
 	set open(value) {
-		if (typeof value === 'boolean' && value !== this.open) {
-			toggle(this, value);
+		if (typeof value === 'boolean') {
+			setExpanded(this, value);
 		}
 	}
 	constructor() {
@@ -56,35 +84,45 @@ var PalmerDisclosure = class extends HTMLElement {
 		}
 		this.button = button;
 		this.content = content;
-		const {open} = this;
 		button.hidden = false;
-		content.hidden = !open;
+		content.hidden = true;
 		let {id} = content;
 		if (isNullableOrWhitespace(id)) {
 			id = `palmer_disclosure_${++index}`;
 		}
-		button.setAttribute('aria-expanded', open);
 		button.setAttribute('aria-controls', id);
+		button.setAttribute('aria-expanded', false);
 		content.id = id;
 		button.addEventListener(
 			'click',
-			_ => toggle(this, !this.open),
+			_ => setExpanded(this, !this.open),
 			getOptions(),
 		);
+		if (!this.open) {
+			return;
+		}
+		content.hidden = false;
+		setExpanded(this, true);
+	}
+	/**
+	 * @param {string} name
+	 * @param {string|null} newValue
+	 */
+	attributeChangedCallback(name, _, newValue) {
+		if (name === 'open') {
+			setExpanded(this, !(newValue === null || newValue === 'false'));
+		}
 	}
 	hide() {
-		if (this.open) {
-			toggle(this, false);
-		}
+		setExpanded(this, false);
 	}
 	show() {
-		if (!this.open) {
-			toggle(this, true);
-		}
+		setExpanded(this, true);
 	}
 	toggle() {
-		toggle(this, !this.open);
+		setExpanded(this, !this.open);
 	}
 };
+PalmerDisclosure.observedAttributes = ['open'];
 customElements.define(selector, PalmerDisclosure);
 export {PalmerDisclosure};

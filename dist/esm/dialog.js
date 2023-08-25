@@ -32,6 +32,7 @@ function getOptions(passive, capture) {
 }
 
 // src/helpers/focusable.js
+var booleanAttribute = /^(|true)$/i;
 var filters = [isDisabled, isNotTabbable, isInert, isHidden, isSummarised];
 var selector = [
 	'[contenteditable]:not([contenteditable="false"])',
@@ -55,11 +56,7 @@ function getFocusableElements(element) {
 		.filter(item => isFocusableFilter(item));
 	const indiced = [];
 	for (const item of items) {
-		if (indiced[item.tabIndex] === void 0) {
-			indiced[item.tabIndex] = [item.element];
-		} else {
-			indiced[item.tabIndex].push(item.element);
-		}
+		indiced[item.tabIndex] = [...(indiced[item.tabIndex] ?? []), item.element];
 	}
 	return indiced.flat();
 }
@@ -106,7 +103,7 @@ function isDisabledFromFieldset(element) {
 	return false;
 }
 function isEditable(element) {
-	return /^(|true)$/i.test(element.getAttribute('contenteditable'));
+	return booleanAttribute.test(element.getAttribute('contenteditable'));
 }
 function isFocusableFilter(item) {
 	return !filters.some(callback => callback(item));
@@ -128,7 +125,7 @@ function isHidden(item) {
 function isInert(item) {
 	return (
 		(item.element.inert ?? false) ||
-		/^(|true)$/i.test(item.element.getAttribute('inert')) ||
+		booleanAttribute.test(item.element.getAttribute('inert')) ||
 		(item.element.parentElement !== null &&
 			isInert({element: item.element.parentElement}))
 	);
@@ -286,7 +283,6 @@ function destroy(element) {
 	if (focusTrap === void 0) {
 		return;
 	}
-	element.tabIndex = focusTrap.tabIndex;
 	store.delete(element);
 }
 function handleEvent(event, focusTrap, element) {
@@ -336,15 +332,7 @@ function onKeydown(event) {
 	event.stopImmediatePropagation();
 	handleEvent(event, focusTrap, event.target);
 }
-var FocusTrap = class {
-	/**
-	 * @param {HTMLElement} element
-	 */
-	constructor(element) {
-		this.tabIndex = element.tabIndex;
-		element.tabIndex = -1;
-	}
-};
+var FocusTrap = class {};
 var observer = new MutationObserver(observe);
 observer.observe(document, {
 	attributeFilter: [selector2],
@@ -367,11 +355,12 @@ var closeAttribute = `${selector3}-close`;
 var openAttribute = `${selector3}-open`;
 var focused = /* @__PURE__ */ new WeakMap();
 var parents = /* @__PURE__ */ new WeakMap();
-function close(component) {
+function close(before, component, target) {
 	if (
 		!component.dispatchEvent(
-			new CustomEvent('hide', {
+			new CustomEvent(before, {
 				cancelable: true,
+				detail: {target},
 			}),
 		)
 	) {
@@ -382,20 +371,17 @@ function close(component) {
 	focused.get(component)?.focus();
 	focused.delete(component);
 	component.dispatchEvent(
-		new CustomEvent('toggle', {
-			detail: 'hide',
+		new CustomEvent('close', {
+			detail: {target},
 		}),
 	);
 }
 function defineButton(button) {
 	button.addEventListener('click', onOpen, getOptions());
 }
-function onClose() {
-	close(this);
-}
 function onKeydown2(event) {
 	if (event.key === 'Escape') {
-		onClose.call(this);
+		close('cancel', this, document.activeElement);
 	}
 }
 function onOpen() {
@@ -442,7 +428,7 @@ var PalmerDialog = class extends HTMLElement {
 		if (value) {
 			open(this);
 		} else {
-			close(this);
+			close('cancel', this);
 		}
 	}
 	constructor() {
@@ -497,10 +483,15 @@ var PalmerDialog = class extends HTMLElement {
 		this.setAttribute(selector2, '');
 		this.addEventListener('keydown', onKeydown2.bind(this), getOptions());
 		for (const closer of closers) {
-			if (isAlert && closer === overlay) {
+			const isOverlay = closer === overlay;
+			if (isAlert && isOverlay) {
 				continue;
 			}
-			closer.addEventListener('click', onClose.bind(this), getOptions());
+			closer.addEventListener(
+				'click',
+				() => close(isOverlay ? 'cancel' : 'beforeclose', this, closer),
+				getOptions(),
+			);
 		}
 	}
 	hide() {

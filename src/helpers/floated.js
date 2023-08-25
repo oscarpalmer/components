@@ -57,7 +57,13 @@ const allPositions = [
 	'vertical-right',
 ];
 
+const centeredXAxis = /^(above|below|vertical)$/i;
+const centeredYAxis = /^(horizontal|left|right)$/i;
+
 const domRectKeys = ['bottom', 'height', 'left', 'right', 'top', 'width'];
+
+const prefixHorizontal = /^horizontal/i;
+const prefixVertical = /^vertical/i;
 
 /**
  * @param {AbsoluteParameters} parameters
@@ -93,29 +99,21 @@ function getAbsolute(parameters) {
 function getAttribute(position, anchor, values) {
 	const {left, top} = values;
 
-	switch (position) {
-		case 'horizontal':
-		case 'horizontal-bottom':
-		case 'horizontal-top': {
-			return position.replace(
-				'horizontal',
-				anchor.right - 1 < left && left < anchor.right + 1 ? 'right' : 'left',
-			);
-		}
-
-		case 'vertical':
-		case 'vertical-left':
-		case 'vertical-right': {
-			return position.replace(
-				'vertical',
-				anchor.bottom - 1 < top && top < anchor.bottom + 1 ? 'below' : 'above',
-			);
-		}
-
-		default: {
-			return position;
-		}
+	if (prefixHorizontal.test(position)) {
+		return position.replace(
+			'horizontal',
+			anchor.right - 1 < left && left < anchor.right + 1 ? 'right' : 'left',
+		);
 	}
+
+	if (prefixVertical.test(position)) {
+		return position.replace(
+			'vertical',
+			anchor.bottom - 1 < top && top < anchor.bottom + 1 ? 'below' : 'above',
+		);
+	}
+
+	return position;
 }
 
 /**
@@ -128,21 +126,14 @@ function getAttribute(position, anchor, values) {
 function getCentered(xAxis, position, rectangles, preferMin) {
 	const {anchor, floater} = rectangles;
 
-	if (
-		(xAxis
-			? ['above', 'below', 'vertical']
-			: ['horizontal', 'left', 'right']
-		).includes(position)
-	) {
+	if ((xAxis ? centeredXAxis : centeredYAxis).test(position)) {
 		const offset = (xAxis ? anchor.width : anchor.height) / 2;
 		const size = (xAxis ? floater.width : floater.height) / 2;
 
 		return (xAxis ? anchor.left : anchor.top) + offset - size;
 	}
 
-	if (
-		xAxis ? position.startsWith('horizontal') : position.startsWith('vertical')
-	) {
+	if ((xAxis ? prefixHorizontal : prefixVertical).test(position)) {
 		return getAbsolute({
 			preferMin,
 			end: xAxis ? anchor.right : anchor.bottom,
@@ -182,18 +173,18 @@ function getPosition(currentPosition, defaultPosition) {
 function getValue(xAxis, position, rectangles, preferMin) {
 	const {anchor, floater} = rectangles;
 
-	if (xAxis ? position.startsWith('right') : position.endsWith('top')) {
+	if ((xAxis ? /^right/i : /top$/i).test(position)) {
 		return xAxis ? anchor.right : anchor.top;
 	}
 
-	if (xAxis ? position.startsWith('left') : position.endsWith('bottom')) {
+	if ((xAxis ? /^left/i : /bottom$/i).test(position)) {
 		return (
 			(xAxis ? anchor.left : anchor.bottom) -
 			(xAxis ? floater.width : floater.height)
 		);
 	}
 
-	if (xAxis ? position.endsWith('right') : position.startsWith('above')) {
+	if ((xAxis ? /right$/i : /^above/i).test(position)) {
 		return (
 			(xAxis ? anchor.right : anchor.top) -
 			(xAxis ? floater.width : floater.height)
@@ -259,7 +250,7 @@ export function updateFloated(parameters) {
 			return;
 		}
 
-		floater.setAttribute('position', getAttribute(position, anchor, values));
+		floater.setAttribute('position', getAttribute(position, rectangle, values));
 
 		floater.style.position = 'fixed';
 		floater.style.inset = '0 auto auto 0';

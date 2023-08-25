@@ -2,7 +2,7 @@ import {getOptions} from './helpers/event.js';
 
 /**
  * @typedef Stored
- * @property {HTMLElement[]} elements
+ * @property {import('./disclosure.js').PalmerDisclosure[]} elements
  * @property {MutationObserver} observer
  */
 
@@ -14,6 +14,9 @@ const keys = new Set([
 	'End',
 	'Home',
 ]);
+
+/** @type {WeakSet<PalmerAccordion>} */
+const skip = new WeakSet();
 
 /** @type {WeakMap<PalmerAccordion, Stored>} */
 const store = new WeakMap();
@@ -92,12 +95,29 @@ function onKeydown(component, event) {
 
 /**
  * @param {PalmerAccordion} component
- * @param {HTMLElement} element
+ * @param {boolean} multiple
  */
-function onToggle(component, element) {
-	if (element.open && !component.multiple) {
-		toggleDisclosures(component, element);
+function setAttribute(component, multiple) {
+	if (component.multiple === multiple || skip.has(component)) {
+		skip.delete(component);
+
+		return;
 	}
+
+	skip.add(component);
+
+	if (multiple) {
+		component.setAttribute('multiple', '');
+
+		return;
+	}
+
+	component.removeAttribute('multiple');
+
+	toggleDisclosures(
+		component,
+		store.get(component)?.elements.find(element => element.open),
+	);
 }
 
 /**
@@ -115,7 +135,11 @@ function setDisclosures(component) {
 	];
 
 	for (const element of stored.elements) {
-		element.addEventListener('toggle', () => onToggle(component, element));
+		element.addEventListener('toggle', event => {
+			if (event.detail.newState === 'open') {
+				toggleDisclosures(component, element);
+			}
+		});
 	}
 }
 
@@ -124,6 +148,10 @@ function setDisclosures(component) {
  * @param {HTMLElement|undefined} active
  */
 function toggleDisclosures(component, active) {
+	if (component.multiple) {
+		return;
+	}
+
 	const stored = store.get(component);
 
 	if (stored === undefined) {
@@ -132,7 +160,7 @@ function toggleDisclosures(component, active) {
 
 	for (const element of stored.elements) {
 		if (element !== active && element.open) {
-			element.open = false;
+			element.hide();
 		}
 	}
 }
@@ -140,12 +168,14 @@ function toggleDisclosures(component, active) {
 export class PalmerAccordion extends HTMLElement {
 	/** @returns {boolean} */
 	get multiple() {
-		return this.getAttribute('multiple') !== 'false';
+		const multiple = this.getAttribute('multiple');
+
+		return !(multiple === null || multiple === 'false');
 	}
 
 	/** @param {boolean} multiple */
 	set multiple(multiple) {
-		this.setAttribute('multiple', multiple);
+		setAttribute(this, multiple);
 	}
 
 	constructor() {
@@ -166,16 +196,11 @@ export class PalmerAccordion extends HTMLElement {
 			getOptions(false),
 		);
 
-		if (!this.multiple) {
-			toggleDisclosures(
-				this,
-				stored.elements.find(element => element.open),
-			);
-		}
+		setAttribute(this, this.multiple);
 	}
 
 	attributeChangedCallback(name) {
-		if (name === 'multiple' && !this.multiple) {
+		if (name === 'multiple') {
 			toggleDisclosures(
 				this,
 				store.get(this)?.elements.find(element => element.open),
@@ -195,6 +220,6 @@ export class PalmerAccordion extends HTMLElement {
 	}
 }
 
-PalmerAccordion.observedAttributes = ['max', 'min', 'value'];
+PalmerAccordion.observedAttributes = ['multiple'];
 
 customElements.define('palmer-accordion', PalmerAccordion);

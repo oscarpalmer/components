@@ -1,6 +1,6 @@
 export class PalmerDisclosure extends HTMLElement {
-	set open(arg: boolean);
 	get open(): boolean;
+	set open(open: boolean);
 	readonly button: HTMLButtonElement;
 	readonly content: HTMLElement;
 	hide(): void;

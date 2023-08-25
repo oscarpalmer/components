@@ -155,10 +155,18 @@ function isNullableOrWhitespace(value) {
 }
 
 // src/helpers/event.js
+var toggleClosed = 'closed';
+var toggleOpen = 'open';
 function getOptions(passive, capture) {
 	return {
 		capture: capture ?? false,
 		passive: passive ?? true,
+	};
+}
+function getToggleState(open2) {
+	return {
+		newState: open2 ? toggleOpen : toggleClosed,
+		oldState: open2 ? toggleClosed : toggleOpen,
 	};
 }
 
@@ -183,7 +191,11 @@ var allPositions = [
 	'vertical-left',
 	'vertical-right',
 ];
+var centeredXAxis = /^(above|below|vertical)$/i;
+var centeredYAxis = /^(horizontal|left|right)$/i;
 var domRectKeys = ['bottom', 'height', 'left', 'right', 'top', 'width'];
+var prefixHorizontal = /^horizontal/i;
+var prefixVertical = /^vertical/i;
 function getAbsolute(parameters) {
 	const {end, max, offset, preferMin, start} = parameters;
 	const maxPosition = end + offset;
@@ -201,43 +213,28 @@ function getAbsolute(parameters) {
 }
 function getAttribute(position, anchor, values) {
 	const {left, top} = values;
-	switch (position) {
-		case 'horizontal':
-		case 'horizontal-bottom':
-		case 'horizontal-top': {
-			return position.replace(
-				'horizontal',
-				anchor.right - 1 < left && left < anchor.right + 1 ? 'right' : 'left',
-			);
-		}
-		case 'vertical':
-		case 'vertical-left':
-		case 'vertical-right': {
-			return position.replace(
-				'vertical',
-				anchor.bottom - 1 < top && top < anchor.bottom + 1 ? 'below' : 'above',
-			);
-		}
-		default: {
-			return position;
-		}
+	if (prefixHorizontal.test(position)) {
+		return position.replace(
+			'horizontal',
+			anchor.right - 1 < left && left < anchor.right + 1 ? 'right' : 'left',
+		);
 	}
+	if (prefixVertical.test(position)) {
+		return position.replace(
+			'vertical',
+			anchor.bottom - 1 < top && top < anchor.bottom + 1 ? 'below' : 'above',
+		);
+	}
+	return position;
 }
 function getCentered(xAxis, position, rectangles, preferMin) {
 	const {anchor, floater} = rectangles;
-	if (
-		(xAxis
-			? ['above', 'below', 'vertical']
-			: ['horizontal', 'left', 'right']
-		).includes(position)
-	) {
+	if ((xAxis ? centeredXAxis : centeredYAxis).test(position)) {
 		const offset = (xAxis ? anchor.width : anchor.height) / 2;
 		const size = (xAxis ? floater.width : floater.height) / 2;
 		return (xAxis ? anchor.left : anchor.top) + offset - size;
 	}
-	if (
-		xAxis ? position.startsWith('horizontal') : position.startsWith('vertical')
-	) {
+	if ((xAxis ? prefixHorizontal : prefixVertical).test(position)) {
 		return getAbsolute({
 			preferMin,
 			end: xAxis ? anchor.right : anchor.bottom,
@@ -260,16 +257,16 @@ function getPosition(currentPosition, defaultPosition) {
 }
 function getValue(xAxis, position, rectangles, preferMin) {
 	const {anchor, floater} = rectangles;
-	if (xAxis ? position.startsWith('right') : position.endsWith('top')) {
+	if ((xAxis ? /^right/i : /top$/i).test(position)) {
 		return xAxis ? anchor.right : anchor.top;
 	}
-	if (xAxis ? position.startsWith('left') : position.endsWith('bottom')) {
+	if ((xAxis ? /^left/i : /bottom$/i).test(position)) {
 		return (
 			(xAxis ? anchor.left : anchor.bottom) -
 			(xAxis ? floater.width : floater.height)
 		);
 	}
-	if (xAxis ? position.endsWith('right') : position.startsWith('above')) {
+	if ((xAxis ? /right$/i : /^above/i).test(position)) {
 		return (
 			(xAxis ? anchor.right : anchor.top) -
 			(xAxis ? floater.width : floater.height)
@@ -314,7 +311,7 @@ function updateFloated(parameters) {
 		if (floater.style.transform === matrix) {
 			return;
 		}
-		floater.setAttribute('position', getAttribute(position, anchor, values));
+		floater.setAttribute('position', getAttribute(position, rectangle, values));
 		floater.style.position = 'fixed';
 		floater.style.inset = '0 auto auto 0';
 		floater.style.transform = matrix;
@@ -330,6 +327,7 @@ function updateFloated(parameters) {
 }
 
 // src/helpers/focusable.js
+var booleanAttribute = /^(|true)$/i;
 var filters = [isDisabled, isNotTabbable, isInert, isHidden, isSummarised];
 var selector = [
 	'[contenteditable]:not([contenteditable="false"])',
@@ -353,11 +351,7 @@ function getFocusableElements(element) {
 		.filter(item => isFocusableFilter(item));
 	const indiced = [];
 	for (const item of items) {
-		if (indiced[item.tabIndex] === void 0) {
-			indiced[item.tabIndex] = [item.element];
-		} else {
-			indiced[item.tabIndex].push(item.element);
-		}
+		indiced[item.tabIndex] = [...(indiced[item.tabIndex] ?? []), item.element];
 	}
 	return indiced.flat();
 }
@@ -404,7 +398,7 @@ function isDisabledFromFieldset(element) {
 	return false;
 }
 function isEditable(element) {
-	return /^(|true)$/i.test(element.getAttribute('contenteditable'));
+	return booleanAttribute.test(element.getAttribute('contenteditable'));
 }
 function isFocusableFilter(item) {
 	return !filters.some(callback => callback(item));
@@ -426,7 +420,7 @@ function isHidden(item) {
 function isInert(item) {
 	return (
 		(item.element.inert ?? false) ||
-		/^(|true)$/i.test(item.element.getAttribute('inert')) ||
+		booleanAttribute.test(item.element.getAttribute('inert')) ||
 		(item.element.parentElement !== null &&
 			isInert({element: item.element.parentElement}))
 	);
@@ -483,7 +477,6 @@ function destroy(element) {
 	if (focusTrap === void 0) {
 		return;
 	}
-	element.tabIndex = focusTrap.tabIndex;
 	store.delete(element);
 }
 function handleEvent(event, focusTrap, element) {
@@ -533,15 +526,7 @@ function onKeydown(event) {
 	event.stopImmediatePropagation();
 	handleEvent(event, focusTrap, event.target);
 }
-var FocusTrap = class {
-	/**
-	 * @param {HTMLElement} element
-	 */
-	constructor(element) {
-		this.tabIndex = element.tabIndex;
-		element.tabIndex = -1;
-	}
-};
+var FocusTrap = class {};
 var observer = new MutationObserver(observe);
 observer.observe(document, {
 	attributeFilter: [selector2],
@@ -559,6 +544,7 @@ wait(() => {
 document.addEventListener('keydown', onKeydown, getOptions(false));
 
 // src/popover.js
+var closeKeys = /^\s|enter$/i;
 var selector3 = 'palmer-popover';
 var store2 = /* @__PURE__ */ new WeakMap();
 var index = 0;
@@ -572,7 +558,7 @@ function afterToggle(component, active) {
 	}, 0);
 	component.dispatchEvent(
 		new CustomEvent('toggle', {
-			detail: active ? 'open' : 'show',
+			detail: getToggleState(active),
 		}),
 	);
 }
@@ -589,8 +575,9 @@ function handleToggle(component, expand) {
 	const expanded = typeof expand === 'boolean' ? !expand : component.open;
 	if (
 		!component.dispatchEvent(
-			new CustomEvent(expanded ? 'hide' : 'show', {
+			new CustomEvent('beforetoggle', {
 				cancelable: true,
+				detail: getToggleState(expanded),
 			}),
 		)
 	) {
@@ -617,7 +604,7 @@ function handleToggle(component, expand) {
 	afterToggle(component, !expanded);
 }
 function onClose(event) {
-	if (!(event instanceof KeyboardEvent) || [' ', 'Enter'].includes(event.key)) {
+	if (!(event instanceof KeyboardEvent) || closeKeys.test(event.key)) {
 		handleToggle(this, false);
 	}
 }

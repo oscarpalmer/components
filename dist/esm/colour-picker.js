@@ -45,6 +45,7 @@ var methods = {
 };
 
 // src/colour-picker.js
+var arrowKeys = /^arrow(?:(down)|(left)|(right)|(up))/i;
 var backgroundImage = [
 	'linear-gradient(to bottom',
 	'hsl(0 0% 100%) 0%',
@@ -55,6 +56,8 @@ var backgroundImage = [
 	'hsl(0 0% 50%) 0%',
 	'hsl(0 0% 50% / 0) 100%)',
 ];
+var hexGroups = /^([\da-f]{2})([\da-f]{2})([\da-f]{2})$/i;
+var hexValue = /^([\da-f]{3}){1,2}$/i;
 var store = /* @__PURE__ */ new WeakMap();
 var selector = 'palmer-colour-picker';
 function createHue(element, input) {
@@ -92,7 +95,7 @@ function hexToRgb(value) {
 	if (hex === void 0) {
 		return void 0;
 	}
-	const pairs = hex.match(/^([\da-f]{2})([\da-f]{2})([\da-f]{2})$/i);
+	const pairs = hex.match(hexGroups);
 	const rgb = [];
 	for (let index = 0; index < 3; index += 1) {
 		rgb.push(Number.parseInt(pairs[index + 1], 16));
@@ -142,7 +145,7 @@ function onDocumentPointerMove(event) {
 	setValue(this, saturation, lightness);
 }
 function onHueChange() {
-	this.hsl.hue = Number.parseInt(this.hue.value, 10);
+	this.hsl.hue = Number.parseInt(this.hueInput.value, 10);
 	update(this);
 }
 function onInputKeydown(event) {
@@ -161,34 +164,14 @@ function onInputKeydown(event) {
 	update(this);
 }
 function onWellKeydown(event) {
-	if (
-		!['ArrowDown', 'ArrowLeft', 'ArrowRight', 'ArrowUp'].includes(event.key)
-	) {
+	const match = arrowKeys.exec(event.key);
+	if (match === null) {
 		return;
 	}
 	event.preventDefault();
 	let {lightness, saturation} = this.hsl;
-	switch (event.key) {
-		case 'ArrowDown': {
-			lightness -= 1;
-			break;
-		}
-		case 'ArrowLeft': {
-			saturation -= 1;
-			break;
-		}
-		case 'ArrowRight': {
-			saturation += 1;
-			break;
-		}
-		case 'ArrowUp': {
-			lightness += 1;
-			break;
-		}
-		default: {
-			return;
-		}
-	}
+	lightness += match[1] ? -1 : match[4] ? 1 : 0;
+	saturation += match[2] ? -1 : match[3] ? 1 : 0;
 	setValue(this, saturation, lightness);
 }
 function onWellPointerBegin(event) {
@@ -266,14 +249,10 @@ function rgbToHsl(rgb) {
 	};
 }
 function setCallbacks(callbacks, add) {
-	const method = add ? 'addEventListener' : 'removeEventListener';
-	document[method]('keydown', callbacks.onKeydown, getOptions(true, true));
-	document[method](methods.end, callbacks.onPointerEnd, getOptions());
-	document[method](
-		methods.move,
-		callbacks.onPointerMove,
-		getOptions(!isTouchy),
-	);
+	const method = add ? document.addEventListener : document.removeEventListener;
+	method('keydown', callbacks.onKeydown, getOptions(true, true));
+	method(methods.end, callbacks.onPointerEnd, getOptions());
+	method(methods.move, callbacks.onPointerMove, getOptions(!isTouchy));
 	setStyles(add);
 }
 function setStyles(active) {
@@ -300,33 +279,33 @@ function stopMove(component, reset) {
 		update(component);
 	}
 	store.delete(component);
-	component.handle.focus();
+	component.wellHandle.focus();
 }
 function validateHex(value) {
-	return /^([\da-f]{3}){1,2}$/i.test(normaliseHex(value));
+	return hexValue.test(normaliseHex(value));
 }
 function update(component) {
-	component.hue.value = component.hsl.hue;
+	const {hsl, hueInput, input} = component;
+	hueInput.value = hsl.hue;
 	updateCss(component);
 	updateWell(component);
-	component.input.value = rgbToHex(hslToRgb(component.hsl));
-	component.input.dispatchEvent(new Event('change'));
+	input.value = rgbToHex(hslToRgb(hsl));
+	input.dispatchEvent(new Event('change'));
 }
 function updateCss(component) {
 	const {hue, lightness, saturation} = component.hsl;
+	const handle = `${(hue / 360) * 100}%`;
+	const value = `hsl(${hue} ${saturation}% ${lightness}%)`;
 	for (const element of [component, component.hue, component.well]) {
-		element.style.setProperty('--hue-handle', `${(hue / 360) * 100}%`);
+		element.style.setProperty('--hue-handle', handle);
 		element.style.setProperty('--hue-value', hue);
-		element.style.setProperty(
-			'--value',
-			`hsl(${hue} ${saturation}% ${lightness}%)`,
-		);
+		element.style.setProperty('--value', value);
 	}
 }
 function updateWell(component) {
-	const {handle, hsl} = component;
-	handle.style.top = `${100 - hsl.lightness}%`;
-	handle.style.left = `${hsl.saturation}%`;
+	const {hsl, wellHandle} = component;
+	wellHandle.style.top = `${100 - hsl.lightness}%`;
+	wellHandle.style.left = `${hsl.saturation}%`;
 }
 var PalmerColourPicker = class extends HTMLElement {
 	/**
@@ -370,10 +349,11 @@ var PalmerColourPicker = class extends HTMLElement {
 				`<${selector}> needs two elements for the colour well: one wrapping element with the attribute '${selector}-well', and one within it with the attribute '${selector}-well-handle'`,
 			);
 		}
-		this.handle = wellHandle;
-		this.hue = hueInput;
+		this.hue = hue;
+		this.hueInput = hueInput;
 		this.input = input;
 		this.well = well;
+		this.wellHandle = wellHandle;
 		input.pattern = '#?([\\da-fA-F]{3}){1,2}';
 		input.type = 'text';
 		const value = getHex(
@@ -384,17 +364,17 @@ var PalmerColourPicker = class extends HTMLElement {
 		this.hsl = rgbToHsl(rgb);
 		createHue(hue, hueInput);
 		createWell(well, wellHandle);
-		this.input.addEventListener(
+		input.addEventListener(
 			'keydown',
 			onInputKeydown.bind(this),
 			getOptions(false),
 		);
-		this.handle.addEventListener(
+		wellHandle.addEventListener(
 			'keydown',
 			onWellKeydown.bind(this),
 			getOptions(false),
 		);
-		this.handle.addEventListener(
+		wellHandle.addEventListener(
 			methods.begin,
 			onWellPointerBegin.bind(this),
 			getOptions(),
@@ -404,7 +384,7 @@ var PalmerColourPicker = class extends HTMLElement {
 			onWellPointerBegin.bind(this),
 			getOptions(),
 		);
-		this.hue.addEventListener('input', onHueChange.bind(this), getOptions());
+		hueInput.addEventListener('input', onHueChange.bind(this), getOptions());
 		update(this);
 	}
 };
